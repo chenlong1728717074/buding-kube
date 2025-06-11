@@ -2,6 +2,7 @@ package api
 
 import (
 	"buding-kube/internal/service"
+	"buding-kube/internal/web/dto"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,20 +26,46 @@ func (api *NamespacesApi) Router() {
 	api.router.DELETE("/:id", api.Delete)
 	api.router.GET("/list", api.List)
 	api.router.POST("", api.Add)
+	api.router.PUT("", api.Update)
 }
 
 func (*NamespacesApi) List(ctx *gin.Context) {
 
 }
 
-func (api *NamespacesApi) Info(context *gin.Context) {
+func (api *NamespacesApi) Info(ctx *gin.Context) {
 
 }
 
-func (api *NamespacesApi) Delete(context *gin.Context) {
+func (api *NamespacesApi) Delete(ctx *gin.Context) {
 
 }
 
-func (api *NamespacesApi) Add(context *gin.Context) {
+func (api *NamespacesApi) Add(ctx *gin.Context) {
+	var create dto.NamespaceCreateDTO
+	if err := ctx.ShouldBindJSON(&create); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	err := api.srv.Save(create)
+	if err != nil {
+		api.InternalError(ctx, "添加失败:", err)
+		return
+	}
+	api.SuccessMsg(ctx, "添加成功")
+}
+
+func (api *NamespacesApi) Update(ctx *gin.Context) {
+	var create dto.NamespaceCreateDTO
+	if err := ctx.ShouldBindJSON(&create); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	err := api.srv.Update(create)
+	if err != nil {
+		api.InternalError(ctx, "修改失败:", err)
+		return
+	}
+	api.SuccessMsg(ctx, "修改成功")
 
 }
