@@ -32,14 +32,14 @@ func NewNamespaceService() *NamespaceService {
 
 func (s NamespaceService) Save(create dto.NamespaceCreateDTO) error {
 	//获取连接
-	clientSet := ClusterMap[create.ClusterId]
-	if clientSet == nil {
-		logs.Error("集群不存在: %s", create.ClusterId)
-		return errors.New("集群不存在")
+	clientSet, err := ClusterMap.Get(create.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", create.ClusterId, err.Error())
+		return errors.New("获取集群失败")
 	}
 
 	// 检查命名空间是否存在
-	_, err := clientSet.CoreV1().Namespaces().Get(context.TODO(), create.Namespace, metav1.GetOptions{})
+	_, err = clientSet.CoreV1().Namespaces().Get(context.TODO(), create.Namespace, metav1.GetOptions{})
 	if err == nil {
 		// 命名空间已存在
 		logs.Error("命名空间已存在: %s", create.Namespace)

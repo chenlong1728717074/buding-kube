@@ -21,7 +21,7 @@ import (
 var (
 	clusterSrv                    *ClusterService
 	clusterOnce                   sync.Once
-	ClusterMap                    map[string]*kubernetes.Clientset
+	ClusterMap                    ClusterCacheMap
 	ClusterConfigSecretLabelKey   string = "kubeasy.com/cluster.metadata"
 	ClusterConfigSecretLabelValue string = "true"
 )
@@ -34,6 +34,31 @@ type ClusterStatus struct {
 	Describe string `json:"describe"`
 	Version  string `json:"version"`
 	Status   string `json:"status"`
+}
+type ClusterCacheMap map[string]*kubernetes.Clientset
+
+func (m ClusterCacheMap) Put(key string, value *kubernetes.Clientset) {
+	m[key] = value
+}
+func (m ClusterCacheMap) Delete(key string) {
+	delete(m, key)
+}
+
+func (m ClusterCacheMap) Get(key string) (*kubernetes.Clientset, error) {
+	clientSet := m[key]
+	if clientSet != nil {
+		return clientSet, nil
+	}
+	item, err := kube.InClusterClientSet.CoreV1().Secrets("buding").
+		Get(context.TODO(), key, metav1.GetOptions{})
+	if err != nil {
+		logs.Fatal("获取集群资源失败:%v", err)
+	}
+	set, err := buildClientSet(string(item.Data["kubeconfig"]))
+	if err != nil {
+		logs.Fatal("连接到集群资源失败:%v", err)
+	}
+	return set, nil
 }
 
 func GetSingletonClusterService() *ClusterService {
@@ -80,16 +105,12 @@ func (s *ClusterService) SaveOrUpdate(create dto.NodeCreateDTO) error {
 		return err
 	}
 	//全局clientSet
-	ClusterMap[create.Id] = clientSet
+	ClusterMap.Put(create.Id, clientSet)
 	return nil
 }
 
 func (s *ClusterService) getClusterStatus(create dto.NodeCreateDTO) (*ClusterStatus, *kubernetes.Clientset, error) {
-	restConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(create.Config))
-	if err != nil {
-		return nil, nil, err
-	}
-	clientset, err := kubernetes.NewForConfig(restConfig)
+	clientset, err := buildClientSet(create.Config)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -105,6 +126,18 @@ func (s *ClusterService) getClusterStatus(create dto.NodeCreateDTO) (*ClusterSta
 	return &result, clientset, nil
 }
 
+func buildClientSet(config string) (*kubernetes.Clientset, error) {
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(config))
+	if err != nil {
+		return nil, err
+	}
+	clientSet, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+	return clientSet, nil
+}
+
 func (s *ClusterService) Delete(id string) error {
 	err := kube.InClusterClientSet.CoreV1().Secrets("buding").Delete(context.TODO(), id,
 		metav1.DeleteOptions{})
@@ -112,7 +145,7 @@ func (s *ClusterService) Delete(id string) error {
 		logs.Error("删除集群失败%s %v", id, err)
 		return err
 	}
-	delete(ClusterMap, id)
+	ClusterMap.Delete(id)
 	return nil
 }
 
