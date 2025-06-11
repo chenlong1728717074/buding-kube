@@ -13,6 +13,10 @@ type ServerConfig struct {
 	Port int `mapstructure:"port"`
 }
 
+type KubeConfig struct {
+	Ns int `mapstructure:"ns"`
+}
+
 var GlobalConfig Config
 
 func init() {

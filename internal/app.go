@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"buding-kube/internal/web/router"
 	"buding-kube/pkg/logs"
 	"context"
 	"errors"
@@ -39,6 +40,8 @@ func NewApp() *App {
 	gin.DefaultWriter = logs.NewGinLoggerAdapter(zapcore.InfoLevel)
 	gin.DefaultErrorWriter = logs.NewGinLoggerAdapter(zapcore.ErrorLevel)
 	engine := gin.Default()
+
+	router.SetupRouter(engine.Group("/api"))
 	return &App{
 		engine: engine,
 	}
