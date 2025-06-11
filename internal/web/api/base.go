@@ -1,6 +1,7 @@
 package api
 
 import (
+	"buding-kube/internal/web/dto"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -8,22 +9,6 @@ import (
 )
 
 // 统一响应码
-const (
-	CodeSuccess            = http.StatusOK
-	CodeInvalidParams      = http.StatusBadRequest
-	CodeUnauthorized       = http.StatusUnauthorized
-	CodeForbidden          = http.StatusForbidden
-	CodeNotFound           = http.StatusNotFound
-	CodeInternalError      = http.StatusInternalServerError
-	CodeServiceUnavailable = http.StatusServiceUnavailable
-)
-
-// Response 统一响应结构
-type Response struct {
-	Code int         `json:"code"` // 响应码
-	Msg  string      `json:"msg"`  // 响应消息
-	Data interface{} `json:"data"` // 响应数据
-}
 
 type BaseApi struct {
 }
@@ -70,8 +55,8 @@ func (api *BaseApi) GetQueryUint(c *gin.Context, key string) (uint, error) {
 
 // Success 成功响应
 func (api *BaseApi) Success(c *gin.Context, msg string, data interface{}) {
-	c.JSON(http.StatusOK, Response{
-		Code: CodeSuccess,
+	c.JSON(http.StatusOK, dto.Response{
+		Code: dto.CodeSuccess,
 		Msg:  msg,
 		Data: data,
 	})
@@ -89,7 +74,7 @@ func (api *BaseApi) SuccessMsg(c *gin.Context, msg string) {
 
 // Fail 失败响应
 func (api *BaseApi) Fail(c *gin.Context, code int, msg string) {
-	c.JSON(http.StatusOK, Response{
+	c.JSON(http.StatusOK, dto.Response{
 		Code: code,
 		Msg:  msg,
 		Data: nil,
@@ -106,30 +91,30 @@ func (api *BaseApi) FailWithError(c *gin.Context, code int, msg string, err erro
 
 // ParamBindError 参数绑定错误
 func (api *BaseApi) ParamBindError(c *gin.Context, err error) {
-	api.FailWithError(c, CodeInvalidParams, "参数绑定失败", err)
+	api.FailWithError(c, dto.CodeInvalidParams, "参数绑定失败", err)
 }
 
 // InternalError 内部服务器错误
 func (api *BaseApi) InternalError(c *gin.Context, msg string, err error) {
-	api.FailWithError(c, CodeInternalError, msg, err)
+	api.FailWithError(c, dto.CodeInternalError, msg, err)
 }
 
 // NotFound 资源不存在错误
 func (api *BaseApi) NotFound(c *gin.Context, msg string) {
-	api.Fail(c, CodeNotFound, msg)
+	api.Fail(c, dto.CodeNotFound, msg)
 }
 
 // Unauthorized 未授权错误
 func (api *BaseApi) Unauthorized(c *gin.Context, msg string) {
-	api.Fail(c, CodeUnauthorized, msg)
+	api.Fail(c, dto.CodeUnauthorized, msg)
 }
 
 // Forbidden 权限不足错误
 func (api *BaseApi) Forbidden(c *gin.Context, msg string) {
-	api.Fail(c, CodeForbidden, msg)
+	api.Fail(c, dto.CodeForbidden, msg)
 }
 
 // ParamError 参数错误
 func (api *BaseApi) ParamError(c *gin.Context, msg string) {
-	api.Fail(c, CodeInvalidParams, msg)
+	api.Fail(c, dto.CodeInvalidParams, msg)
 }

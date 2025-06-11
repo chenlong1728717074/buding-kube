@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"buding-kube/internal/web/middleware"
 	"buding-kube/internal/web/router"
 	"buding-kube/pkg/logs"
 	"context"
@@ -37,10 +38,18 @@ func (app *App) Stop(ctx context.Context) {
 }
 
 func NewApp() *App {
+	gin.SetMode(gin.DebugMode)
+	//日志
 	gin.DefaultWriter = logs.NewGinLoggerAdapter(zapcore.InfoLevel)
 	gin.DefaultErrorWriter = logs.NewGinLoggerAdapter(zapcore.ErrorLevel)
 	engine := gin.Default()
-
+	//404
+	engine.NoRoute(func(c *gin.Context) {
+		c.String(http.StatusNotFound, "资源未找到")
+	})
+	//中间件
+	engine.Use(middleware.Cors(), middleware.Logger(), middleware.Recovery())
+	//路由
 	router.SetupRouter(engine.Group("/api"))
 	return &App{
 		engine: engine,
