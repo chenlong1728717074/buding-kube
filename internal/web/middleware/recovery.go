@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/vo"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -29,8 +29,8 @@ func Recovery() gin.HandlerFunc {
 				}
 
 				// 返回500错误响应
-				c.AbortWithStatusJSON(http.StatusInternalServerError, dto.Response{
-					Code: dto.CodeInternalError,
+				c.AbortWithStatusJSON(http.StatusInternalServerError, vo.Response{
+					Code: vo.CodeInternalError,
 					Msg:  "服务器内部错误: " + errMsg,
 					Data: nil,
 				})

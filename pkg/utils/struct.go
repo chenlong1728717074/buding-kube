@@ -8,3 +8,15 @@ func Struct2Map(s interface{}) map[string]string {
 	json.Unmarshal(j, &m)
 	return m
 }
+
+func Map2Struct(m map[string]string, s interface{}) error {
+	jsonBytes, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(jsonBytes, s)
+	if err != nil {
+		return err
+	}
+	return nil
+}

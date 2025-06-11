@@ -1,7 +1,7 @@
 package api
 
 import (
-	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/vo"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -21,6 +21,11 @@ func (api *BaseApi) BindJSON(c *gin.Context, obj interface{}) error {
 // BindForm 绑定表单请求
 func (api *BaseApi) BindForm(c *gin.Context, obj interface{}) error {
 	return c.ShouldBind(obj)
+}
+
+// BindQuery 绑定Query请求
+func (api *BaseApi) BindQuery(c *gin.Context, obj interface{}) error {
+	return c.ShouldBindQuery(obj)
 }
 
 // GetParam 获取RESTful风格的URL参数
@@ -55,8 +60,8 @@ func (api *BaseApi) GetQueryUint(c *gin.Context, key string) (uint, error) {
 
 // Success 成功响应
 func (api *BaseApi) Success(c *gin.Context, msg string, data interface{}) {
-	c.JSON(http.StatusOK, dto.Response{
-		Code: dto.CodeSuccess,
+	c.JSON(http.StatusOK, vo.Response{
+		Code: vo.CodeSuccess,
 		Msg:  msg,
 		Data: data,
 	})
@@ -74,7 +79,7 @@ func (api *BaseApi) SuccessMsg(c *gin.Context, msg string) {
 
 // Fail 失败响应
 func (api *BaseApi) Fail(c *gin.Context, code int, msg string) {
-	c.JSON(http.StatusOK, dto.Response{
+	c.JSON(http.StatusOK, vo.Response{
 		Code: code,
 		Msg:  msg,
 		Data: nil,
@@ -91,30 +96,63 @@ func (api *BaseApi) FailWithError(c *gin.Context, code int, msg string, err erro
 
 // ParamBindError 参数绑定错误
 func (api *BaseApi) ParamBindError(c *gin.Context, err error) {
-	api.FailWithError(c, dto.CodeInvalidParams, "参数绑定失败", err)
+	api.FailWithError(c, vo.CodeInvalidParams, "参数绑定失败", err)
 }
 
 // InternalError 内部服务器错误
 func (api *BaseApi) InternalError(c *gin.Context, msg string, err error) {
-	api.FailWithError(c, dto.CodeInternalError, msg, err)
+	api.FailWithError(c, vo.CodeInternalError, msg, err)
 }
 
 // NotFound 资源不存在错误
 func (api *BaseApi) NotFound(c *gin.Context, msg string) {
-	api.Fail(c, dto.CodeNotFound, msg)
+	api.Fail(c, vo.CodeNotFound, msg)
 }
 
 // Unauthorized 未授权错误
 func (api *BaseApi) Unauthorized(c *gin.Context, msg string) {
-	api.Fail(c, dto.CodeUnauthorized, msg)
+	api.Fail(c, vo.CodeUnauthorized, msg)
 }
 
 // Forbidden 权限不足错误
 func (api *BaseApi) Forbidden(c *gin.Context, msg string) {
-	api.Fail(c, dto.CodeForbidden, msg)
+	api.Fail(c, vo.CodeForbidden, msg)
 }
 
 // ParamError 参数错误
 func (api *BaseApi) ParamError(c *gin.Context, msg string) {
-	api.Fail(c, dto.CodeInvalidParams, msg)
+	api.Fail(c, vo.CodeInvalidParams, msg)
+}
+
+func BuildPageResponse[T any](data []T, page, pageSize int) vo.PageResponse {
+	total := len(data)
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	// 计算起止位置
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if start > total {
+		start = total
+	}
+	if end > total {
+		end = total
+	}
+
+	// 切片
+	pagedItems := data[start:end]
+
+	totalPage := (total + pageSize - 1) / pageSize // 向上取整
+
+	return vo.PageResponse{
+		Items:     pagedItems,
+		Total:     int64(total),
+		Page:      page,
+		PageSize:  pageSize,
+		TotalPage: totalPage,
+	}
 }
