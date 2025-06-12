@@ -150,7 +150,6 @@ func (s *NamespaceService) Delete(base dto.NamespaceBaseDTO) error {
 		logs.Error("删除命名空间失败: %v", err)
 		return err
 	}
-	clientSet.CoreV1()
 	return nil
 }
 

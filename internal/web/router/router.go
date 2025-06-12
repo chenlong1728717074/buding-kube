@@ -13,7 +13,10 @@ func SetupRouter(engine *gin.RouterGroup) {
 	//命名空间
 	namespace := engine.Group("/namespace")
 	api.NewNamespacesApi(namespace)
-	//命名空间
+	//节点
 	node := engine.Group("/node")
 	api.NewNodeApi(node)
+	//pod
+	pod := engine.Group("/pod")
+	api.NewPodApi(pod)
 }

@@ -1,6 +1,15 @@
 package service
 
 import (
+	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/vo"
+	"buding-kube/pkg/logs"
+	"context"
+	"errors"
+	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sort"
+	"strings"
 	"sync"
 )
 
@@ -21,4 +30,56 @@ func GetSingletonPodService() *PodService {
 
 func NewPodService() *PodService {
 	return &PodService{}
+}
+
+func (s *PodService) Delete(pod dto.PodDTO) error {
+	clientSet, err := ClusterMap.Get(pod.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", pod.ClusterId, err.Error())
+		return errors.New("获取集群失败")
+	}
+	options := metav1.DeleteOptions{}
+	//强制删除
+	if pod.Force {
+		flag := int64(0)
+		options.GracePeriodSeconds = &flag
+	}
+	err = clientSet.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+	if err != nil {
+		logs.Error("删除pod失败: %s %s", pod.ClusterId, err.Error())
+		return err
+	}
+	return nil
+}
+
+func (s *PodService) List(query dto.PodQueryDTO) ([]vo.PodVO, error) {
+	clientSet, err := ClusterMap.Get(query.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
+		return nil, errors.New("获取集群失败")
+	}
+	listOptions := metav1.ListOptions{}
+	if query.Status != "" {
+		listOptions.FieldSelector = fmt.Sprintf("status.phase=%s", query.Status)
+	}
+	namespaces, err := clientSet.CoreV1().Pods(query.Namespace).List(context.TODO(), listOptions)
+	if err != nil {
+		logs.Error("获取pod失败: %v", err)
+		return nil, err
+	}
+	result := make([]vo.PodVO, 0)
+	for _, item := range namespaces.Items {
+		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
+			result = append(result, vo.Pod2VO(item))
+		}
+	}
+	//按照时间倒叙排序
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].CreationTimestamp.After(result[j].CreationTimestamp)
+	})
+	return result, nil
+}
+
+func (s *PodService) GetById(query dto.PodDTO) (*vo.PodInfoVO, error) {
+	return nil, nil
 }
