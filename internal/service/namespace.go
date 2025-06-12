@@ -57,15 +57,20 @@ func (s NamespaceService) Save(create dto.NamespaceCreateDTO) error {
 
 	// 命名空间不存在，创建新的命名空间
 	logs.Info("创建新命名空间: %s", create.Namespace)
-
+	if create.Annotations == nil {
+		create.Annotations = make(map[string]string)
+	}
+	if create.Alias != "" {
+		create.Annotations["alias"] = create.Alias
+	}
+	if create.Describe != "" {
+		create.Annotations["describe"] = create.Describe
+	}
 	// 定义命名空间对象
 	nsSpec := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: create.Namespace,
-			Annotations: map[string]string{
-				"alias":    create.Alias,
-				"describe": create.Describe,
-			},
+			Name:        create.Namespace,
+			Annotations: create.Annotations,
 		},
 	}
 	// 创建命名空间
