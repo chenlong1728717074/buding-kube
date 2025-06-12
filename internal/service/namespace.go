@@ -2,12 +2,16 @@ package service
 
 import (
 	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
 	"context"
 	"errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sort"
+	"strings"
 	"sync"
 )
 
@@ -76,10 +80,10 @@ func (s NamespaceService) Save(create dto.NamespaceCreateDTO) error {
 
 func (s NamespaceService) Update(create dto.NamespaceCreateDTO) error {
 	//获取连接
-	clientSet := ClusterMap[create.ClusterId]
-	if clientSet == nil {
-		logs.Error("集群不存在: %s", create.ClusterId)
-		return errors.New("集群不存在")
+	clientSet, err := ClusterMap.Get(create.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", create.ClusterId, err.Error())
+		return errors.New("获取集群失败")
 	}
 
 	// 获取命名空间
@@ -108,4 +112,71 @@ func (s NamespaceService) Update(create dto.NamespaceCreateDTO) error {
 	}
 	logs.Info("命名空间 %s 更新成功", create.Namespace)
 	return nil
+}
+
+func (s NamespaceService) Delete(base dto.NamespaceBaseDTO) error {
+	//获取连接
+	clientSet, err := ClusterMap.Get(base.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
+		return errors.New("获取集群失败")
+	}
+	if base.Namespace == apiv1.NamespaceSystem {
+		return errors.New("禁止删除 kube-system 命名空间")
+	}
+	options := metav1.DeleteOptions{}
+	if base.Force {
+		//设置为 0 表示跳过优雅关闭阶段，立即删除资源
+		//级联删除所有依赖资源（阻塞直到子资源都删除）
+		flag := int64(0)
+		policy := metav1.DeletePropagationForeground
+		options.GracePeriodSeconds = &flag
+		options.PropagationPolicy = &policy
+	}
+	if err := clientSet.CoreV1().Namespaces().Delete(context.TODO(), base.Namespace, options); err != nil {
+		logs.Error("删除命名空间失败: %v", err)
+		return err
+	}
+	clientSet.CoreV1()
+	return nil
+}
+
+func (s NamespaceService) List(query dto.NamespacePageQueryBaseDTO) ([]vo.NamespaceVO, error) {
+	clientSet, err := ClusterMap.Get(query.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
+		return nil, errors.New("获取集群失败")
+	}
+	listOptions := metav1.ListOptions{}
+	namespaces, err := clientSet.CoreV1().Namespaces().List(context.TODO(), listOptions)
+	if err != nil {
+		logs.Error("获取命名空间失败: %v", err)
+		return nil, err
+	}
+	result := make([]vo.NamespaceVO, 0)
+	for _, item := range namespaces.Items {
+		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
+			result = append(result, vo.Namespace2VO(&item))
+		}
+	}
+	//按照时间倒叙排序
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].CreationTimestamp.After(result[j].CreationTimestamp)
+	})
+	return result, nil
+}
+
+func (s NamespaceService) GetById(base dto.NamespaceBaseDTO) (*vo.NamespaceVO, error) {
+	clientSet, err := ClusterMap.Get(base.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
+		return nil, errors.New("获取集群失败")
+	}
+	ns, err := clientSet.CoreV1().Namespaces().Get(context.TODO(), base.Namespace, metav1.GetOptions{})
+	if err != nil {
+		logs.Error("获取命名空间失败: %v", err)
+		return nil, err
+	}
+	result := vo.Namespace2VO(ns)
+	return &result, nil
 }

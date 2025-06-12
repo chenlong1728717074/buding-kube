@@ -22,23 +22,53 @@ func NewNamespacesApi(router *gin.RouterGroup) *NamespacesApi {
 }
 
 func (api *NamespacesApi) Router() {
-	api.router.GET("/:id", api.Info)
-	api.router.DELETE("/:id", api.Delete)
+	api.router.GET("", api.Info)
+	api.router.DELETE("", api.Delete)
 	api.router.GET("/list", api.List)
 	api.router.POST("", api.Add)
 	api.router.PUT("", api.Update)
 }
 
-func (*NamespacesApi) List(ctx *gin.Context) {
-
+func (api *NamespacesApi) List(ctx *gin.Context) {
+	var query dto.NamespacePageQueryBaseDTO
+	if err := api.BindQuery(ctx, &query); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	list, err := api.srv.List(query)
+	if err != nil {
+		api.InternalError(ctx, "查询失败:", err)
+		return
+	}
+	response := BuildPageResponse(list, query.Page, query.PageSize)
+	api.SuccessWithData(ctx, response)
 }
 
 func (api *NamespacesApi) Info(ctx *gin.Context) {
-
+	var base dto.NamespaceBaseDTO
+	if err := api.BindQuery(ctx, &base); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	result, err := api.srv.GetById(base)
+	if err != nil {
+		api.InternalError(ctx, "获取失败:", err)
+		return
+	}
+	api.SuccessWithData(ctx, result)
 }
 
 func (api *NamespacesApi) Delete(ctx *gin.Context) {
-
+	var base dto.NamespaceBaseDTO
+	if err := api.BindQuery(ctx, &base); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	if err := api.srv.Delete(base); err != nil {
+		api.InternalError(ctx, "删除失败", err)
+		return
+	}
+	api.SuccessMsg(ctx, "删除成功")
 }
 
 func (api *NamespacesApi) Add(ctx *gin.Context) {
@@ -67,5 +97,4 @@ func (api *NamespacesApi) Update(ctx *gin.Context) {
 		return
 	}
 	api.SuccessMsg(ctx, "修改成功")
-
 }
