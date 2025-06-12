@@ -1,0 +1,17 @@
+basePath: /api
+host: localhost:8888
+info:
+  contact: {}
+  description: buding-kube api文档
+  title: buding-kube
+  version: "1.0"
+paths: {}
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

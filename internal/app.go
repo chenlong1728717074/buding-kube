@@ -3,11 +3,14 @@ package internal
 import (
 	"buding-kube/internal/web/middleware"
 	"buding-kube/internal/web/router"
+	_ "buding-kube/pkg/docs"
 	"buding-kube/pkg/logs"
 	"context"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap/zapcore"
 	"net/http"
 )
@@ -50,7 +53,9 @@ func NewApp() *App {
 	//中间件
 	engine.Use(middleware.Cors(), middleware.Logger(), middleware.Recovery())
 	//路由
-	router.SetupRouter(engine.Group("/api"))
+	api := engine.Group("/api")
+	router.SetupRouter(api)
+	api.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	return &App{
 		engine: engine,
 	}
