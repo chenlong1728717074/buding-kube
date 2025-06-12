@@ -27,6 +27,7 @@ func (api *NamespacesApi) Router() {
 	api.router.GET("/list", api.List)
 	api.router.POST("", api.Add)
 	api.router.PUT("", api.Update)
+	api.router.POST("/apply", api.Apply)
 }
 
 func (api *NamespacesApi) List(ctx *gin.Context) {
@@ -97,4 +98,18 @@ func (api *NamespacesApi) Update(ctx *gin.Context) {
 		return
 	}
 	api.SuccessMsg(ctx, "修改成功")
+}
+
+func (api *NamespacesApi) Apply(ctx *gin.Context) {
+	var apply dto.NamespaceApplyDTO
+	if err := ctx.ShouldBindJSON(&apply); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	err := api.srv.Apply(apply)
+	if err != nil {
+		api.InternalError(ctx, "执行失败:", err)
+		return
+	}
+	api.SuccessMsg(ctx, "执行成功")
 }

@@ -6,6 +6,7 @@ import (
 	"buding-kube/pkg/logs"
 	"context"
 	"errors"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +35,7 @@ func NewNamespaceService() *NamespaceService {
 	return &NamespaceService{}
 }
 
-func (s NamespaceService) Save(create dto.NamespaceCreateDTO) error {
+func (s *NamespaceService) Save(create dto.NamespaceCreateDTO) error {
 	//获取连接
 	clientSet, err := ClusterMap.Get(create.ClusterId)
 	if err != nil {
@@ -83,7 +84,7 @@ func (s NamespaceService) Save(create dto.NamespaceCreateDTO) error {
 	return nil
 }
 
-func (s NamespaceService) Update(create dto.NamespaceCreateDTO) error {
+func (s *NamespaceService) Update(create dto.NamespaceCreateDTO) error {
 	//获取连接
 	clientSet, err := ClusterMap.Get(create.ClusterId)
 	if err != nil {
@@ -107,8 +108,15 @@ func (s NamespaceService) Update(create dto.NamespaceCreateDTO) error {
 	if ns.Annotations == nil {
 		ns.Annotations = make(map[string]string)
 	}
-	ns.Annotations["alias"] = create.Alias
-	ns.Annotations["describe"] = create.Describe
+	if create.Annotations == nil {
+		create.Annotations = make(map[string]string)
+	}
+	if create.Alias != "" {
+		create.Annotations["alias"] = create.Alias
+	}
+	if create.Describe != "" {
+		create.Annotations["describe"] = create.Describe
+	}
 
 	_, err = clientSet.CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
 	if err != nil {
@@ -119,7 +127,7 @@ func (s NamespaceService) Update(create dto.NamespaceCreateDTO) error {
 	return nil
 }
 
-func (s NamespaceService) Delete(base dto.NamespaceBaseDTO) error {
+func (s *NamespaceService) Delete(base dto.NamespaceBaseDTO) error {
 	//获取连接
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
@@ -146,7 +154,7 @@ func (s NamespaceService) Delete(base dto.NamespaceBaseDTO) error {
 	return nil
 }
 
-func (s NamespaceService) List(query dto.NamespacePageQueryBaseDTO) ([]vo.NamespaceVO, error) {
+func (s *NamespaceService) List(query dto.NamespacePageQueryBaseDTO) ([]vo.NamespaceVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
@@ -171,7 +179,7 @@ func (s NamespaceService) List(query dto.NamespacePageQueryBaseDTO) ([]vo.Namesp
 	return result, nil
 }
 
-func (s NamespaceService) GetById(base dto.NamespaceBaseDTO) (*vo.NamespaceVO, error) {
+func (s *NamespaceService) GetById(base dto.NamespaceBaseDTO) (*vo.NamespaceVO, error) {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
@@ -182,6 +190,55 @@ func (s NamespaceService) GetById(base dto.NamespaceBaseDTO) (*vo.NamespaceVO, e
 		logs.Error("获取命名空间失败: %v", err)
 		return nil, err
 	}
+	yamlData, err := yaml.Marshal(ns)
+	if err != nil {
+		logs.Error("序列化命名空间失败: %v", err)
+		return nil, err
+	}
 	result := vo.Namespace2VO(ns)
+	result.Yaml = string(yamlData)
 	return &result, nil
+}
+
+func (s *NamespaceService) Apply(apply dto.NamespaceApplyDTO) error {
+	clientSet, err := ClusterMap.Get(apply.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", apply.ClusterId, err.Error())
+		return errors.New("获取集群失败")
+	}
+	var ns corev1.Namespace
+	err = yaml.Unmarshal([]byte(apply.Yaml), &ns)
+	if err != nil {
+		logs.Error("解析yaml失败: %v", err)
+		return err
+	}
+
+	// 检查命名空间是否存在
+	existingNs, err := clientSet.CoreV1().Namespaces().Get(context.TODO(), ns.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// 命名空间不存在，创建新的命名空间
+			logs.Info("正在创建命名空间: %s", ns.Name)
+			_, err = clientSet.CoreV1().Namespaces().Create(context.TODO(), &ns, metav1.CreateOptions{})
+			if err != nil {
+				logs.Error("创建命名空间失败: %v", err)
+				return err
+			}
+			logs.Info("命名空间创建成功: %s", ns.Name)
+			return nil
+		}
+		// 其他错误
+		logs.Error("获取命名空间失败: %v", err)
+		return err
+	}
+
+	ns.ResourceVersion = existingNs.ResourceVersion
+	logs.Info("正在更新命名空间: %s", ns.Name)
+	_, err = clientSet.CoreV1().Namespaces().Update(context.TODO(), &ns, metav1.UpdateOptions{})
+	if err != nil {
+		logs.Error("更新命名空间失败: %v", err)
+		return err
+	}
+	logs.Info("命名空间更新成功: %s", ns.Name)
+	return nil
 }

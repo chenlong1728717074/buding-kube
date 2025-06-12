@@ -20,6 +20,7 @@ type NamespaceVO struct {
 	CreationTimestamp time.Time            `json:"creationTimestamp"`
 	Metadata          metav1.ObjectMeta    `json:"metadata"`
 	Spec              corev1.NamespaceSpec `json:"spec"`
+	Yaml              string               `json:"yaml"`
 }
 
 func Namespace2VO(ns *corev1.Namespace) NamespaceVO {

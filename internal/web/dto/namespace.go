@@ -6,6 +6,7 @@ type NamespaceCreateDTO struct {
 	Alias       string            `json:"alias"`
 	Describe    string            `json:"describe"`
 	Annotations map[string]string `json:"annotations"`
+	Yaml        string            `json:"yaml"`
 }
 
 type NamespaceBaseDTO struct {
@@ -17,4 +18,9 @@ type NamespaceBaseDTO struct {
 type NamespacePageQueryBaseDTO struct {
 	PageQueryDTO
 	NamespaceBaseDTO
+}
+
+type NamespaceApplyDTO struct {
+	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`
+	Yaml      string `json:"yaml" binding:"required"`
 }
