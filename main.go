@@ -2,7 +2,7 @@
 // @version 1.0
 // @description  buding-kube api文档
 // @host localhost:8888
-// @BasePath /api
+// @BasePath /
 // @schemes http https
 // @securityDefinitions.apikey BearerAuth
 // @in header

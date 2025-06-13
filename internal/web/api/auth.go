@@ -25,6 +25,16 @@ func (api *AuthApi) Router() {
 	api.router.POST("/login", api.login)
 }
 
+// @Summary 用户登录
+// @Description 用户登录，返回用户信息和Token
+// @Tags 用户认证
+// @Accept json
+// @Produce json
+// @Param login body dto.LoginDTO true "登录参数，包含用户名（username）和密码（password）"
+// @Success 200 {object} vo.Response{data=vo.UserVO} "登录成功"
+// @Failure 400 {object} vo.Response "参数绑定错误"
+// @Failure 500 {object} vo.Response "登录失败"
+// @Router /api/auth/login [post]
 func (api *AuthApi) login(ctx *gin.Context) {
 	var login dto.LoginDTO
 	if err := ctx.ShouldBindJSON(&login); err != nil {

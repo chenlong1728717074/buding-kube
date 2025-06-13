@@ -14,7 +14,156 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {},
+    "paths": {
+        "/api/auth/login": {
+            "post": {
+                "description": "用户登录，返回用户信息和Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户认证"
+                ],
+                "summary": "用户登录",
+                "parameters": [
+                    {
+                        "description": "登录参数，包含用户名（username）和密码（password）",
+                        "name": "login",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.LoginDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "登录成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/vo.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/vo.UserVO"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数绑定错误",
+                        "schema": {
+                            "$ref": "#/definitions/vo.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "登录失败",
+                        "schema": {
+                            "$ref": "#/definitions/vo.Response"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.LoginDTO": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "description": "密码，用户登录密码",
+                    "type": "string",
+                    "example": "123456"
+                },
+                "username": {
+                    "description": "用户名，用户登录账号",
+                    "type": "string",
+                    "example": "zhangsan"
+                }
+            }
+        },
+        "model.UserRole": {
+            "type": "integer",
+            "enum": [
+                1,
+                2,
+                3
+            ],
+            "x-enum-comments": {
+                "Admin": "管理员",
+                "Normal": "普通用户",
+                "SuperAdmin": "超级管理员"
+            },
+            "x-enum-varnames": [
+                "SuperAdmin",
+                "Admin",
+                "Normal"
+            ]
+        },
+        "vo.Response": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "响应码",
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "description": "响应数据"
+                },
+                "msg": {
+                    "description": "响应消息",
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "vo.UserVO": {
+            "type": "object",
+            "properties": {
+                "cluster": {
+                    "type": "string",
+                    "example": "cluster-1"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "zhangsan@example.com"
+                },
+                "namespace": {
+                    "type": "string",
+                    "example": "default"
+                },
+                "role": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.UserRole"
+                        }
+                    ],
+                    "example": 1
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "username": {
+                    "type": "string",
+                    "example": "zhangsan"
+                }
+            }
+        }
+    },
     "securityDefinitions": {
         "BearerAuth": {
             "type": "apiKey",
@@ -28,7 +177,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8888",
-	BasePath:         "/api",
+	BasePath:         "/",
 	Schemes:          []string{"http", "https"},
 	Title:            "buding-kube",
 	Description:      "buding-kube api文档",
