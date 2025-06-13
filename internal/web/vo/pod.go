@@ -42,6 +42,7 @@ type PodInfoVO struct {
 	Labels            map[string]string `json:"labels,omitempty"`
 	MetaData          metav1.ObjectMeta `json:"metaData"`
 	Spec              corev1.PodSpec    `json:"spec"`
+	Events            []EventVO         `json:"events"`
 }
 
 type PodContainerVO struct {
@@ -70,7 +71,7 @@ type PodPortVO struct {
 	Protocol      string `json:"protocol"`
 }
 
-func Pod2InfoVO(item *corev1.Pod) PodInfoVO {
+func Pod2InfoVO(item *corev1.Pod, events *corev1.EventList) PodInfoVO {
 	return PodInfoVO{
 		CreationTimestamp: item.CreationTimestamp.Time,
 		Name:              item.Name,
@@ -84,6 +85,7 @@ func Pod2InfoVO(item *corev1.Pod) PodInfoVO {
 		Labels:            item.Labels,
 		MetaData:          item.ObjectMeta,
 		Spec:              item.Spec,
+		Events:            buildNodeEvents(events),
 	}
 }
 

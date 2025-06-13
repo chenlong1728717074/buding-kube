@@ -22,7 +22,7 @@ type NodeVO struct {
 type NodeInfoVO struct {
 	Serve       NodeServerInfoVO  `json:"server"`
 	Runtime     NodeRuntimeVO     `json:"runtime"`
-	Events      []NodeEventVO     `json:"events"`
+	Events      []EventVO         `json:"events"`
 	Pods        []NodePodVO       `json:"pods"`
 	Annotations map[string]string `json:"annotations"`
 	Labels      map[string]string `json:"labels"`
@@ -46,18 +46,6 @@ type NodeServerInfoVO struct {
 	CreateTime       time.Time `json:"createTime"`
 }
 
-type NodeEventVO struct {
-	Type      string    `json:"type"`      // Normal, Warning
-	Reason    string    `json:"reason"`    // 事件原因
-	Object    string    `json:"object"`    // 涉及的对象
-	Message   string    `json:"message"`   // 事件消息
-	Source    string    `json:"source"`    // 事件源组件
-	Count     int32     `json:"count"`     // 事件发生次数
-	FirstTime time.Time `json:"firstTime"` // 首次发生时间
-	LastTime  time.Time `json:"lastTime"`  // 最后发生时间
-	Age       string    `json:"age"`       // 距离现在的时间
-}
-
 type NodeRuntimeVO struct {
 	CPU              string `json:"cpu"`
 	Memory           string `json:"memory"`
@@ -79,47 +67,6 @@ type NodePodVO struct {
 	Node        string    `json:"node"`        // 节点名称
 	Ports       []string  `json:"ports"`       // 端口信息
 	CreatedTime time.Time `json:"createdTime"` // 创建时间
-}
-
-func buildNodeEvents(events *corev1.EventList) []NodeEventVO {
-	var result []NodeEventVO
-
-	if events == nil {
-		return result
-	}
-
-	for _, event := range events.Items {
-		eventVO := NodeEventVO{
-			Type:      event.Type,
-			Reason:    event.Reason,
-			Object:    fmt.Sprintf("%s/%s", event.InvolvedObject.Kind, event.InvolvedObject.Name),
-			Message:   event.Message,
-			Source:    event.Source.Component,
-			Count:     event.Count,
-			FirstTime: event.FirstTimestamp.Time,
-			LastTime:  event.LastTimestamp.Time,
-			Age:       time.Since(event.LastTimestamp.Time).String(),
-		}
-
-		// 如果FirstTimestamp为空，使用EventTime
-		if event.FirstTimestamp.IsZero() && !event.EventTime.IsZero() {
-			eventVO.FirstTime = event.EventTime.Time
-		}
-
-		// 如果LastTimestamp为空，使用EventTime
-		if event.LastTimestamp.IsZero() && !event.EventTime.IsZero() {
-			eventVO.LastTime = event.EventTime.Time
-		}
-
-		result = append(result, eventVO)
-	}
-
-	// 按时间倒序排列（最新的在前面）
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].LastTime.After(result[j].LastTime)
-	})
-
-	return result
 }
 
 func buildNodePods(pods *corev1.PodList) []NodePodVO {

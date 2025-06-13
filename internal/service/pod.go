@@ -97,7 +97,14 @@ func (s *PodService) GetById(query dto.PodDTO) (*vo.PodInfoVO, error) {
 		logs.Error("序列化pod失败: %v", err)
 		return nil, err
 	}
-	result := vo.Pod2InfoVO(pod)
+	events, err := clientSet.CoreV1().Events(query.Namespace).List(context.TODO(), metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("involvedObject.kind=Pod,involvedObject.name=%s", query.Name),
+	})
+	if err != nil {
+		logs.Error("获取pod事件: %v", err)
+		return nil, err
+	}
+	result := vo.Pod2InfoVO(pod, events)
 	result.Yaml = string(yamlData)
 	return &result, nil
 }
