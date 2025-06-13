@@ -19,4 +19,7 @@ func SetupRouter(engine *gin.RouterGroup) {
 	//pod
 	pod := engine.Group("/pod")
 	api.NewPodApi(pod)
+	//auth
+	auth := engine.Group("/auth")
+	api.NewAuthApi(auth)
 }

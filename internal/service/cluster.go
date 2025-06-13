@@ -22,7 +22,7 @@ var (
 	clusterSrv                    *ClusterService
 	clusterOnce                   sync.Once
 	ClusterMap                    ClusterCacheMap
-	ClusterConfigSecretLabelKey   string = "kubeasy.com/cluster.metadata"
+	ClusterConfigSecretLabelKey   string = "buding-kube.com/cluster.metadata"
 	ClusterConfigSecretLabelValue string = "true"
 )
 

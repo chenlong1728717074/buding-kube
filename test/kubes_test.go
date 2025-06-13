@@ -11,7 +11,7 @@ import (
 )
 
 func TestClient(t *testing.T) {
-	config, err := clientcmd.BuildConfigFromFlags("", "../configs/k3s.yaml")
+	config, err := clientcmd.BuildConfigFromFlags("", "../configs/conf.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -29,7 +29,7 @@ func TestClient(t *testing.T) {
 	}
 }
 func TestNode(t *testing.T) {
-	config, err := clientcmd.BuildConfigFromFlags("", "../configs/k3s.yaml")
+	config, err := clientcmd.BuildConfigFromFlags("", "../configs/conf.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +47,7 @@ func TestNode(t *testing.T) {
 	}
 }
 func TestNs(t *testing.T) {
-	config, err := clientcmd.BuildConfigFromFlags("", "../configs/k3s.yaml")
+	config, err := clientcmd.BuildConfigFromFlags("", "../configs/conf.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -75,7 +75,7 @@ func TestNs(t *testing.T) {
 }
 
 func TestDep(t *testing.T) {
-	config, err := clientcmd.BuildConfigFromFlags("", "../configs/k3s.yaml")
+	config, err := clientcmd.BuildConfigFromFlags("", "../configs/conf.yaml")
 	if err != nil {
 		panic(err)
 	}
