@@ -6,11 +6,12 @@ import (
 	"buding-kube/pkg/logs"
 	"context"
 	"errors"
-	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/yaml"
 	"sort"
 	"strings"
 	"sync"
@@ -196,6 +197,8 @@ func (s *NamespaceService) GetById(base dto.NamespaceBaseDTO) (*vo.NamespaceVO, 
 	}
 	result := vo.Namespace2VO(ns)
 	result.Yaml = string(yamlData)
+	//构建资源信息
+	s.buildResourceStat(clientSet, &result)
 	return &result, nil
 }
 
@@ -240,4 +243,8 @@ func (s *NamespaceService) Apply(apply dto.NamespaceApplyDTO) error {
 	}
 	logs.Info("命名空间更新成功: %s", ns.Name)
 	return nil
+}
+
+func (s *NamespaceService) buildResourceStat(clientSet *kubernetes.Clientset, result *vo.NamespaceVO) {
+
 }

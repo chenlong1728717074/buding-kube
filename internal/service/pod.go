@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 	"sort"
 	"strings"
 	"sync"
@@ -81,5 +82,22 @@ func (s *PodService) List(query dto.PodQueryDTO) ([]vo.PodVO, error) {
 }
 
 func (s *PodService) GetById(query dto.PodDTO) (*vo.PodInfoVO, error) {
-	return nil, nil
+	clientSet, err := ClusterMap.Get(query.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
+		return nil, errors.New("获取集群失败")
+	}
+	pod, err := clientSet.CoreV1().Pods(query.Namespace).Get(context.TODO(), query.Name, metav1.GetOptions{})
+	if err != nil {
+		logs.Error("获取命pod失败: %v", err)
+		return nil, err
+	}
+	yamlData, err := yaml.Marshal(pod)
+	if err != nil {
+		logs.Error("序列化pod失败: %v", err)
+		return nil, err
+	}
+	result := vo.Pod2InfoVO(pod)
+	result.Yaml = string(yamlData)
+	return &result, nil
 }
