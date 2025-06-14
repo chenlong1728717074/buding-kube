@@ -1,7 +1,9 @@
 package api
 
 import (
+	"buding-kube/internal/model"
 	"buding-kube/internal/web/vo"
+	"buding-kube/pkg/utils/jwt"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -155,4 +157,25 @@ func BuildPageResponse[T any](data []T, page, pageSize int) vo.PageResponse {
 		PageSize:  pageSize,
 		TotalPage: totalPage,
 	}
+}
+
+func (api *BaseApi) CurrentUser(ctx *gin.Context) (*model.User, error) {
+	claims, exists := ctx.Get("claims")
+	if !exists {
+		api.Unauthorized(ctx, "未认证")
+		return nil, errors.New("未认证")
+	}
+
+	// 将声明转换为JWT声明对象
+	jwtClaims, ok := claims.(*jwt.Claims)
+	if !ok {
+		api.InternalError(ctx, "无效的JWT声明", nil)
+		return nil, errors.New("无效的JWT声明")
+	}
+	return &model.User{
+		Username:  jwtClaims.Username,
+		Role:      jwtClaims.Role,
+		Namespace: jwtClaims.Namespace,
+		Cluster:   jwtClaims.Cluster,
+	}, nil
 }
