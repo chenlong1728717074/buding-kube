@@ -96,9 +96,6 @@ func (s *UserService) ListUsers(query dto.UserQueryDTO) ([]vo.UserVO, error) {
 		if query.Role > 0 && int(user.Role) != query.Role {
 			continue
 		}
-		if query.Status > -1 && user.Status != query.Status {
-			continue
-		}
 		userVO := vo.UserVO{}
 		copier.Copy(&userVO, &user)
 		userVOs = append(userVOs, userVO)
