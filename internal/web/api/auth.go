@@ -6,12 +6,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AuthApi 认证API
 type AuthApi struct {
 	router *gin.RouterGroup
 	srv    *service.AuthService
 	BaseApi
 }
 
+// NewAuthApi 创建认证API控制器
 func NewAuthApi(router *gin.RouterGroup) *AuthApi {
 	api := AuthApi{
 		router: router,
@@ -21,6 +23,7 @@ func NewAuthApi(router *gin.RouterGroup) *AuthApi {
 	return &api
 }
 
+// Router 配置路由
 func (api *AuthApi) Router() {
 	api.router.POST("/login", api.login)
 }
@@ -33,6 +36,8 @@ func (api *AuthApi) Router() {
 // @Param login body dto.LoginDTO true "登录参数，包含用户名（username）和密码（password）"
 // @Success 200 {object} vo.Response{data=vo.UserVO} "登录成功"
 // @Failure 400 {object} vo.Response "参数绑定错误"
+// @Failure 500 {object} vo.Response "用户名或密码错误"
+// @Failure 500 {object} vo.Response "用户已禁用"
 // @Failure 500 {object} vo.Response "登录失败"
 // @Router /api/auth/login [post]
 func (api *AuthApi) login(ctx *gin.Context) {

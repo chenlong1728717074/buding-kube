@@ -6,12 +6,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UserApi 用户管理API
 type UserApi struct {
 	router *gin.RouterGroup
 	srv    *service.UserService
 	BaseApi
 }
 
+// NewUserApi 创建用户API控制器
 func NewUserApi(router *gin.RouterGroup) *UserApi {
 	api := UserApi{
 		router: router,
@@ -21,6 +23,7 @@ func NewUserApi(router *gin.RouterGroup) *UserApi {
 	return &api
 }
 
+// Router 配置路由
 func (api *UserApi) Router() {
 	api.router.GET("", api.listUsers)
 	api.router.GET("/:username", api.getUser)
@@ -37,6 +40,7 @@ func (api *UserApi) Router() {
 // @Security BearerAuth
 // @Param page query int false "页码，默认1"
 // @Param pageSize query int false "每页数量，默认10"
+// @Param keyword query string false "搜索关键词"
 // @Param username query string false "用户名，精确匹配"
 // @Param role query int false "角色，1=超级管理员 2=管理员 3=普通用户"
 // @Param status query int false "状态，1=正常 0=禁用"
@@ -69,7 +73,8 @@ func (api *UserApi) listUsers(ctx *gin.Context) {
 // @Success 200 {object} vo.Response{data=vo.UserVO} "获取成功"
 // @Failure 400 {object} vo.Response "参数绑定错误"
 // @Failure 401 {object} vo.Response "未授权"
-// @Failure 404 {object} vo.Response "用户不存在"
+// @Failure 500 {object} vo.Response "权限不足"
+// @Failure 500 {object} vo.Response "用户不存在"
 // @Failure 500 {object} vo.Response "获取失败"
 // @Router /api/user/{username} [get]
 func (api *UserApi) getUser(ctx *gin.Context) {
@@ -103,7 +108,8 @@ func (api *UserApi) getUser(ctx *gin.Context) {
 // @Success 200 {object} vo.Response "创建成功"
 // @Failure 400 {object} vo.Response "参数绑定错误"
 // @Failure 401 {object} vo.Response "未授权"
-// @Failure 403 {object} vo.Response "权限不足"
+// @Failure 500 {object} vo.Response "权限不足"
+// @Failure 500 {object} vo.Response "用户已存在"
 // @Failure 500 {object} vo.Response "创建失败"
 // @Router /api/user [post]
 func (api *UserApi) createUser(ctx *gin.Context) {
@@ -137,8 +143,8 @@ func (api *UserApi) createUser(ctx *gin.Context) {
 // @Success 200 {object} vo.Response "更新成功"
 // @Failure 400 {object} vo.Response "参数绑定错误"
 // @Failure 401 {object} vo.Response "未授权"
-// @Failure 403 {object} vo.Response "权限不足"
-// @Failure 404 {object} vo.Response "用户不存在"
+// @Failure 500 {object} vo.Response "权限不足"
+// @Failure 500 {object} vo.Response "用户不存在"
 // @Failure 500 {object} vo.Response "更新失败"
 // @Router /api/user/{username} [put]
 func (api *UserApi) updateUser(ctx *gin.Context) {
@@ -187,8 +193,8 @@ func (api *UserApi) updateUser(ctx *gin.Context) {
 // @Param username path string true "用户名"
 // @Success 200 {object} vo.Response "删除成功"
 // @Failure 401 {object} vo.Response "未授权"
-// @Failure 403 {object} vo.Response "权限不足，不能删除自己或超级管理员"
-// @Failure 404 {object} vo.Response "用户不存在"
+// @Failure 500 {object} vo.Response "权限不足，不能删除自己或超级管理员"
+// @Failure 500 {object} vo.Response "用户不存在"
 // @Failure 500 {object} vo.Response "删除失败"
 // @Router /api/user/{username} [delete]
 func (api *UserApi) deleteUser(ctx *gin.Context) {

@@ -1,5 +1,29 @@
 basePath: /
 definitions:
+  dto.CreateUserDTO:
+    properties:
+      email:
+        description: 邮箱
+        example: zhangsan@example.com
+        type: string
+      password:
+        description: 密码，用户登录密码
+        example: "123456"
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/model.UserRole'
+        description: '角色: 1=超级管理员 2=管理员 3=普通用户'
+        example: 2
+      username:
+        description: 用户名，用户登录账号
+        example: zhangsan
+        type: string
+    required:
+    - password
+    - role
+    - username
+    type: object
   dto.LoginDTO:
     properties:
       password:
@@ -10,6 +34,29 @@ definitions:
         description: 用户名，用户登录账号
         example: zhangsan
         type: string
+    required:
+    - password
+    - username
+    type: object
+  dto.UpdateUserDTO:
+    properties:
+      email:
+        description: 邮箱
+        example: zhangsan@example.com
+        type: string
+      password:
+        description: 密码，用户登录密码
+        example: "123456"
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/model.UserRole'
+        description: '角色: 1=超级管理员 2=管理员 3=普通用户'
+        example: 2
+      status:
+        description: '状态: 1=正常 0=禁用'
+        example: 1
+        type: integer
     type: object
   model.UserRole:
     enum:
@@ -25,6 +72,27 @@ definitions:
     - SuperAdmin
     - Admin
     - Normal
+  vo.PageResponse:
+    properties:
+      items:
+        description: 数据项
+      page:
+        description: 当前页码
+        example: 1
+        type: integer
+      pageSize:
+        description: 每页大小
+        example: 10
+        type: integer
+      total:
+        description: 总数
+        example: 100
+        type: integer
+      totalPage:
+        description: 总页数
+        example: 10
+        type: integer
+    type: object
   vo.Response:
     properties:
       code:
@@ -41,25 +109,32 @@ definitions:
   vo.UserVO:
     properties:
       cluster:
+        description: 集群名称
         example: cluster-1
         type: string
       email:
+        description: 邮箱
         example: zhangsan@example.com
         type: string
       namespace:
+        description: 命名空间
         example: default
         type: string
       role:
         allOf:
         - $ref: '#/definitions/model.UserRole'
+        description: '角色: 1=超级管理员 2=管理员 3=普通用户'
         example: 1
       status:
+        description: '状态: 1=正常 0=禁用'
         example: 1
         type: integer
       token:
+        description: JWT令牌
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
       username:
+        description: 用户名
         example: zhangsan
         type: string
     type: object
@@ -105,6 +180,217 @@ paths:
       summary: 用户登录
       tags:
       - 用户认证
+  /api/user:
+    get:
+      consumes:
+      - application/json
+      description: 根据查询条件获取用户列表，支持分页
+      parameters:
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认10
+        in: query
+        name: pageSize
+        type: integer
+      - description: 搜索关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 用户名，精确匹配
+        in: query
+        name: username
+        type: string
+      - description: 角色，1=超级管理员 2=管理员 3=普通用户
+        in: query
+        name: role
+        type: integer
+      - description: 状态，1=正常 0=禁用
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/vo.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/vo.PageResponse'
+                  - properties:
+                      items:
+                        items:
+                          $ref: '#/definitions/vo.UserVO'
+                        type: array
+                    type: object
+              type: object
+        "400":
+          description: 参数绑定错误
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "500":
+          description: 获取失败
+          schema:
+            $ref: '#/definitions/vo.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取用户列表
+      tags:
+      - 用户管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新用户
+      parameters:
+      - description: 用户信息
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateUserDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "400":
+          description: 参数绑定错误
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "500":
+          description: 创建失败
+          schema:
+            $ref: '#/definitions/vo.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建用户
+      tags:
+      - 用户管理
+  /api/user/{username}:
+    delete:
+      consumes:
+      - application/json
+      description: 删除用户（不能删除自己或超级管理员）
+      parameters:
+      - description: 用户名
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "500":
+          description: 删除失败
+          schema:
+            $ref: '#/definitions/vo.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除用户
+      tags:
+      - 用户管理
+    get:
+      consumes:
+      - application/json
+      description: 根据用户名获取用户详情
+      parameters:
+      - description: 用户名
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/vo.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.UserVO'
+              type: object
+        "400":
+          description: 参数绑定错误
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "500":
+          description: 获取失败
+          schema:
+            $ref: '#/definitions/vo.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取用户信息
+      tags:
+      - 用户管理
+    put:
+      consumes:
+      - application/json
+      description: 更新用户信息（不能修改用户名）
+      parameters:
+      - description: 用户名（不可修改）
+        in: path
+        name: username
+        required: true
+        type: string
+      - description: 用户信息
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateUserDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "400":
+          description: 参数绑定错误
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/vo.Response'
+        "500":
+          description: 更新失败
+          schema:
+            $ref: '#/definitions/vo.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新用户
+      tags:
+      - 用户管理
 schemes:
 - http
 - https

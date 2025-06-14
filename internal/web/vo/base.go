@@ -21,10 +21,11 @@ type Response struct {
 	Data interface{} `json:"data"`                  // 响应数据
 }
 
+// PageResponse 分页响应结构
 type PageResponse struct {
-	Items     interface{} `json:"items"`     // 数据项
-	Total     int64       `json:"total"`     // 总数
-	Page      int         `json:"page"`      // 当前页码
-	PageSize  int         `json:"pageSize"`  // 每页大小
-	TotalPage int         `json:"totalPage"` // 总页数
+	Items     interface{} `json:"items"`                  // 数据项
+	Total     int64       `json:"total" example:"100"`    // 总数
+	Page      int         `json:"page" example:"1"`       // 当前页码
+	PageSize  int         `json:"pageSize" example:"10"`  // 每页大小
+	TotalPage int         `json:"totalPage" example:"10"` // 总页数
 }
