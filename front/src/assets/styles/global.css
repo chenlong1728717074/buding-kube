@@ -1,0 +1,103 @@
+/* 全局响应式样式 */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 响应式字体大小 */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+  
+  body {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1200px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+/* 保留基础样式，删除未使用的工具类 */
+
+/* 删除未使用的响应式工具类 */
+
+/* 触摸友好的按钮 */
+@media (max-width: 768px) {
+  .el-button {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+  
+  .el-button--small {
+    min-height: 36px;
+    padding: 8px 12px;
+  }
+}
+
+/* 表格响应式 */
+@media (max-width: 768px) {
+  .el-table {
+    font-size: 12px;
+  }
+  
+  .el-table .el-table__cell {
+    padding: 8px 4px;
+  }
+}
+
+/* 卡片响应式 */
+@media (max-width: 768px) {
+  .el-card {
+    margin: 8px 0;
+  }
+  
+  .el-card__body {
+    padding: 16px;
+  }
+}
+
+/* 表单响应式 */
+@media (max-width: 768px) {
+  .el-form-item {
+    margin-bottom: 16px;
+  }
+  
+  .el-input__inner,
+  .el-textarea__inner {
+    font-size: 16px; /* 防止iOS缩放 */
+  }
+}
+
+/* 对话框响应式 */
+@media (max-width: 768px) {
+  .el-dialog {
+    width: 95% !important;
+    margin: 0 auto;
+  }
+  
+  .el-dialog__body {
+    padding: 16px;
+  }
+}
+
+/* 抽屉响应式 */
+@media (max-width: 768px) {
+  .el-drawer {
+    width: 100% !important;
+  }
+}

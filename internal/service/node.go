@@ -54,7 +54,7 @@ func (s *NodeService) UnSchedule(query dto.NodeUnScheduleDTO) error {
 	if err != nil {
 		return err
 	}
-	node.Spec.Unschedulable = query.UnSchedule
+	node.Spec.Unschedulable = *query.UnSchedule
 	_, err = clientSet.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
 	if err != nil {
 		logs.Error("更新节点失败: %s %s %s", query.ClusterId, query.Hostname, err.Error())

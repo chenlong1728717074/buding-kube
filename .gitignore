@@ -10,6 +10,9 @@
 configs
 *.idea
 logs
+.vscode/
+vendor/
+node_modules/
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 

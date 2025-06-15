@@ -7,7 +7,7 @@ type NodeQueryDTO struct {
 
 type NodeUnScheduleDTO struct {
 	NodeInfoQueryDTO
-	UnSchedule bool `json:"unSchedule" form:"unSchedule" binding:"required"`
+	UnSchedule *bool `json:"unSchedule" form:"unSchedule" binding:"required"`
 }
 
 type NodeInfoQueryDTO struct {

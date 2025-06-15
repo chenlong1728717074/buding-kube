@@ -58,7 +58,7 @@ func (api *NodeApi) Info(ctx *gin.Context) {
 
 func (api *NodeApi) UnSchedule(ctx *gin.Context) {
 	var query dto.NodeUnScheduleDTO
-	if err := api.BindQuery(ctx, &query); err != nil {
+	if err := api.BindJSON(ctx, &query); err != nil {
 		api.ParamBindError(ctx, err)
 		return
 	}
