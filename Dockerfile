@@ -16,9 +16,15 @@ RUN chmod +x /app/kube
 # 暴露端口
 EXPOSE 8080
 
+# 创建 /opt 目录并设置权限
+RUN mkdir -p /opt && chmod 755 /opt
+
 # 创建非 root 用户（安全最佳实践）
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
+
+# 设置 /opt 目录的所有者为 appuser
+RUN chown -R appuser:appgroup /opt
 
 # 切换到非 root 用户
 USER appuser
