@@ -49,7 +49,7 @@ func (m ClusterCacheMap) Get(key string) (*kubernetes.Clientset, error) {
 	if clientSet != nil {
 		return clientSet, nil
 	}
-	item, err := kube.InClusterClientSet.CoreV1().Secrets("buding").
+	item, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		Get(context.TODO(), key, metav1.GetOptions{})
 	if err != nil {
 		logs.Fatal("获取集群资源失败:%v", err)
@@ -92,14 +92,14 @@ func (s *ClusterService) SaveOrUpdate(create dto.NodeCreateDTO) error {
 
 	if clusterConfigSecret.Name == "" {
 		clusterConfigSecret.Name = uuid.New().String()
-		if _, err = kube.InClusterClientSet.CoreV1().Secrets("buding").
+		if _, err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 			Create(context.TODO(), &clusterConfigSecret, metav1.CreateOptions{}); err != nil {
 			logs.Error("添加集群失败%v", err)
 			return err
 		}
 		return nil
 	}
-	if _, err = kube.InClusterClientSet.CoreV1().Secrets("buding").
+	if _, err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		Update(context.TODO(), &clusterConfigSecret, metav1.UpdateOptions{}); err != nil {
 		logs.Info("更新集群失败%s", err)
 		return err
@@ -139,7 +139,7 @@ func buildClientSet(config string) (*kubernetes.Clientset, error) {
 }
 
 func (s *ClusterService) Delete(id string) error {
-	err := kube.InClusterClientSet.CoreV1().Secrets("buding").Delete(context.TODO(), id,
+	err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).Delete(context.TODO(), id,
 		metav1.DeleteOptions{})
 	if err != nil {
 		logs.Error("删除集群失败%s %v", id, err)
@@ -153,7 +153,7 @@ func (s *ClusterService) List(query dto.PageQueryDTO) ([]vo.ClusterQueryVO, erro
 	listOptions := metav1.ListOptions{
 		LabelSelector: ClusterConfigSecretLabelKey + "=" + ClusterConfigSecretLabelValue,
 	}
-	secretList, err := kube.InClusterClientSet.CoreV1().Secrets("buding").
+	secretList, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		List(context.TODO(), listOptions)
 	if err != nil {
 		logs.Error("获取集群资源失败%v", err)
@@ -176,7 +176,7 @@ func (s *ClusterService) List(query dto.PageQueryDTO) ([]vo.ClusterQueryVO, erro
 }
 
 func (s *ClusterService) GetById(id string) (*vo.ClusterVO, error) {
-	item, err := kube.InClusterClientSet.CoreV1().Secrets("buding").
+	item, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		Get(context.TODO(), id, metav1.GetOptions{})
 	if err != nil {
 		logs.Error("获取集群:%v", err)

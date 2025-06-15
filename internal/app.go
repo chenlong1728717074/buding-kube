@@ -13,6 +13,8 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap/zapcore"
 	"net/http"
+	"os"
+	"strconv"
 )
 
 type App struct {
@@ -21,13 +23,22 @@ type App struct {
 }
 
 func (app *App) Start() {
+	portStr := os.Getenv("KUBE_RUNTIME_PORT")
+	port := 8080
+	var err error
+	if portStr != "" {
+		port, err = strconv.Atoi(portStr)
+		if err != nil {
+			logs.Fatal("初始化端口号失败 %v", err)
+		}
+	}
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", 8888),
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: app.engine,
 	}
 	//路由
 	go func() {
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err = server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logs.Fatal("Server Shutdown err:", err)
 		}
 	}()

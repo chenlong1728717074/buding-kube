@@ -37,7 +37,7 @@ func NewAuthService() *AuthService {
 
 func (s *AuthService) Login(login dto.LoginDTO) (*vo.UserVO, error) {
 	labelSelector := fmt.Sprintf("%s=%s", model.UserConfigSecretLabelKey, login.Username)
-	item, err := kube.InClusterClientSet.CoreV1().Secrets("buding").
+	item, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		List(context.TODO(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})

@@ -22,10 +22,6 @@ var (
 	userOnce sync.Once
 )
 
-const (
-	userNamespace = "buding" // 存储用户信息的命名空间
-)
-
 type UserService struct{}
 
 func GetSingletonUserService() *UserService {
@@ -43,7 +39,7 @@ func NewUserService() *UserService {
 func (s *UserService) GetUserByUsername(username string) (*model.User, error) {
 	labelSelector := fmt.Sprintf("%s=%s", model.UserConfigSecretLabelKey, username)
 
-	items, err := kube.InClusterClientSet.CoreV1().Secrets(userNamespace).
+	items, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		List(context.TODO(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
@@ -72,7 +68,7 @@ func (s *UserService) GetUserByUsername(username string) (*model.User, error) {
 func (s *UserService) ListUsers(query dto.UserQueryDTO) ([]vo.UserVO, error) {
 	labelSelector := fmt.Sprintf("%s", model.UserConfigSecretLabelKey)
 
-	items, err := kube.InClusterClientSet.CoreV1().Secrets(userNamespace).
+	items, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		List(context.TODO(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
@@ -117,7 +113,7 @@ func (s *UserService) CreateUser(req dto.CreateUserDTO, currentUser *model.User)
 
 	// 检查用户是否已存在
 	labelSelector := fmt.Sprintf("%s=%s", model.UserConfigSecretLabelKey, req.Username)
-	existingUsers, err := kube.InClusterClientSet.CoreV1().Secrets(userNamespace).
+	existingUsers, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		List(context.TODO(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
@@ -155,7 +151,7 @@ func (s *UserService) CreateUser(req dto.CreateUserDTO, currentUser *model.User)
 		Type: v1.SecretTypeOpaque,
 	}
 
-	_, err = kube.InClusterClientSet.CoreV1().Secrets(userNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
 		logs.Error("创建用户失败: %s", err.Error())
 		return err
@@ -221,7 +217,7 @@ func (s *UserService) UpdateUser(username string, req dto.UpdateUserDTO, current
 
 	// 获取原 Secret
 	labelSelector := fmt.Sprintf("%s=%s", model.UserConfigSecretLabelKey, username)
-	items, err := kube.InClusterClientSet.CoreV1().Secrets(userNamespace).
+	items, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		List(context.TODO(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
@@ -234,7 +230,7 @@ func (s *UserService) UpdateUser(username string, req dto.UpdateUserDTO, current
 	secret := items.Items[0]
 	secret.Data["config"] = userData
 
-	_, err = kube.InClusterClientSet.CoreV1().Secrets(userNamespace).Update(context.TODO(), &secret, metav1.UpdateOptions{})
+	_, err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).Update(context.TODO(), &secret, metav1.UpdateOptions{})
 	if err != nil {
 		logs.Error("更新用户失败: %s", err.Error())
 		return err
@@ -268,7 +264,7 @@ func (s *UserService) DeleteUser(username string, currentUser *model.User) error
 
 	// 执行删除
 	labelSelector := fmt.Sprintf("%s=%s", model.UserConfigSecretLabelKey, username)
-	items, err := kube.InClusterClientSet.CoreV1().Secrets(userNamespace).
+	items, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		List(context.TODO(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
@@ -280,7 +276,7 @@ func (s *UserService) DeleteUser(username string, currentUser *model.User) error
 
 	secretName := items.Items[0].Name
 
-	err = kube.InClusterClientSet.CoreV1().Secrets(userNamespace).Delete(context.TODO(), secretName, metav1.DeleteOptions{})
+	err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).Delete(context.TODO(), secretName, metav1.DeleteOptions{})
 	if err != nil {
 		logs.Error("删除用户失败: %s", err.Error())
 		return err
