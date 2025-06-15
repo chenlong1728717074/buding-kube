@@ -1,5 +1,5 @@
 # 使用 Alpine Linux 作为基础镜像（最小精简的 Linux 发行版）
-FROM alpine:latest
+FROM ccr.ccs.tencentyun.com/docker-hubs/alpine:latest
 
 # 安装必要的运行时依赖
 RUN apk --no-cache add ca-certificates tzdata
