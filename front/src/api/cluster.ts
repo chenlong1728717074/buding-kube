@@ -1,4 +1,4 @@
-import request, { type PageResponse } from '@/utils/request'
+import request, { type ApiResponse, type PageResponse } from '@/utils/request'
 
 // 集群信息
 export interface ClusterVO {

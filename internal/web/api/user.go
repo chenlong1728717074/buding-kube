@@ -25,11 +25,11 @@ func NewUserApi(router *gin.RouterGroup) *UserApi {
 
 // Router 配置路由
 func (api *UserApi) Router() {
-	api.router.GET("", api.listUsers)
-	api.router.GET("/:username", api.getUser)
-	api.router.POST("", api.createUser)
-	api.router.PUT("/:username", api.updateUser)
-	api.router.DELETE("/:username", api.deleteUser)
+	api.router.POST("", api.CreateUser)
+	api.router.PUT("", api.UpdateUser)
+	api.router.GET("/list", api.ListUsers)
+	api.router.GET("/:id", api.GetUser)
+	api.router.DELETE("/:id", api.DeleteUser)
 }
 
 // @Summary 获取用户列表
@@ -49,7 +49,7 @@ func (api *UserApi) Router() {
 // @Failure 401 {object} vo.Response "未授权"
 // @Failure 500 {object} vo.Response "获取失败"
 // @Router /api/user [get]
-func (api *UserApi) listUsers(ctx *gin.Context) {
+func (api *UserApi) ListUsers(ctx *gin.Context) {
 	var query dto.UserQueryDTO
 	if err := ctx.ShouldBindQuery(&query); err != nil {
 		api.ParamBindError(ctx, err)
@@ -77,14 +77,14 @@ func (api *UserApi) listUsers(ctx *gin.Context) {
 // @Failure 500 {object} vo.Response "用户不存在"
 // @Failure 500 {object} vo.Response "获取失败"
 // @Router /api/user/{username} [get]
-func (api *UserApi) getUser(ctx *gin.Context) {
-	username := api.GetParam(ctx, "username")
+func (api *UserApi) GetUser(ctx *gin.Context) {
+	id := api.GetParam(ctx, "id")
 	// 获取当前用户
 	currentUser, err := api.CurrentUser(ctx)
 	if err != nil {
 		return
 	}
-	user, err := api.srv.GetUserByUsername(username)
+	user, _, err := api.srv.GetUserById(id)
 	if err != nil {
 		api.NotFound(ctx, "用户不存在")
 		return
@@ -112,7 +112,7 @@ func (api *UserApi) getUser(ctx *gin.Context) {
 // @Failure 500 {object} vo.Response "用户已存在"
 // @Failure 500 {object} vo.Response "创建失败"
 // @Router /api/user [post]
-func (api *UserApi) createUser(ctx *gin.Context) {
+func (api *UserApi) CreateUser(ctx *gin.Context) {
 	var req dto.CreateUserDTO
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		api.ParamBindError(ctx, err)
@@ -147,40 +147,22 @@ func (api *UserApi) createUser(ctx *gin.Context) {
 // @Failure 500 {object} vo.Response "用户不存在"
 // @Failure 500 {object} vo.Response "更新失败"
 // @Router /api/user/{username} [put]
-func (api *UserApi) updateUser(ctx *gin.Context) {
-	username := api.GetParam(ctx, "username")
-
+func (api *UserApi) UpdateUser(ctx *gin.Context) {
 	var req dto.UpdateUserDTO
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		api.ParamBindError(ctx, err)
 		return
 	}
-
 	// 获取当前用户
 	currentUser, err := api.CurrentUser(ctx)
 	if err != nil {
 		return
 	}
-
-	// 获取目标用户，确认其存在
-	targetUser, err := api.srv.GetUserByUsername(username)
-	if err != nil {
-		api.NotFound(ctx, "用户不存在")
-		return
-	}
-
-	// 检查是否有权限修改此用户
-	if !currentUser.CanManageUser(targetUser) {
-		api.Forbidden(ctx, "权限不足")
-		return
-	}
-
-	err = api.srv.UpdateUser(username, req, currentUser)
+	err = api.srv.UpdateUser(req, currentUser)
 	if err != nil {
 		api.InternalError(ctx, "更新用户失败", err)
 		return
 	}
-
 	api.SuccessMsg(ctx, "更新用户成功")
 }
 
@@ -197,8 +179,8 @@ func (api *UserApi) updateUser(ctx *gin.Context) {
 // @Failure 500 {object} vo.Response "用户不存在"
 // @Failure 500 {object} vo.Response "删除失败"
 // @Router /api/user/{username} [delete]
-func (api *UserApi) deleteUser(ctx *gin.Context) {
-	username := api.GetParam(ctx, "username")
+func (api *UserApi) DeleteUser(ctx *gin.Context) {
+	id := api.GetParam(ctx, "id")
 
 	// 获取当前用户
 	currentUser, err := api.CurrentUser(ctx)
@@ -206,7 +188,7 @@ func (api *UserApi) deleteUser(ctx *gin.Context) {
 		return
 	}
 
-	err = api.srv.DeleteUser(username, currentUser)
+	err = api.srv.DeleteUser(id, currentUser)
 	if err != nil {
 		api.InternalError(ctx, "删除用户失败", err)
 		return

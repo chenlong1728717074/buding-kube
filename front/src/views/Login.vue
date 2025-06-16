@@ -62,9 +62,10 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Monitor, Check } from '@element-plus/icons-vue'
-import { loginApi } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const loginForm = ref({ username: '', password: '' })
 const loading = ref(false)
 const formRef = ref()
@@ -80,16 +81,12 @@ const onSubmit = async () => {
     if (!valid) return
     loading.value = true
     try {
-      const res = await loginApi(loginForm.value)
-      if (res.code === 200 && res.data?.token) {
-        localStorage.setItem('token', res.data.token)
-        localStorage.setItem('userInfo', JSON.stringify(res.data))
-        ElMessage.success('登录成功')
+      const success = await userStore.login(loginForm.value)
+      if (success) {
         router.push('/')
-      } else {
-        ElMessage.error(res.msg || '登录失败')
       }
-    } catch (e) {
+    } catch (error) {
+      console.error('登录失败:', error)
       ElMessage.error('登录失败')
     } finally {
       loading.value = false

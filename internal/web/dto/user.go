@@ -10,18 +10,27 @@ type LoginDTO struct {
 
 // CreateUserDTO 创建用户参数
 type CreateUserDTO struct {
-	Username string         `json:"username" binding:"required" example:"zhangsan"` // 用户名，用户登录账号
-	Password string         `json:"password" binding:"required" example:"123456"`   // 密码，用户登录密码
-	Email    string         `json:"email" example:"zhangsan@example.com"`           // 邮箱
-	Role     model.UserRole `json:"role" binding:"required" example:"2"`            // 角色: 1=超级管理员 2=管理员 3=普通用户
+	Username   string         `json:"username" binding:"required" example:"zhangsan"`         // 用户名，用户登录账号
+	Password   string         `json:"password" binding:"required" example:"123456"`           // 密码，用户登录密码
+	Email      string         `json:"email" example:"zhangsan@example.com"`                   // 邮箱
+	Role       model.UserRole `json:"role" binding:"required" example:"2"`                    // 角色: 1=超级管理员 2=管理员 3=普通用户
+	Department string         `json:"department" example:"研发部"`                               //部门
+	Phone      string         `json:"phone" example:"131420203214"`                           //电话号码
+	Cluster    string         `json:"cluster" example:"0599432d-98fa-4da4-8c84-96a01ffaf113"` //授权的集群
+	Status     int            `json:"status" example:"0"`                                     //状态
 }
 
 // UpdateUserDTO 更新用户参数
 type UpdateUserDTO struct {
-	Email    string         `json:"email" example:"zhangsan@example.com"` // 邮箱
-	Password string         `json:"password" example:"123456"`            // 密码，用户登录密码
-	Role     model.UserRole `json:"role" example:"2"`                     // 角色: 1=超级管理员 2=管理员 3=普通用户
-	Status   int            `json:"status" example:"1"`                   // 状态: 1=正常 0=禁用
+	Id         string         `json:"id" binding:"required" example:"0599432d-98fa-4da4-8c84-96a01ffaf113"` // id
+	Username   string         `json:"username" binding:"required" example:"zhangsan"`                       // 用户名，用户登录账号
+	Password   string         `json:"password" example:"123456"`                                            // 密码，用户登录密码
+	Email      string         `json:"email" example:"zhangsan@example.com"`                                 // 邮箱
+	Role       model.UserRole `json:"role" binding:"required" example:"2"`                                  // 角色: 1=超级管理员 2=管理员 3=普通用户
+	Department string         `json:"department" example:"研发部"`                                             //部门
+	Phone      string         `json:"phone" example:"131420203214"`                                         //电话号码
+	Cluster    string         `json:"cluster" example:"0599432d-98fa-4da4-8c84-96a01ffaf113"`               //授权的集群
+	Status     int            `json:"status" example:"0"`
 }
 
 // UserQueryDTO 用户查询参数

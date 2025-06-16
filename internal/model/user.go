@@ -19,14 +19,16 @@ const (
 )
 
 type User struct {
-	Username  string   `json:"username"`
-	Password  string   `json:"password"`
-	Salt      string   `json:"salt"`
-	Email     string   `json:"email"`
-	Role      UserRole `json:"role"`
-	Namespace string   `json:"namespace"`
-	Cluster   string   `json:"cluster"`
-	Status    int      `json:"status"`
+	Username   string   `json:"username"`
+	Password   string   `json:"password"`
+	Salt       string   `json:"salt"`
+	Email      string   `json:"email"`
+	Role       UserRole `json:"role"`
+	RealName   string   `json:"realName"`
+	Department string   `json:"department"`
+	Phone      string   `json:"phone"`
+	Cluster    string   `json:"cluster"`
+	Status     int      `json:"status"`
 }
 
 func AdminUser() *User {

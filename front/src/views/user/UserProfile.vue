@@ -175,41 +175,8 @@
 
       <!-- 登录历史 -->
       <el-card class="history-card">
-        <template #header>
-          <div class="card-header">
-            <span>登录历史</span>
-            <el-button @click="handleRefreshHistory">
-              <el-icon><Refresh /></el-icon>
-              刷新
-            </el-button>
-          </div>
-        </template>
-        
-        <el-table v-loading="historyLoading" :data="loginHistory" stripe>
-          <el-table-column prop="loginTime" label="登录时间" width="180" />
-          <el-table-column prop="ip" label="IP地址" width="150" />
-          <el-table-column prop="location" label="登录地点" width="200" />
-          <el-table-column prop="device" label="设备信息" show-overflow-tooltip />
-          <el-table-column prop="browser" label="浏览器" width="150" />
-          <el-table-column prop="status" label="状态" width="100">
-            <template #default="{ row }">
-              <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">
-                {{ row.status === 'success' ? '成功' : '失败' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
-        
-        <div class="pagination-wrapper">
-          <el-pagination
-            v-model:current-page="historyPagination.page"
-            v-model:page-size="historyPagination.size"
-            :total="historyPagination.total"
-            :page-sizes="[10, 20, 50]"
-            layout="total, sizes, prev, pager, next"
-            @size-change="handleHistorySizeChange"
-            @current-change="handleHistoryCurrentChange"
-          />
+        <div class="empty-state">
+          <el-empty description="登录历史功能暂未开放" />
         </div>
       </el-card>
     </div>
@@ -283,7 +250,7 @@ const userStore = useUserStore()
 
 const editMode = ref(false)
 const saveLoading = ref(false)
-const historyLoading = ref(false)
+
 const passwordLoading = ref(false)
 const formRef = ref()
 const passwordFormRef = ref()
@@ -303,8 +270,7 @@ const userInfo = reactive({
   bio: '',
   emailVerified: false,
   phoneVerified: false,
-  createTime: '',
-  lastLoginTime: ''
+
 })
 
 // 原始用户信息（用于取消编辑时恢复）
@@ -324,13 +290,7 @@ const formRules = {
   ]
 }
 
-// 登录历史
-const loginHistory = ref([])
-const historyPagination = reactive({
-  page: 1,
-  size: 10,
-  total: 0
-})
+
 
 // 修改密码对话框
 const passwordDialogVisible = ref(false)
@@ -372,36 +332,24 @@ const uploadHeaders = {
 
 // 获取用户信息
 const fetchUserInfo = async () => {
-  try {
-    const res = await userApi.getProfile()
-    if (res.code === 200) {
-      Object.assign(userInfo, res.data)
-      Object.assign(originalUserInfo, res.data)
-    }
-  } catch (error) {
-    ElMessage.error('获取用户信息失败')
+  ElMessage.info('个人信息功能暂未开放')
+  // 使用当前登录用户的基本信息
+  const currentUser = userStore.userInfo
+  if (currentUser) {
+    Object.assign(userInfo, {
+      id: currentUser.id || '',
+      username: currentUser.username || '',
+      email: currentUser.email || '',
+      role: currentUser.role || '',
+      status: currentUser.status || '',
+      department: currentUser.department || '',
+      phone: currentUser.phone || ''
+    })
+    Object.assign(originalUserInfo, userInfo)
   }
 }
 
-// 获取登录历史
-const fetchLoginHistory = async () => {
-  historyLoading.value = true
-  try {
-    const params = {
-      page: historyPagination.page,
-      size: historyPagination.size
-    }
-    const res = await userApi.getLoginHistory(params)
-    if (res.code === 200) {
-      loginHistory.value = res.data.list || []
-      historyPagination.total = res.data.total || 0
-    }
-  } catch (error) {
-    ElMessage.error('获取登录历史失败')
-  } finally {
-    historyLoading.value = false
-  }
-}
+
 
 // 编辑模式
 const handleEdit = () => {
@@ -515,23 +463,7 @@ const handleBindPhone = () => {
   ElMessage.info('手机绑定功能开发中')
 }
 
-// 刷新登录历史
-const handleRefreshHistory = () => {
-  fetchLoginHistory()
-}
 
-// 历史分页大小改变
-const handleHistorySizeChange = (size: number) => {
-  historyPagination.size = size
-  historyPagination.page = 1
-  fetchLoginHistory()
-}
-
-// 历史当前页改变
-const handleHistoryCurrentChange = (page: number) => {
-  historyPagination.page = page
-  fetchLoginHistory()
-}
 
 // 获取角色类型
 const getRoleType = (role: string) => {
@@ -574,7 +506,7 @@ const getStatusText = (status: string) => {
 // 初始化
 onMounted(() => {
   fetchUserInfo()
-  fetchLoginHistory()
+
 })
 </script>
 

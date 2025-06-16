@@ -1,0 +1,33 @@
+# Version control
+.git
+.gitignore
+
+# Node.js dependencies and build files
+node_modules
+
+# Test files
+**/*.test.js
+**/*.spec.js
+
+# Editor configurations
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables
+.env.local
+.env.*.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Misc
+.DS_Store
+Thumbs.db 

@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,6 +65,25 @@ func (s *UserService) GetUserByUsername(username string) (*model.User, error) {
 	return &user, nil
 }
 
+// GetUserById 根据用户名获取用户
+func (s *UserService) GetUserById(id string) (*model.User, *v1.Secret, error) {
+	items, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
+		Get(context.TODO(), id, metav1.GetOptions{})
+
+	if err != nil {
+		logs.Error("获取用户失败: %s", err.Error())
+		return nil, nil, err
+	}
+
+	var user model.User
+	if err := json.Unmarshal(items.Data["config"], &user); err != nil {
+		logs.Error("解析用户数据失败: %s", err.Error())
+		return nil, nil, err
+	}
+
+	return &user, items, nil
+}
+
 // ListUsers 获取用户列表
 func (s *UserService) ListUsers(query dto.UserQueryDTO) ([]vo.UserVO, error) {
 	labelSelector := fmt.Sprintf("%s", model.UserConfigSecretLabelKey)
@@ -94,6 +114,7 @@ func (s *UserService) ListUsers(query dto.UserQueryDTO) ([]vo.UserVO, error) {
 		}
 		userVO := vo.UserVO{}
 		copier.Copy(&userVO, &user)
+		userVO.Id = secret.Name
 		userVOs = append(userVOs, userVO)
 	}
 	return userVOs, nil
@@ -102,45 +123,35 @@ func (s *UserService) ListUsers(query dto.UserQueryDTO) ([]vo.UserVO, error) {
 // CreateUser 创建用户
 func (s *UserService) CreateUser(req dto.CreateUserDTO, currentUser *model.User) error {
 	// 检查权限
-	if currentUser.Role > model.Admin {
+	if currentUser.Role >= req.Role {
 		return errors.New("权限不足")
 	}
-
-	// 超管才能创建其他超管和管理员
-	if req.Role < model.Normal && !currentUser.IsSuperAdmin() {
-		return errors.New("普通管理员只能创建普通用户")
-	}
-
 	// 检查用户是否已存在
 	labelSelector := fmt.Sprintf("%s=%s", model.UserConfigSecretLabelKey, req.Username)
 	existingUsers, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		List(context.TODO(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
-
 	if err != nil {
 		logs.Error("检查用户失败: %s", err.Error())
 		return err
 	}
-
 	if len(existingUsers.Items) > 0 {
 		return errors.New("用户已存在")
 	}
-
 	// 创建用户
-	user := model.NewUser(req.Username, req.Password, req.Email, req.Role)
-
+	var user model.User
+	copier.Copy(&user, &req)
 	// 序列化用户信息
 	userData, err := json.Marshal(user)
 	if err != nil {
 		logs.Error("序列化用户数据失败: %s", err.Error())
 		return err
 	}
-
 	// 创建 Secret
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("user-%s", user.Username),
+			Name: uuid.New().String(),
 			Labels: map[string]string{
 				model.UserConfigSecretLabelKey: user.Username,
 			},
@@ -156,15 +167,14 @@ func (s *UserService) CreateUser(req dto.CreateUserDTO, currentUser *model.User)
 		logs.Error("创建用户失败: %s", err.Error())
 		return err
 	}
-
 	return nil
 }
 
 // UpdateUser 更新用户
 // 注意: 用户名(username)是不可修改的，它作为唯一标识符用于查询用户
-func (s *UserService) UpdateUser(username string, req dto.UpdateUserDTO, currentUser *model.User) error {
+func (s *UserService) UpdateUser(req dto.UpdateUserDTO, currentUser *model.User) error {
 	// 获取目标用户
-	targetUser, err := s.GetUserByUsername(username)
+	targetUser, secret, err := s.GetUserById(req.Id)
 	if err != nil {
 		return err
 	}
@@ -185,12 +195,7 @@ func (s *UserService) UpdateUser(username string, req dto.UpdateUserDTO, current
 	}
 
 	// 更新字段
-	if req.Email != "" {
-		targetUser.Email = req.Email
-	}
-	if req.Role > 0 {
-		targetUser.Role = req.Role
-	}
+	s.updateBasic(req, targetUser)
 
 	// 更新密码
 	if req.Password != "" {
@@ -214,23 +219,9 @@ func (s *UserService) UpdateUser(username string, req dto.UpdateUserDTO, current
 		logs.Error("序列化用户数据失败: %s", err.Error())
 		return err
 	}
-
-	// 获取原 Secret
-	labelSelector := fmt.Sprintf("%s=%s", model.UserConfigSecretLabelKey, username)
-	items, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
-		List(context.TODO(), metav1.ListOptions{
-			LabelSelector: labelSelector,
-		})
-
-	if err != nil || len(items.Items) == 0 {
-		logs.Error("获取用户 Secret 失败: %s", err.Error())
-		return errors.New("用户不存在")
-	}
-
-	secret := items.Items[0]
 	secret.Data["config"] = userData
-
-	_, err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).Update(context.TODO(), &secret, metav1.UpdateOptions{})
+	_, err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).Update(context.TODO(),
+		secret, metav1.UpdateOptions{})
 	if err != nil {
 		logs.Error("更新用户失败: %s", err.Error())
 		return err
@@ -239,16 +230,28 @@ func (s *UserService) UpdateUser(username string, req dto.UpdateUserDTO, current
 	return nil
 }
 
+func (s *UserService) updateBasic(req dto.UpdateUserDTO, targetUser *model.User) {
+	if req.Email != "" {
+		targetUser.Email = req.Email
+	}
+	if req.Role > 0 {
+		targetUser.Role = req.Role
+	}
+	if req.Phone != "" {
+		targetUser.Phone = req.Phone
+	}
+}
+
 // DeleteUser 删除用户
-func (s *UserService) DeleteUser(username string, currentUser *model.User) error {
+func (s *UserService) DeleteUser(name string, currentUser *model.User) error {
 	// 获取目标用户
-	targetUser, err := s.GetUserByUsername(username)
+	targetUser, _, err := s.GetUserById(name)
 	if err != nil {
 		return err
 	}
 
 	// 不能删除自己
-	if currentUser.Username == username {
+	if currentUser.Username == targetUser.Username {
 		return errors.New("不能删除自己")
 	}
 
@@ -263,20 +266,7 @@ func (s *UserService) DeleteUser(username string, currentUser *model.User) error
 	}
 
 	// 执行删除
-	labelSelector := fmt.Sprintf("%s=%s", model.UserConfigSecretLabelKey, username)
-	items, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
-		List(context.TODO(), metav1.ListOptions{
-			LabelSelector: labelSelector,
-		})
-
-	if err != nil || len(items.Items) == 0 {
-		logs.Error("获取用户 Secret 失败: %s", err.Error())
-		return errors.New("用户不存在")
-	}
-
-	secretName := items.Items[0].Name
-
-	err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).Delete(context.TODO(), secretName, metav1.DeleteOptions{})
+	err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil {
 		logs.Error("删除用户失败: %s", err.Error())
 		return err

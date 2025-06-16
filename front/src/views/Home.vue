@@ -11,7 +11,9 @@
       <el-card class="stat-card">
         <div class="stat-content">
           <div class="stat-icon cluster">
-            <el-icon size="24"><Monitor /></el-icon>
+            <el-icon size="24">
+              <Monitor/>
+            </el-icon>
           </div>
           <div class="stat-info">
             <h3>{{ clusterCount }}</h3>
@@ -23,7 +25,9 @@
       <el-card class="stat-card">
         <div class="stat-content">
           <div class="stat-icon node">
-            <el-icon size="24"><Monitor /></el-icon>
+            <el-icon size="24">
+              <Monitor/>
+            </el-icon>
           </div>
           <div class="stat-info">
             <h3>{{ nodeCount }}</h3>
@@ -35,7 +39,9 @@
       <el-card class="stat-card">
         <div class="stat-content">
           <div class="stat-icon pod">
-            <el-icon size="24"><Box /></el-icon>
+            <el-icon size="24">
+              <Box/>
+            </el-icon>
           </div>
           <div class="stat-info">
             <h3>{{ podCount }}</h3>
@@ -47,7 +53,9 @@
       <el-card class="stat-card" v-if="userStore.isAdmin">
         <div class="stat-content">
           <div class="stat-icon user">
-            <el-icon size="24"><User /></el-icon>
+            <el-icon size="24">
+              <User/>
+            </el-icon>
           </div>
           <div class="stat-info">
             <h3>{{ userCount }}</h3>
@@ -61,25 +69,31 @@
     <div class="quick-actions">
       <h2>快速操作</h2>
       <div class="action-grid">
-        <el-card class="action-card" @click="$router.push('/clusters')">
+        <el-card class="action-card" @click="$router.push('/cluster')">
           <div class="action-content">
-            <el-icon size="32" class="action-icon"><Monitor /></el-icon>
+            <el-icon size="32" class="action-icon">
+              <Monitor/>
+            </el-icon>
             <h3>管理集群</h3>
             <p>查看和管理Kubernetes集群</p>
           </div>
         </el-card>
 
-        <el-card class="action-card" v-if="userStore.isAdmin" @click="$router.push('/users')">
+        <el-card class="action-card" v-if="userStore.isAdmin" @click="$router.push('/user')">
           <div class="action-content">
-            <el-icon size="32" class="action-icon"><User /></el-icon>
+            <el-icon size="32" class="action-icon">
+              <User/>
+            </el-icon>
             <h3>用户管理</h3>
             <p>管理系统用户和权限</p>
           </div>
         </el-card>
 
-        <el-card class="action-card">
+        <el-card class="action-card" @click="openDocs" style="cursor: pointer;">
           <div class="action-content">
-            <el-icon size="32" class="action-icon"><Document /></el-icon>
+            <el-icon size="32" class="action-icon">
+              <Document/>
+            </el-icon>
             <h3>查看文档</h3>
             <p>阅读使用指南和API文档</p>
           </div>
@@ -125,14 +139,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useUserStore } from '@/stores/user'
-import {
-  Monitor,
-  Box,
-  User,
-  Document
-} from '@element-plus/icons-vue'
+import {onMounted, ref} from 'vue'
+import {useUserStore} from '@/stores/user'
+import {Box, Document, Monitor, User} from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
 
@@ -182,6 +191,9 @@ const loadDashboardData = async () => {
 onMounted(() => {
   loadDashboardData()
 })
+function openDocs() {
+  window.open('https://kubernetes.io/zh-cn/docs', '_blank');
+}
 </script>
 
 <style scoped>
@@ -369,11 +381,11 @@ onMounted(() => {
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .action-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .welcome-section h1 {
     font-size: 24px;
   }

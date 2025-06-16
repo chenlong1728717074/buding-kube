@@ -173,9 +173,8 @@ func (api *BaseApi) CurrentUser(ctx *gin.Context) (*model.User, error) {
 		return nil, errors.New("无效的JWT声明")
 	}
 	return &model.User{
-		Username:  jwtClaims.Username,
-		Role:      jwtClaims.Role,
-		Namespace: jwtClaims.Namespace,
-		Cluster:   jwtClaims.Cluster,
+		Username: jwtClaims.Username,
+		Role:     jwtClaims.Role,
+		Cluster:  jwtClaims.Cluster,
 	}, nil
 }

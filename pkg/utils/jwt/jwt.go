@@ -10,10 +10,9 @@ import (
 var jwtSecret = []byte("your-secret-key") // 在实际应用中应该从配置文件中读取
 
 type Claims struct {
-	Username  string         `json:"username"`
-	Role      model.UserRole `json:"role"`
-	Namespace string         `json:"namespace"`
-	Cluster   string         `json:"cluster"`
+	Username string         `json:"username"`
+	Role     model.UserRole `json:"role"`
+	Cluster  string         `json:"cluster"`
 	jwt.StandardClaims
 }
 
@@ -23,10 +22,9 @@ func GenerateToken(user *model.User) (string, error) {
 	expireTime := nowTime.Add(24 * time.Hour)
 
 	claims := Claims{
-		Username:  user.Username,
-		Role:      user.Role,
-		Namespace: user.Namespace,
-		Cluster:   user.Cluster,
+		Username: user.Username,
+		Role:     user.Role,
+		Cluster:  user.Cluster,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expireTime.Unix(),
 			IssuedAt:  nowTime.Unix(),

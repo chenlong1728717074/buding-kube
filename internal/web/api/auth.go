@@ -25,7 +25,8 @@ func NewAuthApi(router *gin.RouterGroup) *AuthApi {
 
 // Router 配置路由
 func (api *AuthApi) Router() {
-	api.router.POST("/login", api.login)
+	api.router.POST("/login", api.Login)
+	api.router.POST("/logout", api.Logout)
 }
 
 // @Summary 用户登录
@@ -40,7 +41,7 @@ func (api *AuthApi) Router() {
 // @Failure 500 {object} vo.Response "用户已禁用"
 // @Failure 500 {object} vo.Response "登录失败"
 // @Router /api/auth/login [post]
-func (api *AuthApi) login(ctx *gin.Context) {
+func (api *AuthApi) Login(ctx *gin.Context) {
 	var login dto.LoginDTO
 	if err := ctx.ShouldBindJSON(&login); err != nil {
 		api.ParamBindError(ctx, err)
@@ -52,4 +53,8 @@ func (api *AuthApi) login(ctx *gin.Context) {
 		return
 	}
 	api.SuccessWithData(ctx, result)
+}
+
+func (api *AuthApi) Logout(ctx *gin.Context) {
+	api.SuccessMsg(ctx, "登出成功")
 }

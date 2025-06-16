@@ -1,6 +1,8 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import { authApi, userApi, type UserVO, type LoginDTO, UserRole } from '@/api/auth'
+import { loginApi } from '@/api/login'
+import { userApi, type UserVO, UserRole } from '@/api/user'
+import type { LoginDTO } from '@/api/login'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
@@ -35,7 +37,7 @@ export const useUserStore = defineStore('user', () => {
   const login = async (loginData: LoginDTO): Promise<boolean> => {
     try {
       loading.value = true
-      const response = await authApi.login(loginData)
+      const response = await loginApi.login(loginData)
       
       if (response.code === 200 && response.data) {
         const userData = response.data
@@ -67,7 +69,7 @@ export const useUserStore = defineStore('user', () => {
   const logout = async (): Promise<void> => {
     try {
       // 调用后端登出接口
-      await authApi.logout()
+      await loginApi.logout()
     } catch (error) {
       console.error('登出接口调用失败:', error)
     } finally {
@@ -107,7 +109,7 @@ export const useUserStore = defineStore('user', () => {
     try {
       if (!token.value) return
       
-      const response = await authApi.getCurrentUser()
+      const response = await loginApi.getCurrentUser()
       if (response.code === 200 && response.data) {
         userInfo.value = response.data
         localStorage.setItem('userInfo', JSON.stringify(response.data))
@@ -122,7 +124,7 @@ export const useUserStore = defineStore('user', () => {
   // 刷新token
   const refreshToken = async (): Promise<boolean> => {
     try {
-      const response = await authApi.refreshToken()
+      const response = await loginApi.refreshToken()
       if (response.code === 200 && response.data?.token) {
         token.value = response.data.token
         localStorage.setItem('token', response.data.token)

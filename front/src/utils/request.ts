@@ -2,6 +2,25 @@ import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse 
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
+// 通用API响应格式
+export interface ApiResponse<T = any> {
+  code: number
+  msg: string
+  data: T
+}
+
+// 分页响应格式
+export interface PageResponse<T = any> {
+  code: number
+  msg: string
+  data: {
+    list: T[]
+    total: number
+    page: number
+    size: number
+  }
+}
+
 // 创建axios实例
 const request: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',

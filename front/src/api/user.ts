@@ -1,341 +1,163 @@
-import request from '@/utils/request'
+import request, { type ApiResponse, type PageResponse } from '@/utils/request'
 
-// 用户信息
+// 用户角色枚举
+export enum UserRole {
+  SUPER_ADMIN = 1,
+  ADMIN = 2,
+  USER = 3
+}
+
+// 用户状态枚举
+export enum UserStatus {
+  DISABLED = 0,
+  ENABLED = 1
+}
+
+// 用户信息VO
 export interface UserVO {
-  id?: string
+  id: string
   username: string
-  email: string
-  realName?: string
-  phone?: string
-  avatar?: string
-  department?: string
-  position?: string
-  role: string
-  status: string
-  bio?: string
-  lastLoginTime?: string
-  createTime: string
-  updateTime: string
-}
-
-// 用户查询参数
-export interface UserQueryDTO {
-  page?: number
-  pageSize?: number
-  username?: string
   email?: string
-  role?: string
-  status?: string
+  role: number
+  status: number
   department?: string
+  phone?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
-// 创建用户参数
+// 创建用户DTO
 export interface CreateUserDTO {
   username: string
-  email: string
   password: string
-  realName?: string
-  phone?: string
+  email?: string
+  role: number
   department?: string
-  position?: string
-  role: string
-  status?: string
-  bio?: string
+  phone?: string
+  status?: number
 }
 
-// 更新用户参数
+// 更新用户DTO
 export interface UpdateUserDTO {
-  id?: string
+  id: string
   username?: string
   email?: string
-  realName?: string
-  phone?: string
+  role?: number
   department?: string
-  position?: string
-  role?: string
-  status?: string
-  bio?: string
+  phone?: string
+  status?: number
 }
 
-// 修改密码参数
-export interface ChangePasswordDTO {
-  oldPassword: string
-  newPassword: string
-  confirmPassword: string
+// 用户查询DTO
+export interface UserQueryDTO {
+  username?: string
+  email?: string
+  role?: number
+  status?: number
+  page?: number
+  pageSize?: number
 }
 
-// 重置密码参数
+// 重置密码DTO
 export interface ResetPasswordDTO {
   userId: string
   newPassword: string
 }
 
-// 登录历史
-export interface LoginHistoryVO {
-  id: string
-  userId: string
-  username: string
-  ip: string
-  userAgent: string
-  location?: string
-  loginTime: string
-  status: string
-  message?: string
+// 修改密码DTO
+export interface ChangePasswordDTO {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
 }
 
-// 用户权限
-export interface UserPermissionVO {
-  id: string
-  name: string
-  code: string
-  type: string
-  description?: string
-  children?: UserPermissionVO[]
+// API响应格式
+export interface ApiResponse<T = any> {
+  code: number
+  msg: string
+  data: T
 }
 
-// 用户管理API
+// 分页响应格式
+export interface PageResponse<T = any> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+// 用户管理相关API
 export const userApi = {
   // 获取用户列表
-  getUsers: (params: UserQueryDTO) => {
-    return request.get<PageResponse<UserVO>>('/user/list', { params })
+  getUsers: (params: UserQueryDTO): Promise<ApiResponse<PageResponse<UserVO>>> => {
+    return request.get('/user/list', { params })
   },
 
-  // 获取单个用户
-  getUser: (id: string) => {
-    return request.get<UserVO>(`/user/${id}`)
+  // 根据ID获取用户
+  getUserById: (id: string): Promise<ApiResponse<UserVO>> => {
+    return request.get(`/user/${id}`)
   },
 
   // 获取当前用户信息
-  getCurrentUser: () => {
-    return request.get<UserVO>('/user/profile')
+  getCurrentUser: (): Promise<ApiResponse<UserVO>> => {
+    return request.get('/user/profile')
   },
 
   // 创建用户
-  createUser: (data: CreateUserDTO) => {
-    return request.post<UserVO>('/user', data)
+  createUser: (data: CreateUserDTO): Promise<ApiResponse<UserVO>> => {
+    return request.post('/user', data)
   },
 
   // 更新用户
-  updateUser: (id: string, data: UpdateUserDTO) => {
-    return request.put<UserVO>(`/user/${id}`, data)
-  },
-
-  // 更新当前用户信息
-  updateProfile: (data: UpdateUserDTO) => {
-    return request.put<UserVO>('/user/profile', data)
+  updateUser: (data: UpdateUserDTO): Promise<ApiResponse<UserVO>> => {
+    return request.put('/user', data)
   },
 
   // 删除用户
-  deleteUser: (id: string) => {
+  deleteUser: (id: string): Promise<ApiResponse<null>> => {
     return request.delete(`/user/${id}`)
   },
 
   // 批量删除用户
-  batchDeleteUsers: (ids: string[]) => {
-    return request.delete('/user/batch', { data: { ids } })
+  batchDeleteUsers: (ids: string[]): Promise<ApiResponse<null>> => {
+    return request.post('/user/batch-delete', { ids })
   },
 
-  // 启用/禁用用户
-  toggleUserStatus: (id: string, status: string) => {
+  // 切换用户状态
+  toggleUserStatus: (id: string, status: number): Promise<ApiResponse<null>> => {
     return request.put(`/user/${id}/status`, { status })
   },
 
+  // 重置用户密码
+  resetPassword: (data: ResetPasswordDTO): Promise<ApiResponse<null>> => {
+    const { userId, newPassword } = data
+    return request.post(`/user/${userId}/reset-password`, { password: newPassword })
+  },
+
+  // 更新用户资料
+  updateProfile: (data: UpdateUserDTO): Promise<ApiResponse<UserVO>> => {
+    return request.put('/user/profile', data)
+  },
+
   // 修改密码
-  changePassword: (data: ChangePasswordDTO) => {
+  changePassword: (data: ChangePasswordDTO): Promise<ApiResponse<null>> => {
     return request.put('/user/password', data)
   },
 
-  // 重置密码
-  resetPassword: (data: ResetPasswordDTO) => {
-    return request.put('/user/reset-password', data)
-  },
-
-  // 上传头像
-  uploadAvatar: (file: File) => {
-    const formData = new FormData()
-    formData.append('avatar', file)
-    return request.post('/user/avatar', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-  },
-
-  // 获取用户登录历史
-  getLoginHistory: (params?: any) => {
-    return request.get<PageResponse<LoginHistoryVO>>('/user/login-history', { params })
-  },
-
-  // 获取用户登录历史（指定用户）
-  getUserLoginHistory: (userId: string, params?: any) => {
-    return request.get<PageResponse<LoginHistoryVO>>(`/user/${userId}/login-history`, { params })
-  },
-
-  // 获取用户权限
-  getUserPermissions: (userId?: string) => {
-    const url = userId ? `/user/${userId}/permissions` : '/user/permissions'
-    return request.get<UserPermissionVO[]>(url)
-  },
-
-  // 更新用户权限
-  updateUserPermissions: (userId: string, permissionIds: string[]) => {
-    return request.put(`/user/${userId}/permissions`, { permissionIds })
-  },
-
-  // 获取所有权限列表
-  getAllPermissions: () => {
-    return request.get<UserPermissionVO[]>('/user/permissions/all')
-  },
-
-  // 获取角色列表
-  getRoles: () => {
-    return request.get('/user/roles')
-  },
-
-  // 获取部门列表
-  getDepartments: () => {
-    return request.get('/user/departments')
-  },
-
-  // 验证邮箱
-  verifyEmail: (email: string) => {
-    return request.post('/user/verify-email', { email })
-  },
-
-  // 确认邮箱验证
-  confirmEmailVerification: (token: string) => {
-    return request.post('/user/confirm-email', { token })
-  },
-
-  // 绑定手机号
-  bindPhone: (phone: string, code: string) => {
-    return request.post('/user/bind-phone', { phone, code })
-  },
-
-  // 发送手机验证码
-  sendPhoneCode: (phone: string) => {
-    return request.post('/user/send-phone-code', { phone })
-  },
-
-  // 解绑手机号
-  unbindPhone: (code: string) => {
-    return request.post('/user/unbind-phone', { code })
-  },
-
-  // 启用两步验证
-  enableTwoFactor: () => {
-    return request.post('/user/two-factor/enable')
-  },
-
-  // 禁用两步验证
-  disableTwoFactor: (code: string) => {
-    return request.post('/user/two-factor/disable', { code })
-  },
-
-  // 获取两步验证二维码
-  getTwoFactorQR: () => {
-    return request.get('/user/two-factor/qr')
-  },
-
-  // 验证两步验证码
-  verifyTwoFactor: (code: string) => {
-    return request.post('/user/two-factor/verify', { code })
-  },
-
-  // 获取用户统计信息
-  getUserStats: () => {
-    return request.get('/user/stats')
-  },
-
-  // 导出用户列表
-  exportUsers: (params?: UserQueryDTO) => {
-    return request.get('/user/export', { 
-      params,
-      responseType: 'blob'
-    })
-  },
-
-  // 导入用户
-  importUsers: (file: File) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return request.post('/user/import', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-  },
-
-  // 下载用户导入模板
-  downloadImportTemplate: () => {
-    return request.get('/user/import-template', {
-      responseType: 'blob'
-    })
+  // 发送邮箱验证
+  sendEmailVerification: (): Promise<ApiResponse<null>> => {
+    return request.post('/user/verify-email')
   },
 
   // 检查用户名是否可用
-  checkUsername: (username: string) => {
-    return request.get(`/user/check-username/${username}`)
+  checkUsername: (username: string): Promise<ApiResponse<{ available: boolean }>> => {
+    return request.get(`/user/check-username`, { params: { username } })
   },
 
   // 检查邮箱是否可用
-  checkEmail: (email: string) => {
-    return request.get(`/user/check-email/${email}`)
-  },
-
-  // 获取用户活动日志
-  getUserActivityLogs: (userId?: string, params?: any) => {
-    const url = userId ? `/user/${userId}/activity-logs` : '/user/activity-logs'
-    return request.get(url, { params })
-  },
-
-  // 锁定用户
-  lockUser: (id: string, reason?: string) => {
-    return request.put(`/user/${id}/lock`, { reason })
-  },
-
-  // 解锁用户
-  unlockUser: (id: string) => {
-    return request.put(`/user/${id}/unlock`)
-  },
-
-  // 强制用户下线
-  forceLogout: (id: string) => {
-    return request.post(`/user/${id}/force-logout`)
-  },
-
-  // 获取在线用户列表
-  getOnlineUsers: (params?: any) => {
-    return request.get('/user/online', { params })
-  },
-
-  // 发送系统通知
-  sendNotification: (userIds: string[], title: string, content: string) => {
-    return request.post('/user/notification', {
-      userIds,
-      title,
-      content
-    })
-  },
-
-  // 获取用户通知
-  getUserNotifications: (params?: any) => {
-    return request.get('/user/notifications', { params })
-  },
-
-  // 标记通知为已读
-  markNotificationRead: (notificationId: string) => {
-    return request.put(`/user/notifications/${notificationId}/read`)
-  },
-
-  // 删除通知
-  deleteNotification: (notificationId: string) => {
-    return request.delete(`/user/notifications/${notificationId}`)
-  },
-
-  // 清空所有通知
-  clearAllNotifications: () => {
-    return request.delete('/user/notifications/all')
+  checkEmail: (email: string): Promise<ApiResponse<{ available: boolean }>> => {
+    return request.get(`/user/check-email`, { params: { email } })
   }
 }
 

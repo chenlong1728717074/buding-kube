@@ -268,7 +268,7 @@ const fetchClusterList = async () => {
       clusterList.value = response.data.items || []
       pagination.total = response.data.total || 0
       
-      console.log('集群列表数据:', clusterList.value)
+
     } else {
       clusterList.value = []
       pagination.total = 0
