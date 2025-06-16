@@ -31,6 +31,10 @@
             <el-icon><Monitor /></el-icon>
             <span>节点列表</span>
           </el-menu-item>
+          <el-menu-item index="/namespace">
+            <el-icon><List /></el-icon>
+            <span>命名空间</span>
+          </el-menu-item>
         </el-sub-menu>
         
         <el-sub-menu v-if="userStore.isAdmin" index="/user">
@@ -114,6 +118,7 @@ const activeMenu = computed(() => {
   const path = route.path
   if (path.startsWith('/dashboard')) return '/dashboard'
   if (path.startsWith('/cluster')) return path
+  if (path.startsWith('/namespace')) return '/namespace'
   if (path.startsWith('/user')) return path
   return '/dashboard'
 })

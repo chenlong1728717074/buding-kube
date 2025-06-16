@@ -84,6 +84,24 @@ const routes: Array<RouteRecordRaw> = [
               title: 'Pod管理',
               requiresAuth: true
             }
+          },
+          {
+            path: '/namespace',
+            name: 'NamespaceList',
+            component: () => import('@/views/namespace/NamespaceList.vue'),
+            meta: { title: '命名空间管理', requiresAuth: true }
+          },
+          {
+            path: '/namespace/detail',
+            name: 'NamespaceDetail',
+            component: () => import('@/views/namespace/NamespaceDetail.vue'),
+            meta: { title: '命名空间详情', requiresAuth: true }
+          },
+          {
+            path: '/namespace/edit',
+            name: 'NamespaceEdit',
+            component: () => import('@/views/namespace/NamespaceEdit.vue'),
+            meta: { title: '编辑命名空间', requiresAuth: true }
           }
         ]
       },
