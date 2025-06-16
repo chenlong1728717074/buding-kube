@@ -52,9 +52,5 @@ func Cors() gin.HandlerFunc {
 		},
 		AllowCredentials: false,
 		MaxAge:           12 * time.Hour,
-		AllowWildcard:    true,
-		// 允许带有通配符的源，如 https://*.example.com
-		AllowPrivateNetwork: true,
-		// 允许从私有网络访问
 	})
 }
