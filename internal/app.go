@@ -57,12 +57,12 @@ func NewApp() *App {
 	gin.DefaultWriter = logs.NewGinLoggerAdapter(zapcore.InfoLevel)
 	gin.DefaultErrorWriter = logs.NewGinLoggerAdapter(zapcore.ErrorLevel)
 	engine := gin.Default()
+	//中间件
+	engine.Use(middleware.Cors(), middleware.Logger(), middleware.Recovery())
 	//404
 	engine.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusNotFound, "资源未找到")
 	})
-	//中间件
-	engine.Use(middleware.Cors(), middleware.Logger(), middleware.Recovery())
 	//路由
 	api := engine.Group("/api")
 	router.SetupRouter(api)
