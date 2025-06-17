@@ -114,6 +114,16 @@
       </div>
     </el-card>
 
+    <!-- 删除确认对话框 -->
+    <DeleteConfirmDialog
+      v-model="deleteDialogVisible"
+      :item-name="currentDeleteCluster?.name || ''"
+      message="确定要删除集群吗？"
+      :loading="deleteLoading"
+      @confirm="confirmDeleteCluster"
+      @cancel="cancelDeleteCluster"
+    />
+
     <!-- 添加/编辑集群对话框 -->
     <el-dialog 
       v-model="dialogVisible" 
@@ -174,6 +184,7 @@ import { clusterApi, type ClusterVO, type ClusterQueryDTO, type CreateClusterDTO
 import { Codemirror } from 'vue-codemirror'
 import { yaml } from '@codemirror/lang-yaml'
 import { oneDark } from '@codemirror/theme-one-dark'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 
 const router = useRouter()
 
@@ -400,29 +411,41 @@ const handleEditCluster = async (row: ClusterVO) => {
   }
 }
 
+// 删除集群相关状态
+const deleteDialogVisible = ref(false)
+const currentDeleteCluster = ref<ClusterVO | null>(null)
+const deleteLoading = ref(false)
+
 // 删除集群
 const handleDeleteCluster = async (row: ClusterVO) => {
+  currentDeleteCluster.value = row
+  deleteDialogVisible.value = true
+}
+
+// 确认删除集群
+const confirmDeleteCluster = async () => {
+  if (!currentDeleteCluster.value) return
+  
+  deleteLoading.value = true
   try {
-    await ElMessageBox.confirm(
-      `确定要删除集群 "${row.name}" 吗？此操作不可恢复。`,
-      '确认删除',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    await clusterApi.deleteCluster(row.name!)
-    
+    // 根据用户要求，传递集群ID而不是名称
+    // 如果API需要ID，可能需要修改API定义或使用不同的端点
+    await clusterApi.deleteCluster(currentDeleteCluster.value.id || currentDeleteCluster.value.name!)
     ElMessage.success('集群删除成功')
+    deleteDialogVisible.value = false
     fetchClusterList()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('删除集群失败:', error)
-      ElMessage.error('删除集群失败')
-    }
+  } catch (error: any) {
+    console.error('删除集群失败:', error)
+    ElMessage.error('删除集群失败')
+  } finally {
+    deleteLoading.value = false
   }
+}
+
+// 取消删除
+const cancelDeleteCluster = () => {
+  deleteDialogVisible.value = false
+  currentDeleteCluster.value = null
 }
 
 // 提交表单

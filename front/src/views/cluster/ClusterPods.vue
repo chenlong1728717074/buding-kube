@@ -331,6 +331,16 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 删除确认对话框 -->
+    <DeleteConfirmDialog
+      v-model="deleteDialogVisible"
+      :item-name="currentDeletePod?.name || ''"
+      message="确定要删除Pod吗？"
+      :loading="deleteLoading"
+      @confirm="confirmDeletePod"
+      @cancel="cancelDeletePod"
+    />
   </div>
 </template>
 
@@ -347,6 +357,7 @@ import {
   Download
 } from '@element-plus/icons-vue'
 import { clusterApi } from '@/api/cluster'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -553,29 +564,40 @@ const handleExecPod = (pod: any) => {
   ElMessage.info('进入容器功能开发中')
 }
 
+// 删除Pod相关状态
+const deleteDialogVisible = ref(false)
+const currentDeletePod = ref<any>(null)
+const deleteLoading = ref(false)
+
 // 删除Pod
 const handleDeletePod = async (pod: any) => {
+  currentDeletePod.value = pod
+  deleteDialogVisible.value = true
+}
+
+// 确认删除Pod
+const confirmDeletePod = async () => {
+  if (!currentDeletePod.value) return
+  
+  deleteLoading.value = true
   try {
-    await ElMessageBox.confirm(
-      `确定要删除Pod ${pod.name} 吗？此操作不可恢复。`,
-      '确认删除',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    const res = await clusterApi.deletePod(clusterName, pod.namespace, pod.name)
+    const res = await clusterApi.deletePod(clusterName, currentDeletePod.value.namespace, currentDeletePod.value.name)
     if (res.code === 200) {
       ElMessage.success('删除Pod成功')
+      deleteDialogVisible.value = false
       fetchPodList()
     }
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除Pod失败')
-    }
+  } catch (error: any) {
+    ElMessage.error('删除Pod失败')
+  } finally {
+    deleteLoading.value = false
   }
+}
+
+// 取消删除
+const cancelDeletePod = () => {
+  deleteDialogVisible.value = false
+  currentDeletePod.value = null
 }
 
 // 获取Pod日志

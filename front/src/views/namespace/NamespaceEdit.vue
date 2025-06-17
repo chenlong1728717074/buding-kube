@@ -75,6 +75,7 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { namespaceApi } from '@/api/namespace'
 import { clusterApi } from '@/api/cluster'
 import type { NamespaceVO, NamespaceBaseDTO, UpdateNamespaceDTO } from '@/api/namespace'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 
 const route = useRoute()
 const router = useRouter()

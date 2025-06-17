@@ -254,6 +254,16 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 删除确认对话框 -->
+    <DeleteConfirmDialog
+      v-model="deleteDialogVisible"
+      :item-name="currentDeleteNamespace?.name || ''"
+      message="确定要删除命名空间吗？"
+      :loading="deleteLoading"
+      @confirm="confirmDeleteNamespace"
+      @cancel="cancelDeleteNamespace"
+    />
   </div>
 </template>
 
@@ -277,6 +287,7 @@ import {
   type NamespaceBaseDTO
 } from '@/api/namespace'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -525,29 +536,42 @@ const handleViewPods = (row: NamespaceVO) => {
   })
 }
 
+// 删除命名空间相关状态
+const deleteDialogVisible = ref(false)
+const currentDeleteNamespace = ref<NamespaceVO | null>(null)
+const deleteLoading = ref(false)
+
 // 删除命名空间
 const handleDelete = (row: NamespaceVO) => {
-  ElMessageBox.confirm(
-    `确定要删除命名空间 "${row.name}" 吗？此操作不可恢复！`,
-    '确认删除',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+  currentDeleteNamespace.value = row
+  deleteDialogVisible.value = true
+}
+
+// 确认删除命名空间
+const confirmDeleteNamespace = async () => {
+  if (!currentDeleteNamespace.value) return
+  
+  deleteLoading.value = true
+  try {
+    const params: NamespaceBaseDTO = {
+      clusterId: searchForm.clusterId,
+      namespace: currentDeleteNamespace.value.name
     }
-  ).then(async () => {
-    try {
-      const params: NamespaceBaseDTO = {
-        clusterId: searchForm.clusterId,
-        namespace: row.name
-      }
-      await namespaceApi.delete(params)
-      ElMessage.success('删除成功')
-      fetchNamespaceList()
-    } catch (error: any) {
-      ElMessage.error('删除失败')
-    }
-  })
+    await namespaceApi.delete(params)
+    ElMessage.success('删除成功')
+    deleteDialogVisible.value = false
+    fetchNamespaceList()
+  } catch (error: any) {
+    ElMessage.error('删除失败')
+  } finally {
+    deleteLoading.value = false
+  }
+}
+
+// 取消删除
+const cancelDeleteNamespace = () => {
+  deleteDialogVisible.value = false
+  currentDeleteNamespace.value = null
 }
 
 // 提交表单

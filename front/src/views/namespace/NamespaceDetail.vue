@@ -217,6 +217,16 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 删除确认对话框 -->
+    <DeleteConfirmDialog
+      v-model="deleteDialogVisible"
+      :item-name="namespaceInfo?.name || ''"
+      message="确定要删除命名空间吗？"
+      :loading="deleteLoading"
+      @confirm="confirmDeleteNamespace"
+      @cancel="cancelDeleteNamespace"
+    />
   </div>
 </template>
 
@@ -231,11 +241,8 @@ import {
   Delete,
   CopyDocument
 } from '@element-plus/icons-vue'
-import { 
-  namespaceApi, 
-  type NamespaceVO,
-  type NamespaceBaseDTO
-} from '@/api/namespace'
+import { namespaceApi, type NamespaceVO, type NamespaceBaseDTO } from '@/api/namespace'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -294,31 +301,37 @@ const handleCopyYaml = async () => {
   }
 }
 
+// 删除相关状态
+const deleteDialogVisible = ref(false)
+const deleteLoading = ref(false)
+
 // 删除
 const handleDelete = () => {
-  if (!namespaceInfo.value) return
-  
-  ElMessageBox.confirm(
-    `确定要删除命名空间 "${namespaceInfo.value.name}" 吗？此操作不可恢复！`,
-    '确认删除',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+  deleteDialogVisible.value = true
+}
+
+// 确认删除命名空间
+const confirmDeleteNamespace = async () => {
+  deleteLoading.value = true
+  try {
+    const params = {
+      clusterName: route.params.clusterName as string,
+      namespaceName: namespaceInfo.value.name
     }
-  ).then(async () => {
-    try {
-      const params: NamespaceBaseDTO = {
-        clusterId: route.query.clusterId as string,
-        namespace: namespaceInfo.value!.name
-      }
-      await namespaceApi.delete(params)
-      ElMessage.success('删除成功')
-      router.back()
-    } catch (error: any) {
-      ElMessage.error('删除失败')
-    }
-  })
+    await namespaceApi.delete(params)
+    ElMessage.success('删除成功')
+    deleteDialogVisible.value = false
+    router.push({ name: 'NamespaceList', params: { clusterName: route.params.clusterName } })
+  } catch (error) {
+    ElMessage.error('删除失败')
+  } finally {
+    deleteLoading.value = false
+  }
+}
+
+// 取消删除
+const cancelDeleteNamespace = () => {
+  deleteDialogVisible.value = false
 }
 
 // 状态相关

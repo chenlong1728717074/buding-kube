@@ -199,6 +199,16 @@
       <el-empty description="未找到Pod信息" />
     </div>
 
+    <!-- 删除确认对话框 -->
+    <DeleteConfirmDialog
+      v-model="deleteDialogVisible"
+      :item-name="podInfo?.name || ''"
+      message="确定要删除Pod吗？"
+      :loading="deleteLoading"
+      @confirm="confirmDeletePod"
+      @cancel="cancelDeletePod"
+    />
+
     <!-- YAML查看对话框 -->
     <el-dialog
       v-model="yamlDialogVisible"
@@ -232,6 +242,7 @@ import {
   type PodInfoVO, 
   type PodDTO
 } from '@/api/pod'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -310,32 +321,41 @@ const handleBack = () => {
   router.back()
 }
 
+// 删除相关状态
+const deleteDialogVisible = ref(false)
+const deleteLoading = ref(false)
+
 // 删除Pod
 const handleDelete = () => {
   if (!podInfo.value) return
+  deleteDialogVisible.value = true
+}
+
+// 确认删除Pod
+const confirmDeletePod = async () => {
+  if (!podInfo.value) return
   
-  ElMessageBox.confirm(
-    `确定要删除Pod "${podInfo.value.name}" 吗？此操作不可恢复！`,
-    '确认删除',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+  deleteLoading.value = true
+  try {
+    const params: PodDTO = {
+      clusterId: route.query.clusterId as string,
+      namespace: podInfo.value.namespace,
+      name: podInfo.value.name
     }
-  ).then(async () => {
-    try {
-      const params: PodDTO = {
-        clusterId: route.query.clusterId as string,
-        namespace: podInfo.value!.namespace,
-        name: podInfo.value!.name
-      }
-      await podApi.delete(params)
-      ElMessage.success('删除成功')
-      handleBack()
-    } catch (error: any) {
-      ElMessage.error('删除失败')
-    }
-  })
+    await podApi.delete(params)
+    ElMessage.success('删除成功')
+    deleteDialogVisible.value = false
+    router.back()
+  } catch (error) {
+    ElMessage.error('删除失败')
+  } finally {
+    deleteLoading.value = false
+  }
+}
+
+// 取消删除
+const cancelDeletePod = () => {
+  deleteDialogVisible.value = false
 }
 
 // 获取状态类型

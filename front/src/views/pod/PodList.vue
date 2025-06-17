@@ -167,6 +167,16 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 删除确认对话框 -->
+    <DeleteConfirmDialog
+      v-model="deleteDialogVisible"
+      :item-name="currentDeletePod?.name || ''"
+      message="确定要删除Pod吗？"
+      :loading="deleteLoading"
+      @confirm="confirmDeletePod"
+      @cancel="cancelDeletePod"
+    />
   </div>
 </template>
 
@@ -185,6 +195,7 @@ import {
   type PodQueryDTO, 
   type PodDTO
 } from '@/api/pod'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 
@@ -420,30 +431,43 @@ const handleViewYaml = async (row: PodVO) => {
   }
 }
 
+// 删除Pod相关状态
+const deleteDialogVisible = ref(false)
+const currentDeletePod = ref<PodVO | null>(null)
+const deleteLoading = ref(false)
+
 // 删除Pod
 const handleDelete = (row: PodVO) => {
-  ElMessageBox.confirm(
-    `确定要删除Pod "${row.name}" 吗？此操作不可恢复！`,
-    '确认删除',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+  currentDeletePod.value = row
+  deleteDialogVisible.value = true
+}
+
+// 确认删除Pod
+const confirmDeletePod = async () => {
+  if (!currentDeletePod.value) return
+  
+  deleteLoading.value = true
+  try {
+    const params: PodDTO = {
+      clusterId: searchForm.clusterId,
+      namespace: currentDeletePod.value.namespace,
+      name: currentDeletePod.value.name
     }
-  ).then(async () => {
-    try {
-      const params: PodDTO = {
-        clusterId: searchForm.clusterId,
-        namespace: row.namespace,
-        name: row.name
-      }
-      await podApi.delete(params)
-      ElMessage.success('删除成功')
-      fetchPodList()
-    } catch (error: any) {
-      ElMessage.error('删除失败')
-    }
-  })
+    await podApi.delete(params)
+    ElMessage.success('删除成功')
+    deleteDialogVisible.value = false
+    fetchPodList()
+  } catch (error: any) {
+    ElMessage.error('删除失败')
+  } finally {
+    deleteLoading.value = false
+  }
+}
+
+// 取消删除
+const cancelDeletePod = () => {
+  deleteDialogVisible.value = false
+  currentDeletePod.value = null
 }
 
 // 获取状态类型
