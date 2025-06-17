@@ -3,6 +3,7 @@ package api
 import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/middleware"
 	"buding-kube/pkg/logs"
 	"github.com/gin-gonic/gin"
 )
@@ -23,10 +24,10 @@ func NewClusterApi(router *gin.RouterGroup) *ClusterApi {
 }
 
 func (api *ClusterApi) Router() {
-	api.router.GET("/:id", api.Info)
-	api.router.DELETE("/:id", api.Delete)
+	api.router.GET("/:id", middleware.Blocker(), api.Info)
+	api.router.DELETE("/:id", middleware.Blocker(), api.Delete)
 	api.router.GET("/list", api.List)
-	api.router.POST("", api.Add)
+	api.router.POST("", middleware.Blocker(), api.Add)
 }
 func (api *ClusterApi) Add(ctx *gin.Context) {
 	var create dto.NodeCreateDTO

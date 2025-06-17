@@ -13,7 +13,7 @@ func Blocker() gin.HandlerFunc {
 		if os.Getenv("APP_ENV") == "demo" {
 			c.AbortWithStatusJSON(http.StatusOK, vo.Response{
 				Code: vo.CodeInternalError,
-				Msg:  "改服务为演示环境:不允许操作该接口 ",
+				Msg:  "演示环境阻断:不允许操作该接口 ",
 				Data: nil,
 			})
 			c.Abort()

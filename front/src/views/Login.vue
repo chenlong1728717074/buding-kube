@@ -51,6 +51,10 @@
               </el-button>
             </el-form-item>
           </el-form>
+          <div class="demo-info">
+            <p class="demo-account">演示账户: admin / 123456</p>
+            <p class="demo-notice">注意：演示环境部分功能未开放，项目正在开发中</p>
+          </div>
         </el-card>
       </div>
     </div>
@@ -244,6 +248,27 @@ const onSubmit = async () => {
 
 .login-btn:active {
   transform: translateY(0);
+}
+
+.demo-info {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+  text-align: center;
+}
+
+.demo-account {
+  font-size: 13px;
+  color: #409eff;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.demo-notice {
+  font-size: 12px;
+  color: #909399;
+  margin: 0;
+  line-height: 1.4;
 }
 
 /* 响应式设计 */

@@ -3,6 +3,7 @@ package api
 import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,7 +25,7 @@ func NewNodeApi(router *gin.RouterGroup) *NodeApi {
 func (api *NodeApi) Router() {
 	api.router.GET("/list", api.List)
 	api.router.GET("", api.Info)
-	api.router.PUT("/unSchedule", api.UnSchedule)
+	api.router.PUT("/unSchedule", middleware.Blocker(), api.UnSchedule)
 }
 
 func (api *NodeApi) List(ctx *gin.Context) {

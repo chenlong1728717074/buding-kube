@@ -3,6 +3,7 @@ package api
 import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,10 +27,10 @@ func NewUserApi(router *gin.RouterGroup) *UserApi {
 // Router 配置路由
 func (api *UserApi) Router() {
 	api.router.POST("", api.CreateUser)
-	api.router.PUT("", api.UpdateUser)
+	api.router.PUT("", middleware.Blocker(), api.UpdateUser)
 	api.router.GET("/list", api.ListUsers)
 	api.router.GET("/:id", api.GetUser)
-	api.router.DELETE("/:id", api.DeleteUser)
+	api.router.DELETE("/:id", middleware.Blocker(), api.DeleteUser)
 }
 
 // @Summary 获取用户列表

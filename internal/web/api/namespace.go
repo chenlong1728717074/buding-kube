@@ -3,6 +3,7 @@ package api
 import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,12 +23,12 @@ func NewNamespacesApi(router *gin.RouterGroup) *NamespacesApi {
 }
 
 func (api *NamespacesApi) Router() {
-	api.router.GET("", api.Info)
-	api.router.DELETE("", api.Delete)
+	api.router.GET("", middleware.Blocker(), api.Info)
+	api.router.DELETE("", middleware.Blocker(), api.Delete)
 	api.router.GET("/list", api.List)
-	api.router.POST("", api.Add)
-	api.router.PUT("", api.Update)
-	api.router.POST("/apply", api.Apply)
+	api.router.POST("", middleware.Blocker(), api.Add)
+	api.router.PUT("", middleware.Blocker(), api.Update)
+	api.router.POST("/apply", middleware.Blocker(), api.Apply)
 }
 
 func (api *NamespacesApi) List(ctx *gin.Context) {

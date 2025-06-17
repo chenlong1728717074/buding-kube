@@ -3,6 +3,7 @@ package api
 import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/middleware"
 	"errors"
 	"github.com/gin-gonic/gin"
 )
@@ -23,9 +24,9 @@ func NewPodApi(router *gin.RouterGroup) *PodApi {
 }
 
 func (api *PodApi) Router() {
-	api.router.POST("", api.Add)
-	api.router.DELETE("", api.Delete)
-	api.router.PUT("", api.Update)
+	api.router.POST("", middleware.Blocker(), api.Add)
+	api.router.DELETE("", middleware.Blocker(), api.Delete)
+	api.router.PUT("", middleware.Blocker(), api.Update)
 	api.router.GET("/list", api.List)
 	api.router.GET("", api.Info)
 }
