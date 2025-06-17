@@ -40,63 +40,63 @@
                 <span>基本信息</span>
               </div>
             </template>
-            <div class="info-list">
+            <div class="info-grid">
               <div class="info-item">
-                <label>节点名称：</label>
+                <label>节点名称:</label>
                 <span>{{ nodeInfo?.server?.hostname || '-' }}</span>
               </div>
               <div class="info-item">
-                <label>状态：</label>
+                <label>状态:</label>
                 <el-tag :type="getStatusType(nodeInfo?.server?.status)">
                   {{ getStatusText(nodeInfo?.server?.status) }}
                 </el-tag>
               </div>
               <div class="info-item">
-                <label>角色：</label>
+                <label>角色:</label>
                 <el-tag :type="nodeInfo?.server?.role === 'master' ? 'warning' : 'info'">
                   {{ nodeInfo?.server?.role === 'master' ? 'Master' : 'Worker' }}
                 </el-tag>
               </div>
               <div class="info-item">
-                <label>Kubelet版本：</label>
+                <label>Kubelet版本:</label>
                 <span>{{ nodeInfo?.server?.kubeletVersion || '-' }}</span>
               </div>
               <div class="info-item">
-                <label>内部IP：</label>
+                <label>内部IP:</label>
                 <span>{{ nodeInfo?.server?.ip || '-' }}</span>
               </div>
               <div class="info-item">
-                <label>操作系统：</label>
+                <label>操作系统:</label>
                 <span>{{ nodeInfo?.server?.osImage || '-' }}</span>
               </div>
               <div class="info-item">
-                <label>系统类型：</label>
+                <label>系统类型:</label>
                 <span>{{ nodeInfo?.server?.osType || '-' }}</span>
               </div>
               <div class="info-item">
-                <label>架构：</label>
+                <label>架构:</label>
                 <span>{{ nodeInfo?.server?.arch || '-' }}</span>
               </div>
               <div class="info-item">
-                <label>内核版本：</label>
+                <label>内核版本:</label>
                 <span>{{ nodeInfo?.server?.kernelVersion || '-' }}</span>
               </div>
               <div class="info-item">
-                <label>容器运行时：</label>
+                <label>容器运行时:</label>
                 <span>{{ nodeInfo?.server?.containerRuntime || '-' }}</span>
               </div>
               <div class="info-item">
-                <label>KubeProxy版本：</label>
+                <label>KubeProxy版本:</label>
                 <span>{{ nodeInfo?.server?.kubeProxyVersion || '-' }}</span>
               </div>
               <div class="info-item">
-                <label>可调度：</label>
+                <label>可调度:</label>
                 <el-tag :type="!nodeInfo?.server?.unSchedule ? 'success' : 'danger'">
                   {{ !nodeInfo?.server?.unSchedule ? '是' : '否' }}
                 </el-tag>
               </div>
               <div class="info-item">
-                <label>创建时间：</label>
+                <label>创建时间:</label>
                 <span>{{ formatDate(nodeInfo?.server?.createTime) }}</span>
               </div>
             </div>
@@ -490,10 +490,10 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.info-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
 }
 
 .info-item {
@@ -502,13 +502,30 @@ onMounted(() => {
 }
 
 .info-item label {
-  min-width: 120px;
   font-weight: 500;
-  color: #666;
+  color: #606266;
+  min-width: 120px;
 }
 
 .info-item span {
-  color: #333;
+  color: #303133;
+}
+
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 .labels-container,

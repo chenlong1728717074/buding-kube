@@ -8,6 +8,16 @@
         </el-button>
         <h1>Pod详情</h1>
       </div>
+      <div class="header-actions" v-if="podInfo">
+        <el-button size="small" @click="handleViewYaml" v-if="podInfo.yaml">
+          <el-icon><Document /></el-icon>
+          查看YAML
+        </el-button>
+        <el-button size="small" type="danger" @click="handleDelete">
+          <el-icon><Delete /></el-icon>
+          删除
+        </el-button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-container">
@@ -18,55 +28,53 @@
       <!-- 基本信息 -->
       <el-card class="info-card">
         <template #header>
-          <div class="card-header">
-            <span>基本信息</span>
-            <div class="header-actions">
-              <el-button size="small" @click="handleViewYaml" v-if="podInfo.yaml">
-                <el-icon><Document /></el-icon>
-                查看YAML
-              </el-button>
-              <el-button size="small" @click="handleDelete">
-                <el-icon><Delete /></el-icon>
-                删除
-              </el-button>
-            </div>
-          </div>
+          <span>基本信息</span>
         </template>
         
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="集群ID">
-            {{ clusterId || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="集群名称">
-            {{ clusterName || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="Pod名称">
-            {{ podInfo.name }}
-          </el-descriptions-item>
-          <el-descriptions-item label="命名空间">
-            {{ podInfo.namespace }}
-          </el-descriptions-item>
-          <el-descriptions-item label="状态">
+        <div class="info-grid">
+          <div class="info-item">
+            <label>集群ID:</label>
+            <span>{{ clusterId || '-' }}</span>
+          </div>
+          <div class="info-item">
+            <label>集群名称:</label>
+            <span>{{ clusterName || '-' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Pod名称:</label>
+            <span>{{ podInfo.name }}</span>
+          </div>
+          <div class="info-item">
+            <label>命名空间:</label>
+            <span>{{ podInfo.namespace }}</span>
+          </div>
+          <div class="info-item">
+            <label>状态:</label>
             <el-tag :type="getStatusType(podInfo.status)">
               {{ getStatusText(podInfo.status) }}
             </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="节点">
-            {{ podInfo.nodeName || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="Pod IP">
-            {{ podInfo.podIP || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="主机IP">
-            {{ podInfo.hostIP || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="创建时间">
-            {{ formatDate(podInfo.creationTimestamp) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="重启次数">
-            {{ podInfo.restartCount || 0 }}
-          </el-descriptions-item>
-        </el-descriptions>
+          </div>
+          <div class="info-item">
+            <label>节点:</label>
+            <span>{{ podInfo.nodeName || '-' }}</span>
+          </div>
+          <div class="info-item">
+            <label>Pod IP:</label>
+            <span>{{ podInfo.podIP || '-' }}</span>
+          </div>
+          <div class="info-item">
+            <label>主机IP:</label>
+            <span>{{ podInfo.hostIP || '-' }}</span>
+          </div>
+          <div class="info-item">
+            <label>创建时间:</label>
+            <span>{{ formatDate(podInfo.creationTimestamp) }}</span>
+          </div>
+          <div class="info-item">
+            <label>重启次数:</label>
+            <span>{{ podInfo.restartCount || 0 }}</span>
+          </div>
+        </div>
       </el-card>
 
       <!-- 容器信息 -->
@@ -75,20 +83,20 @@
           <span>容器信息</span>
         </template>
         
-        <el-table :data="podInfo.containers" stripe>
-          <el-table-column prop="name" label="容器名称" min-width="150" />
-          <el-table-column prop="image" label="镜像" min-width="200" />
-          <el-table-column prop="ready" label="就绪状态" width="100" align="center">
+        <el-table :data="podInfo.containers" stripe style="width: 100%">
+          <el-table-column prop="name" label="容器名称" width="180" show-overflow-tooltip />
+          <el-table-column prop="image" label="镜像" min-width="250" show-overflow-tooltip />
+          <el-table-column prop="ready" label="就绪状态" width="120" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.ready ? 'success' : 'danger'">
+              <el-tag :type="row.ready ? 'success' : 'danger'" size="small">
                 {{ row.ready ? '就绪' : '未就绪' }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="restartCount" label="重启次数" width="100" align="center" />
-          <el-table-column label="端口" min-width="150">
+          <el-table-column prop="restartCount" label="重启次数" width="120" align="center" />
+          <el-table-column label="端口" width="200">
             <template #default="{ row }">
-              <div v-if="row.ports && row.ports.length > 0">
+              <div v-if="row.ports && row.ports.length > 0" class="ports-container">
                 <el-tag 
                   v-for="port in row.ports" 
                   :key="port.containerPort" 
@@ -98,7 +106,22 @@
                   {{ port.containerPort }}{{ port.protocol ? '/' + port.protocol : '' }}
                 </el-tag>
               </div>
-              <span v-else>-</span>
+              <span v-else class="text-muted">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" min-width="150">
+            <template #default="{ row }">
+              <div class="container-status">
+                <div v-if="row.state">
+                  <el-tag 
+                    :type="getContainerStateType(row.state)" 
+                    size="small"
+                  >
+                    {{ getContainerStateText(row.state) }}
+                  </el-tag>
+                </div>
+                <span v-else class="text-muted">-</span>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -147,17 +170,20 @@
       <!-- 注解 -->
       <el-card class="info-card" v-if="podInfo.annotations && Object.keys(podInfo.annotations).length > 0">
         <template #header>
-          <span>注解</span>
+          <div class="card-header">
+            <span>注解</span>
+            <el-tag size="small" type="info">{{ Object.keys(podInfo.annotations).length }}</el-tag>
+          </div>
         </template>
         
-        <div class="annotations-container">
+        <div class="annotations-grid">
           <div 
             v-for="(value, key) in podInfo.annotations" 
             :key="key"
             class="annotation-item"
           >
-            <strong>{{ key }}:</strong>
-            <span class="annotation-value">{{ value }}</span>
+            <div class="annotation-key">{{ key }}</div>
+            <div class="annotation-value">{{ value }}</div>
           </div>
         </div>
       </el-card>
@@ -392,6 +418,28 @@ const getStatusText = (status: string) => {
   }
 }
 
+// 获取容器状态类型
+const getContainerStateType = (state: any) => {
+  if (state.running) return 'success'
+  if (state.waiting) return 'warning'
+  if (state.terminated) {
+    return state.terminated.exitCode === 0 ? 'success' : 'danger'
+  }
+  return 'info'
+}
+
+// 获取容器状态文本
+const getContainerStateText = (state: any) => {
+  if (state.running) return '运行中'
+  if (state.waiting) return `等待中: ${state.waiting.reason || ''}`
+  if (state.terminated) {
+    const reason = state.terminated.reason || '已终止'
+    const exitCode = state.terminated.exitCode
+    return `${reason} (${exitCode})`
+  }
+  return '未知'
+}
+
 // 格式化日期
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-'
@@ -438,6 +486,7 @@ onMounted(() => {
 .header-left {
   display: flex;
   align-items: center;
+  gap: 16px;
 }
 
 .page-header h1 {
@@ -445,6 +494,11 @@ onMounted(() => {
   font-size: 24px;
   font-weight: 600;
   color: #2c3e50;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .loading-container {
@@ -466,16 +520,28 @@ onMounted(() => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+}
+
+.info-item label {
+  font-weight: 500;
+  color: #606266;
+  min-width: 120px;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-weight: 600;
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
 }
 
 .labels-container {
@@ -488,22 +554,63 @@ onMounted(() => {
   margin: 0;
 }
 
-.annotations-container {
-  display: flex;
-  flex-direction: column;
+.annotations-grid {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .annotation-item {
-  padding: 8px;
+  padding: 16px;
   background-color: #f8f9fa;
-  border-radius: 4px;
-  border-left: 3px solid #409eff;
+  border-radius: 8px;
+  border-left: 4px solid #409eff;
+  transition: all 0.2s ease;
+}
+
+.annotation-item:hover {
+  background-color: #f0f2f5;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.annotation-key {
+  font-weight: 600;
+  color: #409eff;
+  font-size: 13px;
+  margin-bottom: 8px;
+  word-break: break-all;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
 .annotation-value {
-  margin-left: 8px;
+  color: #606266;
+  font-size: 13px;
   word-break: break-all;
+  line-height: 1.5;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background-color: #ffffff;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+}
+
+.ports-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.container-status {
+  display: flex;
+  align-items: center;
+}
+
+.text-muted {
+  color: #909399;
+  font-style: italic;
 }
 
 .yaml-container {
@@ -541,5 +648,22 @@ onMounted(() => {
 .text-info {
   color: #909399;
   font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 </style>
