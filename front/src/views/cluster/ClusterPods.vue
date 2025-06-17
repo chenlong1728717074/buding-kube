@@ -322,15 +322,16 @@
             </el-form-item>
             <el-form-item label="开始时间:">
               <el-date-picker
-                v-model="sinceTime"
-                type="datetime"
-                placeholder="选择开始时间"
-                style="width: 200px"
-                format="YYYY-MM-DD HH:mm:ss"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                clearable
-                @change="handleTimeChange"
-              />
+                 v-model="sinceTime"
+                 type="datetime"
+                 placeholder="选择开始时间"
+                 style="width: 200px"
+                 format="YYYY年MM月DD日 HH:mm:ss"
+                 value-format="YYYY-MM-DD HH:mm:ss"
+                 clearable
+                 @change="handleTimeChange"
+                 :teleported="false"
+               />
             </el-form-item>
             <el-form-item label="行数:">
               <el-input-number 
