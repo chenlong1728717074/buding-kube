@@ -14,9 +14,10 @@ type PodVO struct {
 	NodeName          string    `json:"nodeName"`
 	HostIP            string    `json:"hostIP"`
 	PodIP             string    `json:"podIP"`
+	Yaml              string    `json:"yaml"`
 }
 
-func Pod2VO(item corev1.Pod) PodVO {
+func Pod2VO(item corev1.Pod, yaml string) PodVO {
 	return PodVO{
 		CreationTimestamp: item.CreationTimestamp.Time,
 		Name:              item.Name,
@@ -25,6 +26,7 @@ func Pod2VO(item corev1.Pod) PodVO {
 		HostIP:            item.Status.HostIP,
 		PodIP:             item.Status.PodIP,
 		NodeName:          item.Spec.NodeName,
+		Yaml:              yaml,
 	}
 }
 

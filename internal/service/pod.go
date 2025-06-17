@@ -63,15 +63,19 @@ func (s *PodService) List(query dto.PodQueryDTO) ([]vo.PodVO, error) {
 	if query.Status != "" {
 		listOptions.FieldSelector = fmt.Sprintf("status.phase=%s", query.Status)
 	}
-	namespaces, err := clientSet.CoreV1().Pods(query.Namespace).List(context.TODO(), listOptions)
+	pods, err := clientSet.CoreV1().Pods(query.Namespace).List(context.TODO(), listOptions)
 	if err != nil {
 		logs.Error("获取pod失败: %v", err)
 		return nil, err
 	}
 	result := make([]vo.PodVO, 0)
-	for _, item := range namespaces.Items {
+	for _, item := range pods.Items {
 		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
-			result = append(result, vo.Pod2VO(item))
+			yamlData, err := yaml.Marshal(&item)
+			if err != nil {
+				logs.Error("序列化pod失败: %v", err)
+			}
+			result = append(result, vo.Pod2VO(item, string(yamlData)))
 		}
 	}
 	//按照时间倒叙排序

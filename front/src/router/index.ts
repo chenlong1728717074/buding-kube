@@ -106,6 +106,24 @@ const routes: Array<RouteRecordRaw> = [
         ]
       },
       {
+        path: '/pod',
+        name: 'PodList',
+        component: () => import('@/views/pod/PodList.vue'),
+        meta: {
+          title: 'Pod管理',
+          requiresAuth: true
+        }
+      },
+      {
+        path: '/pod/detail',
+        name: 'PodDetail',
+        component: () => import('@/views/pod/PodDetail.vue'),
+        meta: {
+          title: 'Pod详情',
+          requiresAuth: true
+        }
+      },
+      {
         path: '/user',
         name: 'UserManagement',
         redirect: '/user/list',

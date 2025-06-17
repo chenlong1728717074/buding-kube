@@ -115,6 +115,7 @@
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
+                    <el-dropdown-item command="pods">Pod管理</el-dropdown-item>
                     <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -258,7 +259,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Plus, 
@@ -278,6 +279,7 @@ import {
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 
 const route = useRoute()
+const router = useRouter()
 const loading = ref(false)
 const submitLoading = ref(false)
 const yamlSubmitLoading = ref(false)
@@ -503,10 +505,24 @@ const handleViewYaml = async (row: NamespaceVO) => {
 // 更多操作
 const handleMoreAction = (command: string, row: NamespaceVO) => {
   switch (command) {
+    case 'pods':
+      handleViewPods(row)
+      break
     case 'delete':
       handleDelete(row)
       break
   }
+}
+
+// 查看Pod
+const handleViewPods = (row: NamespaceVO) => {
+  router.push({
+    path: '/pod',
+    query: {
+      clusterId: searchForm.clusterId,
+      namespace: row.name
+    }
+  })
 }
 
 // 删除命名空间

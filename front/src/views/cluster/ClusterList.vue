@@ -50,23 +50,23 @@
         stripe
         @selection-change="handleSelectionChange"
       >
-        <el-table-column type="selection" width="55" />
-        <el-table-column v-if="hasColumnData('id')" prop="id" label="集群ID" width="280" show-overflow-tooltip />
-        <el-table-column prop="name" label="集群名称" width="80">
+        <el-table-column type="selection" width="55" align="center" />
+        <el-table-column v-if="hasColumnData('id')" prop="id" label="集群ID" width="180" show-overflow-tooltip header-align="center" align="center" />
+        <el-table-column prop="name" label="集群名称" width="140" header-align="center" align="center">
           <template #default="{ row }">
             <el-link type="primary" @click="handleViewDetail(row)">
               {{ row.name }}
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column v-if="hasColumnData('alias')" prop="alias" label="集群别名" width="160" show-overflow-tooltip />
-        <el-table-column v-if="hasColumnData('describe') || hasColumnData('description')" prop="description" label="描述" min-width="200" show-overflow-tooltip>
+        <el-table-column v-if="hasColumnData('alias')" prop="alias" label="集群别名" width="140" show-overflow-tooltip header-align="center" align="center" />
+        <el-table-column v-if="hasColumnData('describe') || hasColumnData('description')" prop="description" label="描述" min-width="160" show-overflow-tooltip header-align="center" align="center">
           <template #default="{ row }">
             {{ row.describe || row.description }}
           </template>
         </el-table-column>
-        <el-table-column v-if="hasColumnData('version')" prop="version" label="版本" width="120" />
-        <el-table-column v-if="hasColumnData('status')" prop="status" label="状态" width="100" align="center">
+        <el-table-column v-if="hasColumnData('version')" prop="version" label="版本" width="90" header-align="center" align="center" />
+        <el-table-column v-if="hasColumnData('status')" prop="status" label="状态" width="90" align="center" header-align="center">
           <template #default="{ row }">
             <el-tag 
               :type="getStatusType(row.status)"
@@ -76,17 +76,14 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right" header-align="center">
           <template #default="{ row }">
-            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: nowrap;">
+            <div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: nowrap;">
               <el-button size="small" @click="handleViewDetail(row)">
                 详情
               </el-button>
               <el-button size="small" @click="handleViewNodes(row)">
                 节点
-              </el-button>
-              <el-button size="small" @click="handleViewPods(row)">
-                Pod
               </el-button>
               <el-dropdown @command="(command) => handleMoreAction(command, row)">
                 <el-button size="small">
@@ -336,10 +333,7 @@ const handleViewNodes = (row: ClusterVO) => {
   })
 }
 
-// 查看Pod
-const handleViewPods = (row: ClusterVO) => {
-  router.push(`/cluster/pods/${row.name}`)
-}
+
 
 // 更多操作
 const handleMoreAction = async (command: string, row: ClusterVO) => {

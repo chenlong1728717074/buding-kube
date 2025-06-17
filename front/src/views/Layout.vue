@@ -35,6 +35,10 @@
             <el-icon><List /></el-icon>
             <span>命名空间</span>
           </el-menu-item>
+          <el-menu-item index="/pod">
+            <el-icon><Box /></el-icon>
+            <span>Pod管理</span>
+          </el-menu-item>
         </el-sub-menu>
         
         <el-sub-menu v-if="userStore.isAdmin" index="/user">
@@ -106,7 +110,8 @@ import {
   Avatar,
   ArrowDown,
   List,
-  UserFilled
+  UserFilled,
+  Box
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -119,6 +124,7 @@ const activeMenu = computed(() => {
   if (path.startsWith('/dashboard')) return '/dashboard'
   if (path.startsWith('/cluster')) return path
   if (path.startsWith('/namespace')) return '/namespace'
+  if (path.startsWith('/pod')) return '/pod'
   if (path.startsWith('/user')) return path
   return '/dashboard'
 })
