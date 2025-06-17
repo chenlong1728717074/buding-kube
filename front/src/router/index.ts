@@ -98,6 +98,12 @@ const routes: Array<RouteRecordRaw> = [
             meta: { title: '命名空间详情', requiresAuth: true }
           },
           {
+            path: '/node/detail',
+            name: 'NodeDetail',
+            component: () => import('@/views/cluster/NodeDetail.vue'),
+            meta: { title: '节点详情', requiresAuth: true }
+          },
+          {
             path: '/namespace/edit',
             name: 'NamespaceEdit',
             component: () => import('@/views/namespace/NamespaceEdit.vue'),

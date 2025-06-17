@@ -314,14 +314,14 @@ const handleDelete = () => {
 const confirmDeleteNamespace = async () => {
   deleteLoading.value = true
   try {
-    const params = {
-      clusterName: route.params.clusterName as string,
-      namespaceName: namespaceInfo.value.name
+    const params: NamespaceBaseDTO = {
+      clusterId: route.query.clusterId as string,
+      namespace: namespaceInfo.value.name
     }
     await namespaceApi.delete(params)
     ElMessage.success('删除成功')
     deleteDialogVisible.value = false
-    router.push({ name: 'NamespaceList', params: { clusterName: route.params.clusterName } })
+    router.back()
   } catch (error) {
     ElMessage.error('删除失败')
   } finally {

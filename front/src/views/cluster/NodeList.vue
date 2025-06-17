@@ -90,6 +90,13 @@
             />
           </template>
         </el-table-column>
+        <el-table-column label="操作" width="120" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" @click="handleViewDetail(row)">
+              详情
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <!-- 分页 -->
@@ -213,8 +220,13 @@ const handleRefresh = () => {
 
 // 查看详情
 const handleViewDetail = (row: any) => {
-  // TODO: 实现节点详情页面
-  ElMessage.info('节点详情功能待实现')
+  router.push({
+    path: '/node/detail',
+    query: {
+      clusterId: searchForm.clusterId,
+      hostname: row.hostname || row.name
+    }
+  })
 }
 
 // 处理调度状态切换

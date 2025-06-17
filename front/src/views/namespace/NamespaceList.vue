@@ -493,8 +493,13 @@ const handleEdit = (row: NamespaceVO) => {
 
 // 查看详情
 const handleViewDetail = (row: NamespaceVO) => {
-  // 跳转到详情页面或打开详情对话框
-  ElMessage.info('查看详情功能待实现')
+  router.push({
+    path: '/namespace/detail',
+    query: {
+      clusterId: searchForm.clusterId,
+      namespace: row.name
+    }
+  })
 }
 
 // 查看YAML

@@ -389,15 +389,14 @@ const handleRefresh = () => {
 }
 
 // 查看详情
-const handleViewDetail = async (node: any) => {
-  try {
-    const response = await clusterApi.getNodeDetail(clusterName, node.name)
-    selectedNode.value = response.data
-    detailDialogVisible.value = true
-  } catch (error) {
-    console.error('获取节点详情失败:', error)
-    ElMessage.error('获取节点详情失败')
-  }
+const handleViewDetail = (node: any) => {
+  router.push({
+    path: '/node/detail',
+    query: {
+      clusterName: clusterName,
+      nodeName: node.name
+    }
+  })
 }
 
 // 查看Pod

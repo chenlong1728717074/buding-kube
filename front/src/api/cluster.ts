@@ -100,8 +100,13 @@ export const clusterApi = {
   },
 
   // 获取节点详情
-  getNodeDetail: (clusterName: string, nodeName: string) => {
-    return request.get(`/cluster/${clusterName}/nodes/${nodeName}`)
+  getNodeDetail: (clusterId: string, hostname: string) => {
+    return request.get('/node', {
+      params: {
+        clusterId,
+        hostname
+      }
+    })
   },
 
   // 禁止/允许节点调度

@@ -76,9 +76,9 @@ func buildNodePods(pods *corev1.PodList) []NodePodVO {
 	}
 	for _, pod := range pods.Items {
 		// 跳过已完成或失败的Pod（除非需要显示）
-		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
-			continue
-		}
+		//if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+		//	continue
+		//}
 		podVO := NodePodVO{
 			Name:        pod.Name,
 			Namespace:   pod.Namespace,
