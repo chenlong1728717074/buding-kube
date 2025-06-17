@@ -13,7 +13,14 @@ type PodQueryDTO struct {
 
 type PodLogDTO struct {
 	PodDTO
-	SinceTime *CustomTime `json:"sinceTime"`
-	Follow    bool        `json:"follow"`
-	TailLines *int64      `json:"tailLines"`
+	SinceTime     *CustomTime `json:"sinceTime"`
+	ContainerName string      `json:"containerName"`
+	Follow        bool        `json:"follow"`
+	TailLines     *int64      `json:"tailLines"`
+}
+
+type PodDownloadDTO struct {
+	PodDTO
+	FilePath      string `json:"filePath" form:"filePath"`
+	ContainerName string `json:"containerName" form:"containerName"`
 }

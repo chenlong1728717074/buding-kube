@@ -34,6 +34,8 @@ func (api *PodApi) Router() {
 	api.router.PUT("", middleware.Blocker(), api.Update)
 	api.router.GET("/list", api.List)
 	api.router.POST("/logs", api.Log)
+	api.router.POST("/download", api.Download)
+	api.router.POST("/upload", api.Upload)
 	api.router.GET("", api.Info)
 }
 
@@ -85,6 +87,42 @@ func (api *PodApi) Info(ctx *gin.Context) {
 		return
 	}
 	api.SuccessWithData(ctx, result)
+}
+
+func (api *PodApi) Download(ctx *gin.Context) {
+	//var query dto.PodDownloadDTO
+	//if err := api.BindForm(ctx, &query); err != nil {
+	//	api.ParamBindError(ctx, err)
+	//	return
+	//}
+	//file, fileHeader, err := ctx.Request.FormFile("file") // "file" 是前端表单中的字段名
+	//if err != nil {
+	//	api.ParamError(ctx, "获取上传文件失败: "+err.Error())
+	//	return
+	//}
+	//defer file.Close()
+	//err := api.srv.PodDownloadDTO(query, file, fileHeader)
+	api.SuccessMsg(ctx, "")
+}
+
+func (api *PodApi) Upload(ctx *gin.Context) {
+	var query dto.PodDownloadDTO
+	if err := api.BindForm(ctx, &query); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	file, fileHeader, err := ctx.Request.FormFile("file") // "file" 是前端表单中的字段名
+	if err != nil {
+		api.ParamError(ctx, "获取上传文件失败: "+err.Error())
+		return
+	}
+	defer file.Close()
+	err = api.srv.Upload(query, file, fileHeader)
+	if err != nil {
+		api.InternalError(ctx, "上传文件失败: ", err)
+		return
+	}
+	api.SuccessMsg(ctx, "上传成功")
 }
 
 func (api *PodApi) Log(ctx *gin.Context) {

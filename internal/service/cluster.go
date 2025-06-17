@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"strings"
 	"sync"
@@ -21,7 +22,7 @@ import (
 var (
 	clusterSrv                    *ClusterService
 	clusterOnce                   sync.Once
-	ClusterMap                    ClusterCacheMap
+	ClusterMap                           = make(ClusterCacheMap)
 	ClusterConfigSecretLabelKey   string = "buding-kube.com/cluster.metadata"
 	ClusterConfigSecretLabelValue string = "true"
 )
@@ -35,30 +36,64 @@ type ClusterStatus struct {
 	Version  string `json:"version"`
 	Status   string `json:"status"`
 }
-type ClusterCacheMap map[string]*kubernetes.Clientset
+type ClusterCacheMap map[string]*ClusterCache
 
-func (m ClusterCacheMap) Put(key string, value *kubernetes.Clientset) {
-	m[key] = value
+type ClusterCache struct {
+	clientSet *kubernetes.Clientset
+	config    *rest.Config
+}
+
+func (m ClusterCacheMap) Put(key string, value *kubernetes.Clientset, restConfig *rest.Config) {
+	m[key] = &ClusterCache{
+		clientSet: value,
+		config:    restConfig,
+	}
 }
 func (m ClusterCacheMap) Delete(key string) {
 	delete(m, key)
 }
 
 func (m ClusterCacheMap) Get(key string) (*kubernetes.Clientset, error) {
-	clientSet := m[key]
-	if clientSet != nil {
-		return clientSet, nil
+	cache := m[key]
+	if cache != nil {
+		return cache.clientSet, nil
 	}
+	cli, _, err := m.InitCache(key)
+	return cli, err
+}
+
+func (m ClusterCacheMap) GetConfig(key string) (*rest.Config, error) {
+	cache := m[key]
+	if cache != nil {
+		return cache.config, nil
+	}
+	_, config, err := m.InitCache(key)
+	return config, err
+}
+
+func (m ClusterCacheMap) GetCache(key string) (*ClusterCache, error) {
+	cache := m[key]
+	if cache != nil {
+		return cache, nil
+	}
+	_, _, err := m.InitCache(key)
+	return m[key], err
+}
+
+func (m ClusterCacheMap) InitCache(key string) (*kubernetes.Clientset, *rest.Config, error) {
 	item, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		Get(context.TODO(), key, metav1.GetOptions{})
 	if err != nil {
-		logs.Fatal("获取集群资源失败:%v", err)
+		logs.Error("获取集群资源失败:%v", err)
+		return nil, nil, err
 	}
-	set, err := buildClientSet(string(item.Data["kubeconfig"]))
+	set, restConfig, err := buildClientSet(string(item.Data["kubeconfig"]))
 	if err != nil {
-		logs.Fatal("连接到集群资源失败:%v", err)
+		logs.Error("连接到集群资源失败:%v", err)
+		return nil, nil, err
 	}
-	return set, nil
+	m.Put(key, set, restConfig)
+	return set, restConfig, nil
 }
 
 func GetSingletonClusterService() *ClusterService {
@@ -73,7 +108,7 @@ func NewClusterService() *ClusterService {
 }
 
 func (s *ClusterService) SaveOrUpdate(create dto.NodeCreateDTO) error {
-	status, clientSet, err := s.getClusterStatus(create)
+	status, clientSet, restConfig, err := s.getClusterStatus(create)
 	if err != nil {
 		logs.Info("获取集群状态失败")
 		return errors.New("获取集群状态失败," + err.Error())
@@ -105,37 +140,37 @@ func (s *ClusterService) SaveOrUpdate(create dto.NodeCreateDTO) error {
 		return err
 	}
 	//全局clientSet
-	ClusterMap.Put(create.Id, clientSet)
+	ClusterMap.Put(create.Id, clientSet, restConfig)
 	return nil
 }
 
-func (s *ClusterService) getClusterStatus(create dto.NodeCreateDTO) (*ClusterStatus, *kubernetes.Clientset, error) {
-	clientset, err := buildClientSet(create.Config)
+func (s *ClusterService) getClusterStatus(create dto.NodeCreateDTO) (*ClusterStatus, *kubernetes.Clientset, *rest.Config, error) {
+	clientset, restConfig, err := buildClientSet(create.Config)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	serverVersion, err := clientset.Discovery().ServerVersion()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	clusterVersion := serverVersion.String()
 	var result ClusterStatus
 	copier.Copy(&result, &create)
 	result.Status = "Active"
 	result.Version = clusterVersion
-	return &result, clientset, nil
+	return &result, clientset, restConfig, nil
 }
 
-func buildClientSet(config string) (*kubernetes.Clientset, error) {
+func buildClientSet(config string) (*kubernetes.Clientset, *rest.Config, error) {
 	restConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(config))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	clientSet, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return clientSet, nil
+	return clientSet, restConfig, nil
 }
 
 func (s *ClusterService) Delete(id string) error {

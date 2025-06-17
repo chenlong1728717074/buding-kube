@@ -4,12 +4,16 @@ import (
 	"buding-kube/internal/web/dto"
 	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/remotecommand"
+	"mime/multipart"
 	"sigs.k8s.io/yaml"
 	"sort"
 	"strings"
@@ -142,4 +146,68 @@ func (*PodService) PodLog(query dto.PodLogDTO) (io.ReadCloser, error) {
 		return nil, errors.New("获取日志流失败")
 	}
 	return stream, nil
+}
+
+func (s *PodService) PodDownloadDTO(query dto.PodDownloadDTO) (interface{}, error) {
+	return nil, nil
+}
+
+func (s *PodService) Upload(query dto.PodDownloadDTO, file multipart.File, header *multipart.FileHeader) error {
+	cache, err := ClusterMap.GetCache(query.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
+		return errors.New("获取集群失败")
+	}
+	// 构建 exec 请求
+	//req := cache.clientSet.CoreV1().RESTClient().Post().
+	//	Resource("pods").
+	//	Name(query.Name).
+	//	Namespace(query.Namespace).
+	//	SubResource("exec").
+	//	VersionedParams(&v1.PodExecOptions{
+	//		Container: query.ContainerName,
+	//		Command:   []string{"/bin/sh", "-c", fmt.Sprintf("cat > %s", query.FilePath)},
+	//		Stdin:     true,
+	//		Stdout:    true,
+	//		Stderr:    true,
+	//		TTY:       false,
+	//	}, scheme.ParameterCodec)
+
+	req := cache.clientSet.CoreV1().RESTClient().Post().
+		AbsPath(fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/exec", query.Namespace, query.Name)).
+		VersionedParams(&v1.PodExecOptions{
+			Container: query.ContainerName,
+			Command:   []string{"/bin/sh", "-c", fmt.Sprintf("cat > %s", query.FilePath)},
+			Stdin:     true,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       false,
+		}, scheme.ParameterCodec)
+	// 创建 executor
+	executor, err := remotecommand.NewSPDYExecutor(cache.config, "POST", req.URL())
+	if err != nil {
+		return fmt.Errorf("创建执行器失败: %v", err)
+	}
+	// 准备输入输出流
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		return errors.New("读取文件内容失败" + err.Error())
+	}
+	stdin := bytes.NewReader(fileContent)
+	var stdout, stderr io.Writer
+
+	// 执行命令
+	err = executor.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
+		Stdin:  stdin,
+		Stdout: stdout,
+		Stderr: stderr,
+	})
+
+	if err != nil {
+		logs.Error("文件上传失败: %v", err)
+		return fmt.Errorf("文件上传失败: %v", err)
+	}
+
+	logs.Info("文件上传成功: %s", query.FilePath)
+	return nil
 }
