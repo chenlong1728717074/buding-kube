@@ -3,11 +3,16 @@ package api
 import (
 	"buding-kube/internal/model"
 	"buding-kube/internal/web/vo"
+	"buding-kube/pkg/logs"
 	"buding-kube/pkg/utils/jwt"
+	"bufio"
+	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
+	"io"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 // 统一响应码
@@ -177,4 +182,115 @@ func (api *BaseApi) CurrentUser(ctx *gin.Context) (*model.User, error) {
 		Role:     jwtClaims.Role,
 		Cluster:  jwtClaims.Cluster,
 	}, nil
+}
+
+func (api *BaseApi) keepAliveSSE(ctx *gin.Context) {
+	_ = ctx.Request.ParseMultipartForm(32 << 20)
+	// 设置SSE头信息
+	ctx.Header("Content-Type", "text/event-stream")
+	ctx.Header("Cache-Control", "no-cache,private")
+	ctx.Header("Connection", "keep-alive")
+	ctx.Header("Transfer-Encoding", "chunked")
+	ctx.Header("X-Accel-Buffering", "no")
+	ctx.Header(`Access-Control-Allow-Origin`, `*`)
+}
+
+func (api *BaseApi) keepAliveTextPlain(ctx *gin.Context) {
+	_ = ctx.Request.ParseMultipartForm(32 << 20)
+	// 设置SSE头信息
+	ctx.Header("Content-Type", "text/plain; charset=utf-8")
+	ctx.Header("Cache-Control", "no-cache,private")
+	ctx.Header("Connection", "keep-alive")
+	ctx.Header("X-Accel-Buffering", "no") // 禁用 Nginx 的缓冲
+	ctx.Header(`Access-Control-Allow-Origin`, `*`)
+	ctx.Header("Transfer-Encoding", "chunked")
+	// 设置状态码
+	ctx.Writer.WriteHeader(200)
+}
+
+type TimeoutReader struct {
+	read    *bufio.Reader
+	timeout time.Duration
+}
+
+// TimeoutError 是一个自定义错误类型，实现了 net.Error 接口
+type TimeoutError struct {
+	err error
+}
+
+// 创建一个新的超时错误
+func NewTimeoutError(msg string) *TimeoutError {
+	return &TimeoutError{
+		err: errors.New(msg),
+	}
+}
+
+// Error 实现 error 接口
+func (e *TimeoutError) Error() string {
+	return e.err.Error()
+}
+
+// Timeout 实现 net.Error 接口，始终返回 true 表示这是一个超时错误
+func (e *TimeoutError) Timeout() bool {
+	return true
+}
+
+// Temporary 实现 net.Error 接口，虽然已废弃但仍需实现
+// 对于超时错误，通常也认为是临时性的
+func (e *TimeoutError) Temporary() bool {
+	return true
+}
+
+// ErrReadTimeout 预定义的超时错误实例
+var ErrReadTimeout = NewTimeoutError("read timeout")
+
+func NewTimeoutReader(r io.Reader, timeout time.Duration) *TimeoutReader {
+	return &TimeoutReader{read: bufio.NewReader(r), timeout: timeout}
+}
+
+func (tr *TimeoutReader) Read() (msg string, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), tr.timeout)
+	defer cancel()
+
+	lineChan := make(chan string, 1)
+	errorChan := make(chan error, 1)
+
+	go func() {
+		line, err := tr.read.ReadString('\n')
+		if err != nil {
+			errorChan <- err
+			return
+		}
+		lineChan <- line
+	}()
+
+	select {
+	case line := <-lineChan:
+		return line, nil
+	case err := <-errorChan:
+		return "", err
+	case <-ctx.Done():
+		// 读取超时
+		return "", ErrReadTimeout
+	}
+}
+
+type StreamPlan struct {
+	writer gin.ResponseWriter
+}
+
+func NewStreamPlan(ctx *gin.Context) *StreamPlan {
+	return &StreamPlan{
+		writer: ctx.Writer,
+	}
+}
+
+func (sp StreamPlan) Writer(msg string) {
+	_, err := sp.writer.Write([]byte(msg))
+	if err != nil {
+		logs.Error("连接断开 %s ", err.Error())
+		return
+	}
+	sp.writer.Flush()
+	return
 }

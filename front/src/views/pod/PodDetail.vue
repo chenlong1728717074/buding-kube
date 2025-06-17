@@ -9,6 +9,10 @@
         <h1>Pod详情</h1>
       </div>
       <div class="header-actions" v-if="podInfo">
+        <el-button size="small" @click="handleViewLogs">
+          <el-icon><Document /></el-icon>
+          查看日志
+        </el-button>
         <el-button size="small" @click="handleViewYaml" v-if="podInfo.yaml">
           <el-icon><Document /></el-icon>
           查看YAML
@@ -251,22 +255,128 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 日志查看对话框 -->
+    <el-dialog
+      v-model="logDialogVisible"
+      :title="`查看日志 - ${podInfo?.name || ''}`"
+      width="90%"
+      :close-on-click-modal="false"
+      class="log-dialog"
+      @close="handleCloseLogDialog"
+    >
+      <div class="log-header">
+        <div class="log-controls">
+          <el-form inline>
+            <el-form-item label="容器:">
+              <el-select 
+                v-model="selectedContainer" 
+                placeholder="请选择容器"
+                style="width: 180px"
+                @change="handleContainerChange"
+              >
+                <el-option
+                  v-for="container in podInfo?.containers || []"
+                  :key="container.name"
+                  :label="container.name"
+                  :value="container.name"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="开始时间:">
+              <el-date-picker
+                v-model="sinceTime"
+                type="datetime"
+                placeholder="选择开始时间"
+                style="width: 200px"
+                format="YYYY-MM-DD HH:mm:ss"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                clearable
+                @change="handleTimeChange"
+              />
+            </el-form-item>
+            <el-form-item label="行数:">
+              <el-input-number 
+                v-model="tailLines" 
+                :min="100" 
+                :max="10000" 
+                :step="100"
+                style="width: 140px"
+              />
+            </el-form-item>
+            <el-form-item label="实时日志:">
+              <el-button 
+                :type="followLogs ? 'danger' : 'success'"
+                @click="handleRealTimeToggle"
+                :loading="logLoading"
+              >
+                <el-icon>
+                  <VideoPlay v-if="!followLogs" />
+                  <VideoPause v-else />
+                </el-icon>
+                {{ followLogs ? '停止实时' : '开始实时' }}
+              </el-button>
+            </el-form-item>
+            <el-form-item label="字体颜色:">
+              <el-color-picker v-model="logTextColor" />
+            </el-form-item>
+            <el-form-item label="背景颜色:">
+              <el-color-picker v-model="logBackgroundColor" />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="handleRefreshLogs" :loading="logLoading">
+                <el-icon><Refresh /></el-icon>
+                刷新
+              </el-button>
+              <el-button @click="handleResetLogs">
+                <el-icon><RefreshLeft /></el-icon>
+                重置
+              </el-button>
+              <el-button @click="handleDownloadLogs">
+                <el-icon><Download /></el-icon>
+                下载
+              </el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+      </div>
+      
+      <div v-loading="logLoading" class="log-container" :style="{ backgroundColor: logBackgroundColor }">
+        <div v-if="followLogs" class="real-time-indicator">
+          <el-icon class="blinking"><VideoPause /></el-icon>
+          实时日志连接中
+        </div>
+        <pre class="log-content" :style="{ color: logTextColor, backgroundColor: logBackgroundColor }">{{ logContent }}</pre>
+      </div>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="handleCloseLogDialog">关闭</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   ArrowLeft,
   Delete,
-  Document
+  Document,
+  VideoPlay,
+  VideoPause,
+  Refresh,
+  RefreshLeft,
+  Download
 } from '@element-plus/icons-vue'
 import { 
   podApi, 
   type PodInfoVO, 
-  type PodDTO
+  type PodDTO,
+  type PodLogDTO
 } from '@/api/pod'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 
@@ -283,6 +393,20 @@ const clusterName = ref('')
 const yamlDialogVisible = ref(false)
 const yamlContent = ref('')
 const yamlLoading = ref(false)
+
+// 日志对话框相关
+const logDialogVisible = ref(false)
+const logContent = ref('')
+const logLoading = ref(false)
+const selectedContainer = ref('')
+const followLogs = ref(false)
+const sinceTime = ref('')
+const tailLines = ref(1000)
+const currentAbortController = ref<AbortController | null>(null)
+
+// 日志显示配置
+const logTextColor = ref('#ffffff')
+const logBackgroundColor = ref('#000000')
 
 // 计算属性：是否有环境变量
 const hasEnvironmentVariables = computed(() => {
@@ -342,6 +466,26 @@ const handleViewYaml = () => {
   }
 }
 
+// 查看日志
+const handleViewLogs = async () => {
+  if (!podInfo.value) return
+  
+  // 设置默认容器
+  if (podInfo.value.containers && podInfo.value.containers.length > 0) {
+    selectedContainer.value = podInfo.value.containers[0].name
+  }
+  
+  logDialogVisible.value = true
+  await fetchPodLogs()
+  // 获取日志后自动滚动到底部
+  nextTick(() => {
+    const logContainer = document.querySelector('.log-content')
+    if (logContainer) {
+      logContainer.scrollTop = logContainer.scrollHeight
+    }
+  })
+}
+
 // 返回
 const handleBack = () => {
   router.back()
@@ -382,6 +526,176 @@ const confirmDeletePod = async () => {
 // 取消删除
 const cancelDeletePod = () => {
   deleteDialogVisible.value = false
+}
+
+// 获取Pod日志
+const fetchPodLogs = async () => {
+  if (!podInfo.value || !selectedContainer.value) {
+    ElMessage.warning('请先选择容器')
+    return
+  }
+  
+  // 只在非实时模式下显示loading
+  if (!followLogs.value) {
+    logLoading.value = true
+  }
+  
+  try {
+    // 停止之前的日志流
+    if (currentAbortController.value) {
+      currentAbortController.value.abort()
+      currentAbortController.value = null
+    }
+    
+    // 清空之前的日志内容
+    logContent.value = ''
+    
+    const params: PodLogDTO = {
+      clusterId: clusterId.value,
+      namespace: podInfo.value.namespace,
+      name: podInfo.value.name,
+      container: selectedContainer.value,
+      follow: followLogs.value,
+      sinceTime: sinceTime.value || undefined,
+      tailLines: tailLines.value
+    }
+    
+    // 创建新的控制器
+    currentAbortController.value = new AbortController()
+    
+    await podApi.getLogs(
+      params,
+      // onData 回调 - 处理流式数据
+      (data: string) => {
+        console.log('收到日志数据:', data)
+        
+        // 过滤掉控制信息，但保留实际日志内容
+        const trimmedData = data.trim()
+        if (trimmedData && 
+            !trimmedData.startsWith('[START]') && 
+            !trimmedData.startsWith('[END]') &&
+            !trimmedData.startsWith('[ERROR]') &&
+            !trimmedData.startsWith('[STOP]') &&
+            trimmedData !== 'ping' &&
+            trimmedData !== 'Connected successfully') {
+          
+          // 实时追加日志内容
+          logContent.value += data
+          
+          // 自动滚动到底部
+          nextTick(() => {
+            const logContainer = document.querySelector('.log-content')
+            if (logContainer) {
+              logContainer.scrollTop = logContainer.scrollHeight
+            }
+          })
+        }
+      },
+      // onError 回调
+      (error: Error) => {
+        console.error('日志流错误:', error)
+        if (error.name !== 'AbortError') {
+          ElMessage.error('日志流连接中断')
+          followLogs.value = false
+        }
+      },
+      // 传递AbortSignal
+      currentAbortController.value?.signal
+    )
+    
+  } catch (error: any) {
+    console.error('获取日志失败:', error)
+    if (!error.name || error.name !== 'AbortError') {
+      logContent.value = '获取日志失败: ' + (error.message || '网络错误')
+      ElMessage.error('获取日志失败')
+      followLogs.value = false
+    }
+  } finally {
+    // 只在非实时模式下关闭loading
+    if (!followLogs.value) {
+      logLoading.value = false
+    }
+  }
+}
+
+// 刷新日志
+const handleRefreshLogs = () => {
+  fetchPodLogs()
+}
+
+// 实时日志切换
+const handleRealTimeToggle = () => {
+  if (followLogs.value) {
+    stopRealTimeLogs()
+  } else {
+    startRealTimeLogs()
+  }
+}
+
+// 开始实时日志
+const startRealTimeLogs = () => {
+  followLogs.value = true
+  fetchPodLogs()
+}
+
+// 停止实时日志
+const stopRealTimeLogs = () => {
+  followLogs.value = false
+  
+  if (currentAbortController.value) {
+    currentAbortController.value.abort()
+    currentAbortController.value = null
+  }
+  
+  logLoading.value = false
+  ElMessage.success('已停止实时日志')
+}
+
+// 容器切换
+const handleContainerChange = () => {
+  fetchPodLogs()
+}
+
+// 时间选择变化处理
+const handleTimeChange = () => {
+  fetchPodLogs()
+}
+
+// 重置日志配置
+const handleResetLogs = () => {
+  sinceTime.value = ''
+  tailLines.value = 1000
+  logTextColor.value = '#ffffff'
+  logBackgroundColor.value = '#000000'
+  fetchPodLogs()
+}
+
+// 下载日志
+const handleDownloadLogs = () => {
+  if (!logContent.value || !podInfo.value) {
+    ElMessage.warning('暂无日志可下载')
+    return
+  }
+  
+  const blob = new Blob([logContent.value], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${podInfo.value.name}-${selectedContainer.value}.log`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+// 关闭日志弹窗时清理
+const handleCloseLogDialog = () => {
+  logDialogVisible.value = false
+  stopRealTimeLogs()
+  selectedContainer.value = ''
+  logContent.value = ''
+  sinceTime.value = ''
+  tailLines.value = 1000
 }
 
 // 获取状态类型
@@ -631,6 +945,70 @@ onMounted(() => {
   background-color: #f5f7fa;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+/* 日志相关样式 */
+.log-dialog .el-dialog__body {
+  padding: 10px 20px;
+}
+
+.log-header {
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e4e7ed;
+  padding-bottom: 16px;
+}
+
+.log-controls .el-form {
+  margin: 0;
+}
+
+.log-controls .el-form-item {
+  margin-bottom: 0;
+  margin-right: 16px;
+}
+
+.log-container {
+  position: relative;
+  height: 600px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.log-content {
+  height: 100%;
+  overflow-y: auto;
+  padding: 12px;
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.real-time-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #00ff00;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blinking {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
 }
 
 .dialog-footer {

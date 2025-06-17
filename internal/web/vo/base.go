@@ -12,6 +12,12 @@ const (
 	CodeNotFound           = http.StatusNotFound
 	CodeInternalError      = http.StatusInternalServerError
 	CodeServiceUnavailable = http.StatusServiceUnavailable
+
+	ErrorEvent = "error"
+	StartEvent = "start"
+	PingEvent  = "ping"
+	ChunkEvent = "chunk"
+	DoneEvent  = "done"
 )
 
 // Response 统一响应结构
@@ -28,4 +34,67 @@ type PageResponse struct {
 	Page      int         `json:"page" example:"1"`       // 当前页码
 	PageSize  int         `json:"pageSize" example:"10"`  // 每页大小
 	TotalPage int         `json:"totalPage" example:"10"` // 总页数
+}
+
+type SSEEvent struct {
+	Event string      `json:"event"`
+	Data  interface{} `json:"data"`
+}
+
+type SSEChan chan SSEEvent
+
+func (c SSEChan) Close() {
+	close(c)
+}
+func (c SSEChan) SSEStart(msg string, data interface{}) {
+	c <- SSEEvent{
+		Event: StartEvent,
+		Data: Response{
+			Code: CodeSuccess,
+			Msg:  msg,
+			Data: data,
+		},
+	}
+}
+func (c SSEChan) SSEHeartbeat() {
+	c <- SSEEvent{
+		Event: PingEvent,
+		Data: Response{
+			Code: CodeSuccess,
+			Msg:  "ping",
+			Data: nil,
+		},
+	}
+}
+
+func (c SSEChan) SSEError(err error) {
+	c <- SSEEvent{
+		Event: ErrorEvent,
+		Data: Response{
+			Code: CodeInternalError,
+			Msg:  "获取日志流错误:" + err.Error(),
+			Data: nil,
+		},
+	}
+}
+func (c SSEChan) SSEDone() {
+	c <- SSEEvent{
+		Event: DoneEvent,
+		Data: Response{
+			Code: CodeSuccess,
+			Msg:  "结束连接",
+			Data: nil,
+		},
+	}
+}
+
+func (c SSEChan) SSEChunk(chunk string) {
+	c <- SSEEvent{
+		Event: ChunkEvent,
+		Data: Response{
+			Code: CodeSuccess,
+			Msg:  "事件消息",
+			Data: chunk,
+		},
+	}
 }

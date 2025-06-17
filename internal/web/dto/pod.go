@@ -10,3 +10,10 @@ type PodQueryDTO struct {
 	PageQueryDTO
 	Status string `json:"status" form:"status"`
 }
+
+type PodLogDTO struct {
+	PodDTO
+	SinceTime *CustomTime `json:"sinceTime"`
+	Follow    bool        `json:"follow"`
+	TailLines *int64      `json:"tailLines"`
+}

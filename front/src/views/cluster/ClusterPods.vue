@@ -309,25 +309,62 @@
     >
       <div class="log-container">
         <div class="log-header">
-          <el-select v-model="selectedContainer" placeholder="选择容器" style="width: 200px;">
-            <el-option 
-              v-for="container in currentPodContainers" 
-              :key="container.name" 
-              :label="container.name" 
-              :value="container.name" 
-            />
-          </el-select>
-          <el-button @click="handleRefreshLogs">
-            <el-icon><Refresh /></el-icon>
-            刷新
-          </el-button>
-          <el-button @click="handleDownloadLogs">
-            <el-icon><Download /></el-icon>
-            下载
-          </el-button>
+          <el-form inline>
+            <el-form-item label="容器:">
+              <el-select v-model="selectedContainer" placeholder="选择容器" style="width: 200px;">
+                <el-option 
+                  v-for="container in currentPodContainers" 
+                  :key="container.name" 
+                  :label="container.name" 
+                  :value="container.name" 
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="开始时间:">
+              <el-date-picker
+                v-model="sinceTime"
+                type="datetime"
+                placeholder="选择开始时间"
+                style="width: 200px"
+                format="YYYY-MM-DD HH:mm:ss"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                clearable
+                @change="handleTimeChange"
+              />
+            </el-form-item>
+            <el-form-item label="行数:">
+              <el-input-number 
+                v-model="tailLines" 
+                :min="100" 
+                :max="10000" 
+                :step="100"
+                style="width: 140px"
+              />
+            </el-form-item>
+            <el-form-item label="字体颜色:">
+              <el-color-picker v-model="logTextColor" />
+            </el-form-item>
+            <el-form-item label="背景颜色:">
+              <el-color-picker v-model="logBackgroundColor" />
+            </el-form-item>
+            <el-form-item>
+              <el-button @click="handleRefreshLogs">
+                <el-icon><Refresh /></el-icon>
+                刷新
+              </el-button>
+              <el-button @click="handleResetLogs">
+                <el-icon><RefreshLeft /></el-icon>
+                重置
+              </el-button>
+              <el-button @click="handleDownloadLogs">
+                <el-icon><Download /></el-icon>
+                下载
+              </el-button>
+            </el-form-item>
+          </el-form>
         </div>
-        <div class="log-content">
-          <pre v-loading="logLoading">{{ logContent }}</pre>
+        <div class="log-content" :style="{ backgroundColor: logBackgroundColor }">
+          <pre v-loading="logLoading" :style="{ color: logTextColor, backgroundColor: logBackgroundColor }">{{ logContent }}</pre>
         </div>
       </div>
     </el-dialog>
@@ -345,12 +382,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   ArrowLeft, 
   Refresh, 
+  RefreshLeft,
   Search, 
   Box, 
   ArrowDown,
@@ -398,6 +436,12 @@ const logLoading = ref(false)
 const logContent = ref('')
 const selectedContainer = ref('')
 const currentPodContainers = ref([])
+const sinceTime = ref('')
+const tailLines = ref(1000)
+
+// 日志显示配置
+const logTextColor = ref('#ffffff')
+const logBackgroundColor = ref('#000000')
 
 // 当前Pod的容器列表
 const currentContainers = computed(() => {
@@ -516,14 +560,21 @@ const handleViewDetail = (pod: any) => {
 }
 
 // 查看日志
-const handleViewLogs = (pod: any) => {
+const handleViewLogs = async (pod: any) => {
   selectedPod.value = pod
   currentPodContainers.value = pod.containers || []
   if (currentPodContainers.value.length > 0) {
     selectedContainer.value = currentPodContainers.value[0].name
   }
   logDialogVisible.value = true
-  fetchPodLogs()
+  await fetchPodLogs()
+  // 获取日志后自动滚动到底部
+  nextTick(() => {
+    const logContainer = document.querySelector('.log-content')
+    if (logContainer) {
+      logContainer.scrollTop = logContainer.scrollHeight
+    }
+  })
 }
 
 // 查看节点
@@ -606,17 +657,30 @@ const fetchPodLogs = async () => {
   
   logLoading.value = true
   try {
+    const params: any = {
+      lines: tailLines.value,
+      follow: false
+    }
+    
+    if (sinceTime.value) {
+      params.sinceTime = sinceTime.value
+    }
+    
     const response = await clusterApi.getPodLogs(
       clusterName, 
       selectedPod.value.namespace, 
       selectedPod.value.name, 
       selectedContainer.value,
-      {
-        lines: 1000,
-        follow: false
-      }
+      params
     )
     logContent.value = response.data || '暂无日志'
+    // 获取日志后自动滚动到底部
+    nextTick(() => {
+      const logContainer = document.querySelector('.log-content')
+      if (logContainer) {
+        logContainer.scrollTop = logContainer.scrollHeight
+      }
+    })
   } catch (error) {
     ElMessage.error('获取日志失败')
     logContent.value = '获取日志失败'
@@ -646,6 +710,20 @@ const handleDownloadLogs = () => {
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+}
+
+// 时间选择变化处理
+const handleTimeChange = () => {
+  fetchPodLogs()
+}
+
+// 重置日志配置
+const handleResetLogs = () => {
+  sinceTime.value = ''
+  tailLines.value = 1000
+  logTextColor.value = '#ffffff'
+  logBackgroundColor.value = '#000000'
+  fetchPodLogs()
 }
 
 // 容器日志
@@ -835,7 +913,6 @@ onMounted(() => {
 
 .log-content {
   flex: 1;
-  background: #1e1e1e;
   border-radius: 4px;
   overflow: auto;
 }
@@ -843,7 +920,6 @@ onMounted(() => {
 .log-content pre {
   margin: 0;
   padding: 16px;
-  color: #d4d4d4;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 12px;
   line-height: 1.5;

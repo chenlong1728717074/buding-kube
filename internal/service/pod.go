@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 	"sort"
@@ -111,4 +113,33 @@ func (s *PodService) GetById(query dto.PodDTO) (*vo.PodInfoVO, error) {
 	result := vo.Pod2InfoVO(pod, events)
 	result.Yaml = string(yamlData)
 	return &result, nil
+}
+
+func (*PodService) PodLog(query dto.PodLogDTO) (io.ReadCloser, error) {
+	clientSet, err := ClusterMap.Get(query.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
+		return nil, errors.New("获取集群失败")
+	}
+	options := v1.PodLogOptions{
+		Follow:     query.Follow,
+		Timestamps: true,
+		Previous:   false,
+	}
+	if query.SinceTime != nil {
+		time := metav1.NewTime(query.SinceTime.ToTime())
+		options.SinceTime = &time
+	}
+
+	req := clientSet.CoreV1().Pods(query.Namespace).GetLogs(query.Name, &options)
+	if req.Error() != nil {
+		logs.Error("连接到pod日志失败: %s %s", query.ClusterId, err.Error())
+		return nil, errors.New("连接到pod日志失败")
+	}
+	stream, err := req.Stream(context.Background())
+	if err != nil {
+		logs.Error("获取日志流失败: %s %s", query.ClusterId, err.Error())
+		return nil, errors.New("获取日志流失败")
+	}
+	return stream, nil
 }
