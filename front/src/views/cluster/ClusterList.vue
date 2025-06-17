@@ -333,7 +333,11 @@ const handleAddCluster = () => {
 
 // 查看详情
 const handleViewDetail = (row: ClusterVO) => {
-  router.push(`/cluster/detail/${row.name}`)
+  ElMessage({
+    message: '集群详情功能暂未开放，敬请期待！',
+    type: 'info',
+    duration: 2000
+  })
 }
 
 // 查看节点

@@ -111,6 +111,183 @@ const routes: Array<RouteRecordRaw> = [
           }
         ]
       },
+      // 工作负载
+      {
+        path: '/workload',
+        name: 'Workload',
+        redirect: '/workload/deployment',
+        meta: {
+          title: '工作负载',
+          requiresAuth: true
+        },
+        children: [
+          {
+            path: 'deployment',
+            name: 'Deployment',
+            component: () => import('@/views/workload/Deployment.vue'),
+            meta: {
+              title: 'Deployment',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'daemonset',
+            name: 'DaemonSet',
+            component: () => import('@/views/workload/DaemonSet.vue'),
+            meta: {
+              title: 'DaemonSet',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'statefulset',
+            name: 'StatefulSet',
+            component: () => import('@/views/workload/StatefulSet.vue'),
+            meta: {
+              title: 'StatefulSet',
+              requiresAuth: true
+            }
+          }
+        ]
+      },
+      // 任务调度
+      {
+        path: '/job',
+        name: 'JobSchedule',
+        redirect: '/job/job',
+        meta: {
+          title: '任务调度',
+          requiresAuth: true
+        },
+        children: [
+          {
+            path: 'job',
+            name: 'Job',
+            component: () => import('@/views/job/Job.vue'),
+            meta: {
+              title: 'Job',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'cronjob',
+            name: 'CronJob',
+            component: () => import('@/views/job/CronJob.vue'),
+            meta: {
+              title: 'CronJob',
+              requiresAuth: true
+            }
+          }
+        ]
+      },
+      // 服务发现
+      {
+        path: '/service',
+        name: 'ServiceDiscovery',
+        redirect: '/service/service',
+        meta: {
+          title: '服务发现',
+          requiresAuth: true
+        },
+        children: [
+          {
+            path: 'service',
+            name: 'Service',
+            component: () => import('@/views/service/Service.vue'),
+            meta: {
+              title: 'Service',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'ingress',
+            name: 'Ingress',
+            component: () => import('@/views/service/Ingress.vue'),
+            meta: {
+              title: 'Ingress',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'endpoint',
+            name: 'Endpoint',
+            component: () => import('@/views/service/Endpoint.vue'),
+            meta: {
+              title: 'Endpoint',
+              requiresAuth: true
+            }
+          }
+        ]
+      },
+      // 配置管理
+      {
+        path: '/config',
+        name: 'ConfigManagement',
+        redirect: '/config/configmap',
+        meta: {
+          title: '配置管理',
+          requiresAuth: true
+        },
+        children: [
+          {
+            path: 'configmap',
+            name: 'ConfigMap',
+            component: () => import('@/views/config/ConfigMap.vue'),
+            meta: {
+              title: 'ConfigMap',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'secret',
+            name: 'Secret',
+            component: () => import('@/views/config/Secret.vue'),
+            meta: {
+              title: 'Secret',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'serviceaccount',
+            name: 'ServiceAccount',
+            component: () => import('@/views/config/ServiceAccount.vue'),
+            meta: {
+              title: 'ServiceAccount',
+              requiresAuth: true
+            }
+          }
+        ]
+      },
+      // 存储管理
+      {
+        path: '/storage',
+        name: 'StorageManagement',
+        redirect: '/storage/pv',
+        meta: {
+          title: '存储管理',
+          requiresAuth: true
+        },
+        children: [
+          {
+            path: 'pv',
+            name: 'PersistentVolume',
+            component: () => import('@/views/storage/PersistentVolume.vue'),
+            meta: {
+              title: 'PersistentVolume',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'pvc',
+            name: 'PersistentVolumeClaim',
+            component: () => import('@/views/storage/PersistentVolumeClaim.vue'),
+            meta: {
+              title: 'PersistentVolumeClaim',
+              requiresAuth: true
+            }
+          }
+        ]
+      },
       {
         path: '/pod',
         name: 'PodList',

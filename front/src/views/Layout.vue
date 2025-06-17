@@ -41,6 +41,93 @@
           </el-menu-item>
         </el-sub-menu>
         
+        <el-sub-menu index="/workload">
+          <template #title>
+            <el-icon><Operation /></el-icon>
+            <span>工作负载</span>
+          </template>
+          <el-menu-item index="/workload/deployment" @click="showComingSoon">
+            <el-icon><Grid /></el-icon>
+            <span>Deployment</span>
+          </el-menu-item>
+          <el-menu-item index="/workload/daemonset" @click="showComingSoon">
+            <el-icon><Cpu /></el-icon>
+            <span>DaemonSet</span>
+          </el-menu-item>
+          <el-menu-item index="/workload/statefulset" @click="showComingSoon">
+            <el-icon><DataBoard /></el-icon>
+            <span>StatefulSet</span>
+          </el-menu-item>
+        </el-sub-menu>
+        
+        <el-sub-menu index="/job">
+          <template #title>
+            <el-icon><Timer /></el-icon>
+            <span>任务调度</span>
+          </template>
+          <el-menu-item index="/job/job" @click="showComingSoon">
+            <el-icon><Clock /></el-icon>
+            <span>Job</span>
+          </el-menu-item>
+          <el-menu-item index="/job/cronjob" @click="showComingSoon">
+            <el-icon><AlarmClock /></el-icon>
+            <span>CronJob</span>
+          </el-menu-item>
+        </el-sub-menu>
+        
+        <el-sub-menu index="/service">
+          <template #title>
+            <el-icon><Connection /></el-icon>
+            <span>服务发现</span>
+          </template>
+          <el-menu-item index="/service/service" @click="showComingSoon">
+            <el-icon><Link /></el-icon>
+            <span>Service</span>
+          </el-menu-item>
+          <el-menu-item index="/service/ingress" @click="showComingSoon">
+            <el-icon><Share /></el-icon>
+            <span>Ingress</span>
+          </el-menu-item>
+          <el-menu-item index="/service/endpoint" @click="showComingSoon">
+            <el-icon><Position /></el-icon>
+            <span>Endpoint</span>
+          </el-menu-item>
+        </el-sub-menu>
+        
+        <el-sub-menu index="/config">
+          <template #title>
+            <el-icon><Setting /></el-icon>
+            <span>配置管理</span>
+          </template>
+          <el-menu-item index="/config/configmap" @click="showComingSoon">
+            <el-icon><Files /></el-icon>
+            <span>ConfigMap</span>
+          </el-menu-item>
+          <el-menu-item index="/config/secret" @click="showComingSoon">
+            <el-icon><Key /></el-icon>
+            <span>Secret</span>
+          </el-menu-item>
+          <el-menu-item index="/config/serviceaccount" @click="showComingSoon">
+            <el-icon><UserFilled /></el-icon>
+            <span>ServiceAccount</span>
+          </el-menu-item>
+        </el-sub-menu>
+        
+        <el-sub-menu index="/storage">
+          <template #title>
+            <el-icon><FolderOpened /></el-icon>
+            <span>存储管理</span>
+          </template>
+          <el-menu-item index="/storage/pv" @click="showComingSoon">
+            <el-icon><Folder /></el-icon>
+            <span>PersistentVolume</span>
+          </el-menu-item>
+          <el-menu-item index="/storage/pvc" @click="showComingSoon">
+            <el-icon><FolderAdd /></el-icon>
+            <span>PersistentVolumeClaim</span>
+          </el-menu-item>
+        </el-sub-menu>
+        
         <el-sub-menu v-if="userStore.isAdmin" index="/user">
           <template #title>
             <el-icon><User /></el-icon>
@@ -111,8 +198,27 @@ import {
   ArrowDown,
   List,
   UserFilled,
-  Box
+  Box,
+  Operation,
+  Document,
+  Timer,
+  Clock,
+  AlarmClock,
+  Connection,
+  Link,
+  Share,
+  Position,
+  Setting,
+  Files,
+  Key,
+  FolderOpened,
+  Folder,
+  FolderAdd,
+  Grid,
+  Cpu,
+  DataBoard
 } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -125,6 +231,11 @@ const activeMenu = computed(() => {
   if (path.startsWith('/cluster')) return path
   if (path.startsWith('/namespace')) return '/namespace'
   if (path.startsWith('/pod')) return '/pod'
+  if (path.startsWith('/workload')) return path
+  if (path.startsWith('/job')) return path
+  if (path.startsWith('/service')) return path
+  if (path.startsWith('/config')) return path
+  if (path.startsWith('/storage')) return path
   if (path.startsWith('/user')) return path
   return '/dashboard'
 })
@@ -144,6 +255,17 @@ const handleCommand = (command: string) => {
       userStore.logout()
       break
   }
+}
+
+// 显示暂未开放提示
+const showComingSoon = (event: Event) => {
+  event.preventDefault()
+  event.stopPropagation()
+  ElMessage({
+    message: '该功能暂未开放，敬请期待！',
+    type: 'info',
+    duration: 2000
+  })
 }
 </script>
 
