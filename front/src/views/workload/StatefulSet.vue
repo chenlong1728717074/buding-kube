@@ -437,7 +437,8 @@ const fetchStatefulSetList = async () => {
   loading.value = true
   try {
     const params = {
-      ...searchForm,
+      clusterId: searchForm.clusterId,
+      ...(searchForm.namespace && { namespace: searchForm.namespace }),
       page: pagination.page,
       pageSize: pagination.pageSize
     }
