@@ -65,7 +65,7 @@
             <el-icon><Connection /></el-icon>
             <span>服务发现</span>
           </template>
-          <el-menu-item index="/service/service" @click="showComingSoon">
+          <el-menu-item index="/service/service">
             <el-icon><Link /></el-icon>
             <span>Service</span>
           </el-menu-item>

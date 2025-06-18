@@ -43,4 +43,8 @@ func SetupRouter(engine *gin.RouterGroup) {
 	//daemonSet
 	daemonSet := engine.Group("/daemonSet", middleware.JWTAuth())
 	api.NewDaemonSetApi(daemonSet)
+
+	//daemonSet
+	service := engine.Group("/service", middleware.JWTAuth())
+	api.NewKubeSrvApi(service)
 }

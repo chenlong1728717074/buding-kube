@@ -2,11 +2,14 @@ package service
 
 import (
 	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
 	"context"
 	"errors"
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
+	"sort"
 	"sync"
 )
 
@@ -29,7 +32,7 @@ func GetSingletonKubeSrvService() *KubeSrvService {
 	return kubeSrv
 }
 
-func (s *KubeSrvService) List(query dto.ServiceQueryDTO) ([]interface{}, error) {
+func (s *KubeSrvService) List(query dto.ServiceQueryDTO) ([]vo.ServiceVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
@@ -40,8 +43,18 @@ func (s *KubeSrvService) List(query dto.ServiceQueryDTO) ([]interface{}, error) 
 		logs.Error("获取service失败: %v", err)
 		return nil, fmt.Errorf("获取service失败: %v", err)
 	}
+	result := make([]vo.ServiceVO, 0)
 	for _, item := range items.Items {
-		fmt.Println(item)
+		vi := vo.Service2VO(item)
+		yamlData, err := yaml.Marshal(item)
+		if err != nil {
+			logs.Error("序列化Deployment失败: %v", err)
+		}
+		vi.Yaml = string(yamlData)
+		result = append(result, vi)
 	}
-	return nil, nil
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].CreateTime.After(result[j].CreateTime)
+	})
+	return result, nil
 }
