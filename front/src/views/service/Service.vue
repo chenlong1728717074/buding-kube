@@ -61,7 +61,13 @@
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="namespace" label="命名空间" min-width="100" header-align="center" align="center" />
+        <el-table-column prop="namespace" label="命名空间" width="120" header-align="center" align="center">
+          <template #default="{ row }">
+            <el-link type="primary" @click="handleNamespaceDetail(row)">
+              {{ row.namespace }}
+            </el-link>
+          </template>
+        </el-table-column>
         <el-table-column prop="alias" label="别名" min-width="80" header-align="center" align="center">
           <template #default="{ row }">
             <span v-if="row.alias">{{ row.alias }}</span>
@@ -122,6 +128,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import { serviceApi, type ServiceVO, type ServiceQueryDTO } from '@/api/service'
@@ -130,6 +137,9 @@ import { namespaceApi } from '@/api/namespace'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 
+
+// 路由
+const router = useRouter()
 
 // 响应式数据
 const loading = ref(false)
@@ -237,13 +247,19 @@ const handleCurrentChange = (page: number) => {
 }
 
 // 查看详情
-const handleViewDetail = (row: ServiceVO) => {
+const handleDetail = (row: ServiceVO) => {
   ElMessage.info('详情功能开发中')
 }
 
-// 详情处理
-const handleDetail = (row: ServiceVO) => {
-  ElMessage.info('详情功能开发中')
+// 跳转到命名空间详情
+const handleNamespaceDetail = (row: ServiceVO) => {
+  router.push({
+    path: '/namespace/detail',
+    query: {
+      clusterId: searchForm.clusterId,
+      namespace: row.namespace
+    }
+  })
 }
 
 // 时间格式化

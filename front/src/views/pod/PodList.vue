@@ -82,7 +82,13 @@
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="namespace" label="命名空间" width="120" header-align="center" align="center" />
+        <el-table-column prop="namespace" label="命名空间" width="120" header-align="center" align="center">
+          <template #default="{ row }">
+            <el-link type="primary" @click="handleNamespaceDetail(row)">
+              {{ row.namespace }}
+            </el-link>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="90" align="center" header-align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
@@ -481,6 +487,17 @@ const handleViewDetail = (row: PodVO) => {
       clusterName: currentCluster?.name || '',
       namespace: row.namespace,
       name: row.name
+    }
+  })
+}
+
+// 跳转到命名空间详情
+const handleNamespaceDetail = (row: PodVO) => {
+  router.push({
+    path: '/namespace/detail',
+    query: {
+      clusterId: searchForm.clusterId,
+      namespace: row.namespace
     }
   })
 }

@@ -69,7 +69,13 @@
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="namespace" label="命名空间" min-width="100" header-align="center" align="center" />
+        <el-table-column prop="namespace" label="命名空间" min-width="100" header-align="center" align="center">
+          <template #default="{ row }">
+            <el-link type="primary" @click="handleNamespaceDetail(row)">
+              {{ row.namespace }}
+            </el-link>
+          </template>
+        </el-table-column>
         <el-table-column prop="alias" label="别名" min-width="80" header-align="center" align="center">
           <template #default="{ row }">
             <span v-if="row.alias">{{ row.alias }}</span>
@@ -298,6 +304,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-vue'
 import { deploymentApi, type DeploymentVO, type DeploymentQueryDTO } from '@/api/deployment'
@@ -305,6 +312,9 @@ import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
+
+// 路由
+const router = useRouter()
 
 // 响应式数据
 const loading = ref(false)
@@ -445,6 +455,17 @@ const getStatusType = (status: string) => {
 const handleViewDetail = (row: DeploymentVO) => {
   // TODO: 实现查看详情功能
   ElMessage.info('查看详情功能开发中')
+}
+
+// 跳转到命名空间详情
+const handleNamespaceDetail = (row: DeploymentVO) => {
+  router.push({
+    path: '/namespace/detail',
+    query: {
+      clusterId: searchForm.clusterId,
+      namespace: row.namespace
+    }
+  })
 }
 
 // 格式化时间
