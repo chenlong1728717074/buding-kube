@@ -1,8 +1,10 @@
 package service
 
 import (
+	"archive/tar"
 	"buding-kube/internal/web/dto"
 	"buding-kube/internal/web/vo"
+	"buding-kube/pkg/files"
 	"buding-kube/pkg/logs"
 	"bytes"
 	"context"
@@ -148,8 +150,25 @@ func (*PodService) PodLog(query dto.PodLogDTO) (io.ReadCloser, error) {
 	return stream, nil
 }
 
-func (s *PodService) PodDownloadDTO(query dto.PodDownloadDTO) (interface{}, error) {
-	return nil, nil
+func (s *PodService) Download(query dto.PodDownloadDTO) (io.ReadCloser, error) {
+	cache, err := ClusterMap.GetCache(query.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
+		return nil, errors.New("获取集群失败")
+	}
+
+	// 规范化文件路径为Linux风格
+	filePath := strings.ReplaceAll(query.FilePath, "\\", "/")
+
+	// 使用tar管道进行文件下载
+	reader, err := files.NewTarPipe(context.TODO(), cache.config, cache.clientSet.CoreV1().RESTClient(),
+		query.Namespace, query.Name, query.ContainerName, filePath)
+	if err != nil {
+		return nil, fmt.Errorf("创建tar管道失败: %v", err)
+	}
+
+	logs.Info("文件下载开始: %s", filePath)
+	return reader, nil
 }
 
 func (s *PodService) Upload(query dto.PodDownloadDTO, file multipart.File, header *multipart.FileHeader) error {
@@ -158,6 +177,10 @@ func (s *PodService) Upload(query dto.PodDownloadDTO, file multipart.File, heade
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return errors.New("获取集群失败")
 	}
+
+	// 优雅处理文件路径，兼容Windows和Linux
+	targetPath := formatTargetPath(query.FilePath, header.Filename)
+
 	// 构建 exec 请求
 	req := cache.clientSet.CoreV1().RESTClient().Post().
 		Resource("pods").
@@ -166,7 +189,7 @@ func (s *PodService) Upload(query dto.PodDownloadDTO, file multipart.File, heade
 		SubResource("exec").
 		VersionedParams(&v1.PodExecOptions{
 			Container: query.ContainerName,
-			Command:   []string{"/bin/sh", "-c", fmt.Sprintf("cat > %s", query.FilePath)},
+			Command:   []string{"/bin/sh", "-c", fmt.Sprintf("cat > %s", targetPath)},
 			Stdin:     true,
 			Stdout:    false,
 			Stderr:    true,
@@ -178,27 +201,163 @@ func (s *PodService) Upload(query dto.PodDownloadDTO, file multipart.File, heade
 	if err != nil {
 		return fmt.Errorf("创建执行器失败: %v", err)
 	}
+
 	// 准备输入输出流
 	fileContent, err := io.ReadAll(file)
 	if err != nil {
-		return errors.New("读取文件内容失败" + err.Error())
+		return errors.New("读取文件内容失败: " + err.Error())
 	}
+
 	stdin := bytes.NewReader(fileContent)
-	var stderr io.Writer
+	var stderrBuf bytes.Buffer
 
 	// 执行命令
 	err = executor.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
 		Stdin:             stdin,
 		Stdout:            nil,
-		Stderr:            stderr,
+		Stderr:            &stderrBuf,
 		TerminalSizeQueue: nil,
 	})
 
 	if err != nil {
-		logs.Error("文件上传失败: %v", err)
+		logs.Error("文件上传失败: %v, stderr: %s", err, stderrBuf.String())
 		return fmt.Errorf("文件上传失败: %v", err)
 	}
 
-	logs.Info("文件上传成功: %s", query.FilePath)
+	// 检查 stderr 是否有错误信息
+	if stderrBuf.Len() > 0 {
+		logs.Warn("上传过程中的警告信息: %s", stderrBuf.String())
+	}
+
+	logs.Info("文件上传成功: %s", targetPath)
+	return nil
+}
+
+// formatTargetPath 处理目标路径和文件名，确保路径格式正确
+// 如果传入的路径已经包含文件名，则直接使用；否则将文件名添加到路径后面
+func formatTargetPath(basePath string, filename string) string {
+	// 先规范化路径分隔符为Linux风格 (因为Pod中是Linux环境)
+	basePath = strings.ReplaceAll(basePath, "\\", "/")
+
+	// 去除路径末尾的斜杠，便于后续处理
+	basePath = strings.TrimRight(basePath, "/")
+
+	// 检查路径中是否已包含文件名
+	if strings.HasSuffix(basePath, "/"+filename) || basePath == filename {
+		return basePath
+	}
+
+	// 如果路径为空，直接返回文件名
+	if basePath == "" {
+		return filename
+	}
+
+	// 否则合并路径和文件名
+	return basePath + "/" + filename
+}
+
+// 使用 tar 方式上传（推荐，更稳定）
+func (s *PodService) UploadWithTar(query dto.PodDownloadDTO, file multipart.File, header *multipart.FileHeader) error {
+	cache, err := ClusterMap.GetCache(query.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
+		return errors.New("获取集群失败")
+	}
+
+	// 优雅处理文件路径，兼容Windows和Linux
+	targetPath := formatTargetPath(query.FilePath, header.Filename)
+
+	// 从目标路径中提取目录和文件名
+	targetPath = strings.ReplaceAll(targetPath, "\\", "/")
+	lastSlash := strings.LastIndex(targetPath, "/")
+	var targetDir, fileName string
+	if lastSlash == -1 {
+		// 没有路径分隔符，文件在根目录
+		targetDir = "/"
+		fileName = targetPath
+	} else {
+		targetDir = targetPath[:lastSlash]
+		if targetDir == "" {
+			targetDir = "/"
+		}
+		fileName = targetPath[lastSlash+1:]
+	}
+
+	// 创建 tar 流
+	reader, writer := io.Pipe()
+	go func() {
+		defer writer.Close()
+		tarWriter := tar.NewWriter(writer)
+		defer tarWriter.Close()
+
+		// 读取文件内容
+		fileContent, err := io.ReadAll(file)
+		if err != nil {
+			logs.Error("读取文件失败: %v", err)
+			writer.CloseWithError(err)
+			return
+		}
+
+		// 写入 tar header
+		if err := tarWriter.WriteHeader(&tar.Header{
+			Name: fileName,
+			Mode: 0644,
+			Size: int64(len(fileContent)),
+		}); err != nil {
+			logs.Error("写入tar header失败: %v", err)
+			writer.CloseWithError(err)
+			return
+		}
+
+		// 写入文件内容
+		if _, err := tarWriter.Write(fileContent); err != nil {
+			logs.Error("写入文件内容失败: %v", err)
+			writer.CloseWithError(err)
+			return
+		}
+	}()
+
+	// 构建 exec 请求（使用 tar 命令）
+	req := cache.clientSet.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(query.Name).
+		Namespace(query.Namespace).
+		SubResource("exec").
+		VersionedParams(&v1.PodExecOptions{
+			Container: query.ContainerName,
+			Command:   []string{"tar", "-xf", "-", "-C", targetDir},
+			Stdin:     true,
+			Stdout:    false,
+			Stderr:    true,
+			TTY:       false,
+		}, scheme.ParameterCodec)
+
+	// 创建 executor
+	executor, err := remotecommand.NewSPDYExecutor(cache.config, "POST", req.URL())
+	if err != nil {
+		return fmt.Errorf("创建执行器失败: %v", err)
+	}
+
+	var stderrBuf bytes.Buffer
+
+	// 执行命令
+	err = executor.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
+		Stdin:             reader,
+		Stdout:            nil,
+		Stderr:            &stderrBuf,
+		TerminalSizeQueue: nil,
+	})
+
+	if err != nil {
+		logs.Error("文件上传失败: %v, stderr: %s", err, stderrBuf.String())
+		return fmt.Errorf("文件上传失败: %v", err)
+	}
+
+	// 检查 stderr 是否有错误信息
+	if stderrBuf.Len() > 0 {
+		logs.Warn("上传过程中的警告信息: %s", stderrBuf.String())
+	}
+
+	logs.Info("文件上传成功: %s", targetPath)
 	return nil
 }

@@ -89,20 +89,56 @@ func (api *PodApi) Info(ctx *gin.Context) {
 	api.SuccessWithData(ctx, result)
 }
 
+// extractFileName 从文件路径中提取文件名
+func (api *PodApi) extractFileName(filePath string) string {
+	if filePath == "" {
+		return "download"
+	}
+
+	// 找到最后一个路径分隔符
+	for i := len(filePath) - 1; i >= 0; i-- {
+		if filePath[i] == '/' || filePath[i] == '\\' {
+			return filePath[i+1:]
+		}
+	}
+	return filePath
+}
+
+// setDownloadHeaders 设置文件下载的响应头
+func (api *PodApi) setDownloadHeaders(ctx *gin.Context, fileName string) {
+	ctx.Header("Content-Description", "File Transfer")
+	ctx.Header("Content-Transfer-Encoding", "binary")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s.tar", fileName))
+	ctx.Header("Content-Type", "application/x-tar")
+}
+
 func (api *PodApi) Download(ctx *gin.Context) {
-	//var query dto.PodDownloadDTO
-	//if err := api.BindForm(ctx, &query); err != nil {
-	//	api.ParamBindError(ctx, err)
-	//	return
-	//}
-	//file, fileHeader, err := ctx.Request.FormFile("file") // "file" 是前端表单中的字段名
-	//if err != nil {
-	//	api.ParamError(ctx, "获取上传文件失败: "+err.Error())
-	//	return
-	//}
-	//defer file.Close()
-	//err := api.srv.PodDownloadDTO(query, file, fileHeader)
-	api.SuccessMsg(ctx, "")
+	var query dto.PodDownloadDTO
+	if err := api.BindJSON(ctx, &query); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+
+	// 调用服务层下载文件
+	stream, err := api.srv.Download(query)
+	if err != nil {
+		api.InternalError(ctx, "下载文件失败: ", err)
+		return
+	}
+	defer stream.Close()
+
+	// 提取文件名并设置响应头
+	fileName := api.extractFileName(query.FilePath)
+	api.setDownloadHeaders(ctx, fileName)
+
+	// 流式传输文件内容
+	if _, err = io.Copy(ctx.Writer, stream); err != nil {
+		logs.Error("文件传输失败: %v", err)
+		api.InternalError(ctx, "文件传输失败: ", err)
+		return
+	}
+
+	logs.Info("文件下载成功: %s", query.FilePath)
 }
 
 func (api *PodApi) Upload(ctx *gin.Context) {
@@ -117,7 +153,7 @@ func (api *PodApi) Upload(ctx *gin.Context) {
 		return
 	}
 	defer file.Close()
-	err = api.srv.Upload(query, file, fileHeader)
+	err = api.srv.UploadWithTar(query, file, fileHeader)
 	if err != nil {
 		api.InternalError(ctx, "上传文件失败: ", err)
 		return

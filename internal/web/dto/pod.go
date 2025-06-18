@@ -17,6 +17,7 @@ type PodLogDTO struct {
 	ContainerName string      `json:"containerName"`
 	Follow        bool        `json:"follow"`
 	TailLines     *int64      `json:"tailLines"`
+	Container     string      `json:"container"`
 }
 
 type PodDownloadDTO struct {

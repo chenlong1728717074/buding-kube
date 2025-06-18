@@ -96,6 +96,15 @@ export interface PodLogDTO {
   sinceTime?: string
 }
 
+// Pod文件操作DTO
+export interface PodFileDTO {
+  clusterId: string
+  namespace: string
+  name: string
+  containerName: string
+  filePath: string
+}
+
 // Pod API
 export const podApi = {
   // 获取Pod列表
@@ -177,5 +186,29 @@ export const podApi = {
       }
       throw error
     }
+  },
+
+  // 下载文件
+  downloadFile(params: PodFileDTO): Promise<Blob> {
+    return request.post('/pod/download', params, {
+      responseType: 'blob'
+    })
+  },
+
+  // 上传文件
+  uploadFile(params: PodFileDTO, file: File): Promise<ApiResponse<void>> {
+    const formData = new FormData()
+    formData.append('clusterId', params.clusterId)
+    formData.append('namespace', params.namespace)
+    formData.append('name', params.name)
+    formData.append('containerName', params.containerName)
+    formData.append('filePath', params.filePath)
+    formData.append('file', file)
+    
+    return request.post('/pod/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
   }
 }

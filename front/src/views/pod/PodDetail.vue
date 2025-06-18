@@ -128,6 +128,36 @@
               </div>
             </template>
           </el-table-column>
+          <el-table-column label="操作" width="200" align="center">
+            <template #default="{ row }">
+              <el-button-group size="small">
+                <el-button 
+                  type="primary" 
+                  size="small" 
+                  @click="handleContainerLogs(row)"
+                  title="查看日志"
+                >
+                  <el-icon><Document /></el-icon>
+                </el-button>
+                <el-button 
+                  type="success" 
+                  size="small" 
+                  @click="handleContainerDownload(row)"
+                  title="下载文件"
+                >
+                  <el-icon><Download /></el-icon>
+                </el-button>
+                <el-button 
+                  type="warning" 
+                  size="small" 
+                  @click="handleContainerUpload(row)"
+                  title="上传文件"
+                >
+                  <el-icon><Upload /></el-icon>
+                </el-button>
+              </el-button-group>
+            </template>
+          </el-table-column>
         </el-table>
       </el-card>
 
@@ -256,6 +286,100 @@
       </template>
     </el-dialog>
 
+    <!-- 文件下载对话框 -->
+    <el-dialog
+      v-model="downloadDialogVisible"
+      title="下载文件"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <el-alert
+        title="重要提示"
+        type="warning"
+        :closable="false"
+        style="margin-bottom: 20px;"
+      >
+        <template #default>
+          <div>文件下载功能需要容器基础镜像中包含 <strong>tar</strong> 命令才能正常工作。</div>
+          <div>下载的文件将以 <strong>.tar</strong> 格式保存，可使用 tar 命令解压。</div>
+        </template>
+      </el-alert>
+      <el-form :model="downloadForm" label-width="100px">
+        <el-form-item label="容器名称:">
+          <el-input v-model="downloadForm.containerName" disabled />
+        </el-form-item>
+        <el-form-item label="文件路径:" required>
+          <el-input 
+            v-model="downloadForm.filePath" 
+            placeholder="请输入要下载的文件路径，如: /app/config.json"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="downloadDialogVisible = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="confirmDownload"
+            :loading="downloadLoading"
+            :disabled="!downloadForm.filePath"
+          >
+            下载
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 文件上传对话框 -->
+    <el-dialog
+      v-model="uploadDialogVisible"
+      title="上传文件"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="uploadForm" label-width="100px">
+        <el-form-item label="容器名称:">
+          <el-input v-model="uploadForm.containerName" disabled />
+        </el-form-item>
+        <el-form-item label="目标路径:" required>
+          <el-input 
+            v-model="uploadForm.filePath" 
+            placeholder="请输入目标路径，如: /app/config.json"
+          />
+        </el-form-item>
+        <el-form-item label="选择文件:" required>
+          <el-upload
+            ref="uploadRef"
+            :auto-upload="false"
+            :show-file-list="true"
+            :limit="1"
+            :on-change="handleFileChange"
+            :on-remove="handleFileRemove"
+          >
+            <el-button type="primary">选择文件</el-button>
+            <template #tip>
+              <div class="el-upload__tip">
+                只能上传一个文件
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="uploadDialogVisible = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="confirmUpload"
+            :loading="uploadLoading"
+            :disabled="!uploadForm.filePath || !selectedFile"
+          >
+            上传
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 日志查看对话框 -->
     <el-dialog
       v-model="logDialogVisible"
@@ -371,13 +495,15 @@ import {
   VideoPause,
   Refresh,
   RefreshLeft,
-  Download
+  Download,
+  Upload
 } from '@element-plus/icons-vue'
 import { 
   podApi, 
   type PodInfoVO, 
   type PodDTO,
-  type PodLogDTO
+  type PodLogDTO,
+  type PodFileDTO
 } from '@/api/pod'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 
@@ -398,6 +524,24 @@ const yamlLoading = ref(false)
 // 日志对话框相关
 const logDialogVisible = ref(false)
 const logContent = ref('')
+
+// 文件下载相关
+const downloadDialogVisible = ref(false)
+const downloadLoading = ref(false)
+const downloadForm = ref({
+  containerName: '',
+  filePath: ''
+})
+
+// 文件上传相关
+const uploadDialogVisible = ref(false)
+const uploadLoading = ref(false)
+const uploadForm = ref({
+  containerName: '',
+  filePath: ''
+})
+const selectedFile = ref<File | null>(null)
+const uploadRef = ref()
 const logLoading = ref(false)
 const selectedContainer = ref('')
 const followLogs = ref(false)
@@ -771,6 +915,126 @@ const formatDate = (dateString?: string) => {
     })
   } catch (error) {
     return '-'
+  }
+}
+
+// 容器日志查看
+const handleContainerLogs = (container: any) => {
+  selectedContainer.value = container.name
+  // 当从容器信息进入日志时，自动设置容器参数
+  logParams.value.container = container.name
+  logDialogVisible.value = true
+  // 延迟获取日志，确保对话框已打开
+  nextTick(() => {
+    fetchPodLogs()
+  })
+}
+
+// 容器文件下载
+const handleContainerDownload = (container: any) => {
+  downloadForm.value.containerName = container.name
+  downloadForm.value.filePath = ''
+  downloadDialogVisible.value = true
+}
+
+// 容器文件上传
+const handleContainerUpload = (container: any) => {
+  uploadForm.value.containerName = container.name
+  uploadForm.value.filePath = ''
+  selectedFile.value = null
+  uploadDialogVisible.value = true
+}
+
+// 文件下载确认
+const confirmDownload = async () => {
+  if (!downloadForm.value.filePath) {
+    ElMessage.warning('请输入文件路径')
+    return
+  }
+  
+  downloadLoading.value = true
+  try {
+    const params: PodFileDTO = {
+      clusterId: clusterId.value,
+      namespace: podInfo.value?.namespace || '',
+      name: podInfo.value?.name || '',
+      containerName: downloadForm.value.containerName,
+      filePath: downloadForm.value.filePath
+    }
+    
+    const blob = await podApi.downloadFile(params)
+    
+    // 创建下载链接
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    // 从文件路径中提取文件名并添加.tar后缀
+    const baseName = downloadForm.value.filePath.split('/').pop() || 'download'
+    const fileName = `${baseName}.tar`
+    link.download = fileName
+    
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    ElMessage.success('文件下载成功')
+    downloadDialogVisible.value = false
+  } catch (error) {
+    console.error('下载文件失败:', error)
+    ElMessage.error('下载文件失败')
+  } finally {
+    downloadLoading.value = false
+  }
+}
+
+// 文件选择处理
+const handleFileChange = (file: any) => {
+  selectedFile.value = file.raw
+}
+
+const handleFileRemove = () => {
+  selectedFile.value = null
+}
+
+// 文件上传确认
+const confirmUpload = async () => {
+  if (!uploadForm.value.filePath) {
+    ElMessage.warning('请输入目标路径')
+    return
+  }
+  
+  if (!selectedFile.value) {
+    ElMessage.warning('请选择要上传的文件')
+    return
+  }
+  
+  uploadLoading.value = true
+  try {
+    const params: PodFileDTO = {
+      clusterId: clusterId.value,
+      namespace: podInfo.value?.namespace || '',
+      name: podInfo.value?.name || '',
+      containerName: uploadForm.value.containerName,
+      filePath: uploadForm.value.filePath
+    }
+    
+    await podApi.uploadFile(params, selectedFile.value)
+    
+    ElMessage.success('文件上传成功')
+    uploadDialogVisible.value = false
+    
+    // 清理上传组件
+    if (uploadRef.value) {
+      uploadRef.value.clearFiles()
+    }
+    selectedFile.value = null
+  } catch (error) {
+    console.error('上传文件失败:', error)
+    ElMessage.error('上传文件失败')
+  } finally {
+    uploadLoading.value = false
   }
 }
 
