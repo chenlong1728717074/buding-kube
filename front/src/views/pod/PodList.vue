@@ -180,21 +180,7 @@
        <div class="log-header">
          <div class="log-controls">
            <el-form inline>
-             <el-form-item label="容器:">
-               <el-select 
-                 v-model="selectedContainer" 
-                 placeholder="请选择容器"
-                 style="width: 180px"
-                 @change="handleContainerChange"
-               >
-                 <el-option
-                   v-for="container in currentPodContainers"
-                   :key="container.name"
-                   :label="container.name"
-                   :value="container.name"
-                 />
-               </el-select>
-             </el-form-item>
+             <!-- Pod列表页面显示所有容器日志，无需选择容器 -->
              <el-form-item label="开始时间:">
                <el-date-picker
                  v-model="sinceTime"
@@ -509,8 +495,7 @@ const logDialogVisible = ref(false)
 const logContent = ref('')
 const logLoading = ref(false)
 const selectedPod = ref<PodVO | null>(null)
-const selectedContainer = ref('')
-const currentPodContainers = ref<any[]>([])
+// Pod列表页面不需要选择容器，显示所有容器日志
 const followLogs = ref(false)
 const tailLines = ref(1000)
 const sinceTime = ref('')
@@ -572,28 +557,15 @@ const handleViewLogs = async (row: PodVO) => {
     logDialogVisible.value = true
     logContent.value = ''
     
-    // 获取Pod详情以获取容器列表
-    const params: PodDTO = {
-      clusterId: searchForm.clusterId,
-      namespace: row.namespace,
-      name: row.name
-    }
-    
-    const response = await podApi.getInfo(params)
-    if (response.code === 200 && response.data) {
-      currentPodContainers.value = response.data.containers || []
-      if (currentPodContainers.value.length > 0) {
-        selectedContainer.value = currentPodContainers.value[0].name
-        await fetchPodLogs()
-        // 获取日志后自动滚动到底部
-        nextTick(() => {
-          const logContainer = document.querySelector('.log-content')
-          if (logContainer) {
-            logContainer.scrollTop = logContainer.scrollHeight
-          }
-        })
+    // Pod列表页面直接获取所有容器日志
+    await fetchPodLogs()
+    // 获取日志后自动滚动到底部
+    nextTick(() => {
+      const logContainer = document.querySelector('.log-content')
+      if (logContainer) {
+        logContainer.scrollTop = logContainer.scrollHeight
       }
-    }
+    })
   } catch (error: any) {
     console.error('获取Pod信息失败:', error)
     ElMessage.error('获取Pod信息失败')
@@ -605,8 +577,8 @@ let currentLogController: AbortController | null = null
 
 // 获取Pod日志 - 流式处理
 const fetchPodLogs = async () => {
-  if (!selectedPod.value || !selectedContainer.value) {
-    ElMessage.warning('请先选择Pod和容器')
+  if (!selectedPod.value) {
+    ElMessage.warning('请先选择Pod')
     return
   }
   
@@ -629,7 +601,7 @@ const fetchPodLogs = async () => {
       clusterId: searchForm.clusterId,
       namespace: selectedPod.value.namespace,
       name: selectedPod.value.name,
-      container: selectedContainer.value,
+      // Pod列表页面不传递container参数，获取所有容器日志
       follow: followLogs.value,
       tailLines: tailLines.value
     }
@@ -760,21 +732,16 @@ const handleDownloadLogs = () => {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${selectedPod.value.name}-${selectedContainer.value}.log`
+  a.download = `${selectedPod.value.name}-all-containers.log`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
-// 容器切换
-const handleContainerChange = () => {
-  fetchPodLogs()
-}
-
 // 时间选择变化
 const handleTimeChange = () => {
-  if (selectedPod.value && selectedContainer.value) {
+  if (selectedPod.value) {
     fetchPodLogs()
   }
 }
@@ -799,7 +766,6 @@ const handleCloseLogDialog = () => {
   logDialogVisible.value = false
   stopRealTimeLogs()
   selectedPod.value = null
-  selectedContainer.value = ''
   logContent.value = ''
   sinceTime.value = ''
   tailLines.value = 1000

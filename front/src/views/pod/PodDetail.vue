@@ -621,7 +621,7 @@ const handleViewLogs = async () => {
   }
   
   logDialogVisible.value = true
-  await fetchPodLogs()
+  await fetchPodLogs(false) // 从列表进入，不传递container参数
   // 获取日志后自动滚动到底部
   nextTick(() => {
     const logContainer = document.querySelector('.log-content')
@@ -674,8 +674,14 @@ const cancelDeletePod = () => {
 }
 
 // 获取Pod日志
-const fetchPodLogs = async () => {
-  if (!podInfo.value || !selectedContainer.value) {
+const fetchPodLogs = async (fromContainerList = false) => {
+  if (!podInfo.value) {
+    ElMessage.warning('Pod信息不存在')
+    return
+  }
+  
+  // 如果是从容器列表进入，需要选择容器；如果是从列表进入，可以不选择容器
+  if (fromContainerList && !selectedContainer.value) {
     ElMessage.warning('请先选择容器')
     return
   }
@@ -699,7 +705,8 @@ const fetchPodLogs = async () => {
       clusterId: clusterId.value,
       namespace: podInfo.value.namespace,
       name: podInfo.value.name,
-      container: selectedContainer.value,
+      // 只有从容器列表进入时才传递container参数
+      container: fromContainerList ? selectedContainer.value : undefined,
       follow: followLogs.value,
       sinceTime: sinceTime.value || undefined,
       tailLines: tailLines.value
@@ -765,7 +772,7 @@ const fetchPodLogs = async () => {
 
 // 刷新日志
 const handleRefreshLogs = () => {
-  fetchPodLogs()
+  fetchPodLogs(selectedContainer.value ? true : false) // 根据是否有选中容器判断
 }
 
 // 实时日志切换
@@ -780,7 +787,7 @@ const handleRealTimeToggle = () => {
 // 开始实时日志
 const startRealTimeLogs = () => {
   followLogs.value = true
-  fetchPodLogs()
+  fetchPodLogs(selectedContainer.value ? true : false) // 根据是否有选中容器判断
 }
 
 // 停止实时日志
@@ -798,12 +805,12 @@ const stopRealTimeLogs = () => {
 
 // 容器切换
 const handleContainerChange = () => {
-  fetchPodLogs()
+  fetchPodLogs(true) // 容器切换时传递container参数
 }
 
 // 时间选择变化处理
 const handleTimeChange = () => {
-  fetchPodLogs()
+  fetchPodLogs(selectedContainer.value ? true : false) // 根据是否有选中容器判断
 }
 
 // 重置日志配置
@@ -812,7 +819,7 @@ const handleResetLogs = () => {
   tailLines.value = 1000
   logTextColor.value = '#ffffff'
   logBackgroundColor.value = '#000000'
-  fetchPodLogs()
+  fetchPodLogs(selectedContainer.value ? true : false) // 根据是否有选中容器判断
 }
 
 // 下载日志
@@ -921,12 +928,10 @@ const formatDate = (dateString?: string) => {
 // 容器日志查看
 const handleContainerLogs = (container: any) => {
   selectedContainer.value = container.name
-  // 当从容器信息进入日志时，自动设置容器参数
-  logParams.value.container = container.name
   logDialogVisible.value = true
   // 延迟获取日志，确保对话框已打开
   nextTick(() => {
-    fetchPodLogs()
+    fetchPodLogs(true) // 从容器列表进入，传递container参数
   })
 }
 
