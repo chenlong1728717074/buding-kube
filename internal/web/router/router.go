@@ -26,4 +26,7 @@ func SetupRouter(engine *gin.RouterGroup) {
 	//用户管理
 	user := engine.Group("/user", middleware.JWTAuth())
 	api.NewUserApi(user)
+	//NewDeploymentApi
+	deployment := engine.Group("/deployment", middleware.JWTAuth())
+	api.NewDeploymentApi(deployment)
 }
