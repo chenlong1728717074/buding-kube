@@ -1,22 +1,23 @@
 package dto
 
-type DeploymentQueryDTO struct {
-	PageQueryDTO
+type WorkloadBaseDTO struct {
 	NamespaceBaseDTO
-	Name   string `json:"name" form:"name" `
+	Name string `json:"name" form:"name" `
+}
+
+type WorkloadQueryDTO struct {
+	PageQueryDTO
+	WorkloadBaseDTO
 	Status string `json:"status" form:"status"`
 }
 
-type StatefulSetQueryDTO struct {
-	PageQueryDTO
-	NamespaceBaseDTO
-	Name   string `json:"name" form:"name" `
-	Status string `json:"status" form:"status"`
+type WorkloadUpdateDTO struct {
+	WorkloadBaseDTO
+	Alias    string `json:"alias"`
+	Describe string `json:"describe"`
 }
 
-type DaemonSetQueryDTO struct {
-	PageQueryDTO
-	NamespaceBaseDTO
-	Name   string `json:"name" form:"name" `
-	Status string `json:"status" form:"status"`
+type WorkloadApplyDTO struct {
+	WorkloadBaseDTO
+	Yaml string `json:"yaml"`
 }

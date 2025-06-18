@@ -1,6 +1,9 @@
 <template>
   <div class="node-list">
-    <!-- 搜索区域 -->
+    <div class="page-header">
+      <h1>节点列表</h1>
+    </div>
+
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="集群">
@@ -273,6 +276,24 @@ onMounted(async () => {
 <style scoped>
 .node-list {
   padding: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
 }
 
 .search-card {

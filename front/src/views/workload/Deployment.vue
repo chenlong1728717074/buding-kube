@@ -2,6 +2,16 @@
   <div class="deployment-list">
     <div class="page-header">
       <h1>Deployment管理</h1>
+      <div class="header-actions">
+        <el-button type="primary" @click="handleAddDeployment">
+          <el-icon><Plus /></el-icon>
+          添加Deployment
+        </el-button>
+        <el-button type="success" @click="handleAddDeploymentByYaml">
+          <el-icon><Document /></el-icon>
+          YAML添加
+        </el-button>
+      </div>
     </div>
 
     <el-card class="search-card">
@@ -139,13 +149,174 @@
         />
       </div>
     </el-card>
+
+    <!-- 编辑Deployment对话框 -->
+    <el-dialog 
+      v-model="editDialogVisible" 
+      title="编辑Deployment" 
+      width="600px"
+      :before-close="() => editDialogVisible = false"
+      destroy-on-close
+    >
+      <el-form 
+        :model="editForm" 
+        label-width="100px"
+        class="deployment-form"
+      >
+        <el-form-item label="集群">
+          <el-input 
+            v-model="editForm.clusterName" 
+            placeholder="集群名称" 
+            disabled
+            style="width: 100%;"
+          />
+        </el-form-item>
+        
+        <el-form-item label="命名空间">
+          <el-input 
+            v-model="editForm.namespace" 
+            placeholder="命名空间" 
+            disabled
+            style="width: 100%;"
+          />
+        </el-form-item>
+        
+        <el-form-item label="名称">
+          <el-input 
+            v-model="editForm.name" 
+            placeholder="Deployment名称" 
+            disabled
+            style="width: 100%;"
+          />
+        </el-form-item>
+        
+        <el-form-item label="别名">
+          <el-input 
+            v-model="editForm.alias" 
+            placeholder="请输入别名" 
+            style="width: 100%;"
+          />
+        </el-form-item>
+        
+        <el-form-item label="描述">
+          <el-input 
+            v-model="editForm.describe" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入描述" 
+            style="width: 100%;"
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSaveEdit">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- YAML添加对话框 -->
+    <el-dialog 
+      v-model="yamlDialogVisible" 
+      title="YAML添加Deployment" 
+      width="80%"
+      :before-close="() => yamlDialogVisible = false"
+      destroy-on-close
+    >
+      <el-form 
+        :model="yamlForm" 
+        label-width="100px"
+      >
+        <el-form-item label="集群">
+          <el-select 
+            v-model="yamlForm.clusterId" 
+            placeholder="请选择集群" 
+            style="width: 300px;"
+          >
+            <el-option 
+              v-for="cluster in clusterList" 
+              :key="cluster.id" 
+              :label="cluster.name" 
+              :value="cluster.id" 
+            />
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item label="YAML配置">
+          <el-input 
+            v-model="yamlForm.yaml" 
+            type="textarea" 
+            :rows="20" 
+            placeholder="请输入Deployment的YAML配置" 
+            style="font-family: 'Courier New', monospace;"
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="yamlDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleApplyYaml">应用</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 查看/编辑YAML对话框 -->
+    <el-dialog 
+      v-model="viewYamlDialogVisible" 
+      title="查看/编辑YAML" 
+      width="80%"
+      :before-close="() => viewYamlDialogVisible = false"
+      destroy-on-close
+    >
+      <el-form 
+        :model="viewYamlForm" 
+        label-width="100px"
+      >
+        <el-form-item label="集群">
+          <el-input 
+            v-model="viewYamlForm.clusterName" 
+            placeholder="集群名称" 
+            disabled
+            style="width: 300px;"
+          />
+        </el-form-item>
+        
+        <el-form-item label="命名空间">
+          <el-input 
+            v-model="viewYamlForm.namespace" 
+            placeholder="命名空间" 
+            disabled
+            style="width: 300px;"
+          />
+        </el-form-item>
+        
+        <el-form-item label="YAML配置">
+          <el-input 
+            v-model="viewYamlForm.yaml" 
+            type="textarea" 
+            :rows="20" 
+            style="font-family: 'Courier New', monospace;"
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="viewYamlDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleApplyEditYaml">应用修改</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-vue'
 import { deploymentApi, type DeploymentVO, type DeploymentQueryDTO } from '@/api/deployment'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
@@ -155,6 +326,34 @@ const loading = ref(false)
 const deploymentList = ref<DeploymentVO[]>([])
 const clusterList = ref<ClusterVO[]>([])
 const namespaceList = ref<NamespaceVO[]>([])
+
+// 对话框状态
+const editDialogVisible = ref(false)
+const yamlDialogVisible = ref(false)
+const viewYamlDialogVisible = ref(false)
+const currentDeployment = ref<DeploymentVO | null>(null)
+
+// 编辑表单
+const editForm = reactive({
+  clusterName: '',
+  namespace: '',
+  name: '',
+  alias: '',
+  describe: ''
+})
+
+// YAML表单
+const yamlForm = reactive({
+  clusterId: '',
+  yaml: ''
+})
+
+// 查看YAML表单
+const viewYamlForm = reactive({
+  clusterName: '',
+  namespace: '',
+  yaml: ''
+})
 
 // 搜索表单
 const searchForm = reactive<DeploymentQueryDTO>({
@@ -344,8 +543,15 @@ onMounted(() => {
 
 // 编辑Deployment
 const handleEdit = (row: DeploymentVO) => {
-  // TODO: 实现编辑功能
-  ElMessage.info('编辑功能开发中')
+  currentDeployment.value = row
+  // 获取集群名称
+  const cluster = clusterList.value.find(c => c.id === searchForm.clusterId)
+  editForm.clusterName = cluster?.name || ''
+  editForm.namespace = row.namespace
+  editForm.name = row.name
+  editForm.alias = row.alias || ''
+  editForm.describe = row.describe || ''
+  editDialogVisible.value = true
 }
 
 // 更多操作处理
@@ -364,21 +570,154 @@ const handleMoreAction = (command: string, row: DeploymentVO) => {
 }
 
 // 查看YAML
-const handleViewYaml = (row: DeploymentVO) => {
-  // TODO: 实现查看YAML功能
-  ElMessage.info('查看YAML功能开发中')
+const handleViewYaml = async (row: DeploymentVO) => {
+  currentDeployment.value = row
+  // 获取集群名称
+  const cluster = clusterList.value.find(c => c.id === searchForm.clusterId)
+  viewYamlForm.clusterName = cluster?.name || ''
+  viewYamlForm.namespace = row.namespace
+  // TODO: 调用API获取YAML内容
+  viewYamlForm.yaml = row.yaml || '# YAML内容加载中...'
+  viewYamlDialogVisible.value = true
 }
 
 // 删除Deployment
 const handleDelete = (row: DeploymentVO) => {
-  // TODO: 实现删除功能
-  ElMessage.info('删除功能开发中')
+  ElMessageBox.confirm(
+    `确定要删除Deployment "${row.name}" 吗？此操作不可恢复。`,
+    '确认删除',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      await deploymentApi.deleteDeployment({
+        clusterId: searchForm.clusterId,
+        namespace: row.namespace,
+        name: row.name
+      })
+      ElMessage.success('删除成功')
+      fetchDeploymentList()
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }).catch(() => {
+    ElMessage.info('已取消删除')
+  })
 }
 
 // 重建Deployment
 const handleRestart = (row: DeploymentVO) => {
-  // TODO: 实现重建功能
-  ElMessage.info('重建功能开发中')
+  ElMessageBox.confirm(
+    `确定要重建Deployment "${row.name}" 吗？`,
+    '确认重建',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      await deploymentApi.rolloutDeployment({
+        clusterId: searchForm.clusterId,
+        namespace: row.namespace,
+        name: row.name
+      })
+      ElMessage.success('重建成功')
+      fetchDeploymentList()
+    } catch (error) {
+      console.error('重建失败:', error)
+      ElMessage.error('重建失败')
+    }
+  }).catch(() => {
+    ElMessage.info('已取消重建')
+  })
+}
+
+// 添加Deployment
+const handleAddDeployment = () => {
+  ElMessage.info('普通添加功能暂未实现，请使用YAML添加')
+}
+
+// YAML添加Deployment
+const handleAddDeploymentByYaml = () => {
+  yamlForm.clusterId = searchForm.clusterId || ''
+  yamlForm.yaml = ''
+  yamlDialogVisible.value = true
+}
+
+// 保存编辑
+const handleSaveEdit = async () => {
+  if (!currentDeployment.value) return
+  
+  try {
+    await deploymentApi.updateDeployment({
+      clusterId: searchForm.clusterId,
+      namespace: currentDeployment.value.namespace,
+      name: currentDeployment.value.name,
+      alias: editForm.alias,
+      describe: editForm.describe
+    })
+    ElMessage.success('修改成功')
+    editDialogVisible.value = false
+    fetchDeploymentList()
+  } catch (error) {
+    console.error('修改失败:', error)
+    ElMessage.error('修改失败')
+  }
+}
+
+// 应用YAML
+const handleApplyYaml = async () => {
+  if (!yamlForm.yaml.trim()) {
+    ElMessage.warning('请输入YAML内容')
+    return
+  }
+  
+  if (!yamlForm.clusterId) {
+    ElMessage.warning('请选择集群')
+    return
+  }
+  
+  try {
+    await deploymentApi.applyDeployment({
+      clusterId: yamlForm.clusterId,
+      yaml: yamlForm.yaml
+    })
+    ElMessage.success('应用成功')
+    yamlDialogVisible.value = false
+    fetchDeploymentList()
+  } catch (error) {
+    console.error('应用失败:', error)
+    ElMessage.error('应用失败')
+  }
+}
+
+// 应用编辑YAML
+const handleApplyEditYaml = async () => {
+  if (!viewYamlForm.yaml.trim()) {
+    ElMessage.warning('请输入YAML内容')
+    return
+  }
+  
+  if (!currentDeployment.value) return
+  
+  try {
+    await deploymentApi.applyDeployment({
+      clusterId: searchForm.clusterId,
+      namespace: currentDeployment.value.namespace,
+      yaml: viewYamlForm.yaml
+    })
+    ElMessage.success('应用成功')
+    viewYamlDialogVisible.value = false
+    fetchDeploymentList()
+  } catch (error) {
+    console.error('应用失败:', error)
+    ElMessage.error('应用失败')
+  }
 }
 </script>
 
@@ -388,14 +727,26 @@ const handleRestart = (row: DeploymentVO) => {
 }
 
 .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .page-header h1 {
+  margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #303133;
-  margin: 0;
+  color: #2c3e50;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
 .search-card {

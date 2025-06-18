@@ -26,7 +26,7 @@ func (api *DaemonSetApi) Router() {
 }
 
 func (api *DaemonSetApi) List(ctx *gin.Context) {
-	var query dto.DaemonSetQueryDTO
+	var query dto.WorkloadQueryDTO
 	if err := api.BindQuery(ctx, &query); err != nil {
 		api.ParamBindError(ctx, err)
 		return

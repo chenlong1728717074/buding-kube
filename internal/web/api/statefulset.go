@@ -26,7 +26,7 @@ func (api *StatefulSetApi) Router() {
 }
 
 func (api *StatefulSetApi) List(ctx *gin.Context) {
-	var query dto.StatefulSetQueryDTO
+	var query dto.WorkloadQueryDTO
 	if err := api.BindQuery(ctx, &query); err != nil {
 		api.ParamBindError(ctx, err)
 		return

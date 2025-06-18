@@ -31,7 +31,7 @@ func GetSingletonDaemonSetService() *DaemonSetService {
 	return daemonSetSrv
 }
 
-func (s *DaemonSetService) List(query dto.DaemonSetQueryDTO) ([]vo.WorkloadVO, error) {
+func (s *DaemonSetService) List(query dto.WorkloadQueryDTO) ([]vo.WorkloadVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())

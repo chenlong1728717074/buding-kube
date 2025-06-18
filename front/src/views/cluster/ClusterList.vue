@@ -2,10 +2,12 @@
   <div class="cluster-list">
     <div class="page-header">
       <h1>集群列表</h1>
-      <el-button type="primary" @click="handleAddCluster">
-        <el-icon><Plus /></el-icon>
-        添加集群
-      </el-button>
+      <div class="header-actions">
+        <el-button type="primary" @click="handleAddCluster">
+          <el-icon><Plus /></el-icon>
+          添加集群
+        </el-button>
+      </div>
     </div>
 
     <el-card class="search-card">
@@ -537,6 +539,10 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .page-header h1 {
@@ -544,6 +550,11 @@ onMounted(() => {
   font-size: 24px;
   font-weight: 600;
   color: #2c3e50;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
 .search-card {
