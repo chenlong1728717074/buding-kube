@@ -13,25 +13,25 @@ import (
 )
 
 var (
-	deploymentSrv  *DeploymentService
-	deploymentOnce sync.Once
+	daemonSetSrv  *DaemonSetService
+	daemonSetOnce sync.Once
 )
 
-type DeploymentService struct {
+type DaemonSetService struct {
 }
 
-func NewDeploymentService() *DeploymentService {
-	return &DeploymentService{}
+func NewDaemonSetService() *DaemonSetService {
+	return &DaemonSetService{}
 }
 
-func GetSingletonDeploymentService() *DeploymentService {
-	deploymentOnce.Do(func() {
-		deploymentSrv = NewDeploymentService()
+func GetSingletonDaemonSetService() *DaemonSetService {
+	daemonSetOnce.Do(func() {
+		daemonSetSrv = NewDaemonSetService()
 	})
-	return deploymentSrv
+	return daemonSetSrv
 }
 
-func (s *DeploymentService) List(query dto.DeploymentQueryDTO) ([]vo.WorkloadVO, error) {
+func (s *DaemonSetService) List(query dto.DaemonSetQueryDTO) ([]vo.WorkloadVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
@@ -43,19 +43,19 @@ func (s *DeploymentService) List(query dto.DeploymentQueryDTO) ([]vo.WorkloadVO,
 	if namespace == "" {
 		namespace = metav1.NamespaceAll
 	}
-	dyts, err := clientSet.AppsV1().Deployments(namespace).List(context.TODO(), listOptions)
+	ds, err := clientSet.AppsV1().DaemonSets(namespace).List(context.TODO(), listOptions)
 	if err != nil {
-		logs.Error("获取Deployments失败: %v", err)
+		logs.Error("获取DaemonSets失败: %v", err)
 		return nil, err
 	}
 	result := make([]vo.WorkloadVO, 0)
-	for _, item := range dyts.Items {
+	for _, item := range ds.Items {
 		if query.Name == "" || strings.Contains(item.Name, query.Name) {
 			yamlData, err := yaml.Marshal(item)
 			if err != nil {
-				logs.Error("序列化Deployment失败: %v", err)
+				logs.Error("序列化DaemonSet失败: %v", err)
 			}
-			dv := vo.Deployment2WorkloadVO(item)
+			dv := vo.DaemonSet2WorkloadVO(item)
 			dv.Yaml = string(yamlData)
 			result = append(result, dv)
 		}

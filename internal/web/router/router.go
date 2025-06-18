@@ -11,22 +11,36 @@ func SetupRouter(engine *gin.RouterGroup) {
 	//集群管理
 	cluster := engine.Group("/cluster", middleware.JWTAuth())
 	api.NewClusterApi(cluster)
+
 	//命名空间
 	namespace := engine.Group("/namespace", middleware.JWTAuth())
 	api.NewNamespacesApi(namespace)
+
 	//节点
 	node := engine.Group("/node", middleware.JWTAuth())
 	api.NewNodeApi(node)
+
 	//pod
 	pod := engine.Group("/pod", middleware.JWTAuth())
 	api.NewPodApi(pod)
+
 	//auth
 	auth := engine.Group("/auth")
 	api.NewAuthApi(auth)
+
 	//用户管理
 	user := engine.Group("/user", middleware.JWTAuth())
 	api.NewUserApi(user)
-	//NewDeploymentApi
+
+	//deployment
 	deployment := engine.Group("/deployment", middleware.JWTAuth())
 	api.NewDeploymentApi(deployment)
+
+	//statefulSet
+	statefulSet := engine.Group("/statefulSet", middleware.JWTAuth())
+	api.NewStatefulSetApi(statefulSet)
+
+	//daemonSet
+	daemonSet := engine.Group("/daemonSet", middleware.JWTAuth())
+	api.NewDaemonSetApi(daemonSet)
 }

@@ -46,15 +46,15 @@
             <el-icon><Operation /></el-icon>
             <span>工作负载</span>
           </template>
-          <el-menu-item index="/workload/deployment" @click="showComingSoon">
+          <el-menu-item index="/workload/deployment">
             <el-icon><Grid /></el-icon>
             <span>Deployment</span>
           </el-menu-item>
-          <el-menu-item index="/workload/daemonset" @click="showComingSoon">
+          <el-menu-item index="/workload/daemonset">
             <el-icon><Cpu /></el-icon>
             <span>DaemonSet</span>
           </el-menu-item>
-          <el-menu-item index="/workload/statefulset" @click="showComingSoon">
+          <el-menu-item index="/workload/statefulset">
             <el-icon><DataBoard /></el-icon>
             <span>StatefulSet</span>
           </el-menu-item>

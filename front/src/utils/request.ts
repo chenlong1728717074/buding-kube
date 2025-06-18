@@ -112,6 +112,9 @@ request.interceptors.response.use(
 
 export default request
 
+// 导出request实例
+export { request }
+
 // 导出常用的请求方法
 export const get = <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
   return request.get(url, config)

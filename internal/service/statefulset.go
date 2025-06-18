@@ -13,25 +13,25 @@ import (
 )
 
 var (
-	deploymentSrv  *DeploymentService
-	deploymentOnce sync.Once
+	statefulSetSrv  *StatefulSetService
+	statefulSetOnce sync.Once
 )
 
-type DeploymentService struct {
+type StatefulSetService struct {
 }
 
-func NewDeploymentService() *DeploymentService {
-	return &DeploymentService{}
+func NewStatefulSetService() *StatefulSetService {
+	return &StatefulSetService{}
 }
 
-func GetSingletonDeploymentService() *DeploymentService {
-	deploymentOnce.Do(func() {
-		deploymentSrv = NewDeploymentService()
+func GetSingletonStatefulSetService() *StatefulSetService {
+	statefulSetOnce.Do(func() {
+		statefulSetSrv = NewStatefulSetService()
 	})
-	return deploymentSrv
+	return statefulSetSrv
 }
 
-func (s *DeploymentService) List(query dto.DeploymentQueryDTO) ([]vo.WorkloadVO, error) {
+func (s *StatefulSetService) List(query dto.StatefulSetQueryDTO) ([]vo.WorkloadVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
@@ -43,21 +43,21 @@ func (s *DeploymentService) List(query dto.DeploymentQueryDTO) ([]vo.WorkloadVO,
 	if namespace == "" {
 		namespace = metav1.NamespaceAll
 	}
-	dyts, err := clientSet.AppsV1().Deployments(namespace).List(context.TODO(), listOptions)
+	sts, err := clientSet.AppsV1().StatefulSets(namespace).List(context.TODO(), listOptions)
 	if err != nil {
-		logs.Error("获取Deployments失败: %v", err)
+		logs.Error("获取StatefulSets失败: %v", err)
 		return nil, err
 	}
 	result := make([]vo.WorkloadVO, 0)
-	for _, item := range dyts.Items {
+	for _, item := range sts.Items {
 		if query.Name == "" || strings.Contains(item.Name, query.Name) {
 			yamlData, err := yaml.Marshal(item)
 			if err != nil {
-				logs.Error("序列化Deployment失败: %v", err)
+				logs.Error("序列化StatefulSet失败: %v", err)
 			}
-			dv := vo.Deployment2WorkloadVO(item)
-			dv.Yaml = string(yamlData)
-			result = append(result, dv)
+			sv := vo.StatefulSet2WorkloadVO(item)
+			sv.Yaml = string(yamlData)
+			result = append(result, sv)
 		}
 	}
 	return result, nil
