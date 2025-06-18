@@ -159,30 +159,20 @@ func (s *PodService) Upload(query dto.PodDownloadDTO, file multipart.File, heade
 		return errors.New("获取集群失败")
 	}
 	// 构建 exec 请求
-	//req := cache.clientSet.CoreV1().RESTClient().Post().
-	//	Resource("pods").
-	//	Name(query.Name).
-	//	Namespace(query.Namespace).
-	//	SubResource("exec").
-	//	VersionedParams(&v1.PodExecOptions{
-	//		Container: query.ContainerName,
-	//		Command:   []string{"/bin/sh", "-c", fmt.Sprintf("cat > %s", query.FilePath)},
-	//		Stdin:     true,
-	//		Stdout:    true,
-	//		Stderr:    true,
-	//		TTY:       false,
-	//	}, scheme.ParameterCodec)
-
 	req := cache.clientSet.CoreV1().RESTClient().Post().
-		AbsPath(fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/exec", query.Namespace, query.Name)).
+		Resource("pods").
+		Name(query.Name).
+		Namespace(query.Namespace).
+		SubResource("exec").
 		VersionedParams(&v1.PodExecOptions{
 			Container: query.ContainerName,
 			Command:   []string{"/bin/sh", "-c", fmt.Sprintf("cat > %s", query.FilePath)},
 			Stdin:     true,
-			Stdout:    true,
+			Stdout:    false,
 			Stderr:    true,
 			TTY:       false,
 		}, scheme.ParameterCodec)
+
 	// 创建 executor
 	executor, err := remotecommand.NewSPDYExecutor(cache.config, "POST", req.URL())
 	if err != nil {
@@ -194,13 +184,14 @@ func (s *PodService) Upload(query dto.PodDownloadDTO, file multipart.File, heade
 		return errors.New("读取文件内容失败" + err.Error())
 	}
 	stdin := bytes.NewReader(fileContent)
-	var stdout, stderr io.Writer
+	var stderr io.Writer
 
 	// 执行命令
 	err = executor.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
-		Stdin:  stdin,
-		Stdout: stdout,
-		Stderr: stderr,
+		Stdin:             stdin,
+		Stdout:            nil,
+		Stderr:            stderr,
+		TerminalSizeQueue: nil,
 	})
 
 	if err != nil {
