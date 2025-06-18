@@ -61,27 +61,27 @@
         style="width: 100%"
         @selection-change="handleSelectionChange"
       >
-        <el-table-column type="selection" width="55" />
-        <el-table-column prop="name" label="命名空间名称" min-width="180">
+        <el-table-column type="selection" width="55" header-align="center" align="center" />
+        <el-table-column prop="name" label="命名空间名称" min-width="180" header-align="center" align="center">
           <template #default="{ row }">
             <el-link type="primary" @click="handleViewDetail(row)">
               {{ row.name }}
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="alias" label="别名" min-width="120" :show-overflow-tooltip="true">
+        <el-table-column prop="alias" label="别名" min-width="120" :show-overflow-tooltip="true" header-align="center" align="center">
           <template #default="{ row }">
             <span v-if="row.alias">{{ row.alias }}</span>
             <el-text v-else type="info">-</el-text>
           </template>
         </el-table-column>
-        <el-table-column prop="describe" label="描述" min-width="200" :show-overflow-tooltip="true">
+        <el-table-column prop="describe" label="描述" min-width="200" :show-overflow-tooltip="true" header-align="center" align="center">
           <template #default="{ row }">
             <span v-if="row.describe">{{ row.describe }}</span>
             <el-text v-else type="info">-</el-text>
           </template>
         </el-table-column>
-        <el-table-column prop="active" label="状态" min-width="100" align="center">
+        <el-table-column prop="active" label="状态" min-width="100" header-align="center" align="center">
           <template #default="{ row }">
             <el-tag 
               :type="getStatusType(row.active)"
@@ -91,23 +91,20 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="creationTimestamp" label="创建时间" min-width="160" :show-overflow-tooltip="true">
+        <el-table-column prop="creationTimestamp" label="创建时间" min-width="160" :show-overflow-tooltip="true" header-align="center" align="center">
           <template #default="{ row }">
             <span v-if="row.creationTimestamp">{{ formatDate(row.creationTimestamp) }}</span>
             <el-text v-else type="info">-</el-text>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right" header-align="center" align="center">
           <template #default="{ row }">
-            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: nowrap;">
+            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; justify-content: center;">
               <el-button size="small" @click="handleViewDetail(row)">
                 详情
               </el-button>
               <el-button size="small" @click="handleEdit(row)">
                 编辑
-              </el-button>
-              <el-button size="small" @click="handleViewYaml(row)">
-                YAML
               </el-button>
               <el-dropdown @command="(command) => handleMoreAction(command, row)">
                 <el-button size="small">
@@ -115,6 +112,7 @@
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
+                    <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
                     <el-dropdown-item command="pods">Pod管理</el-dropdown-item>
                     <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
                   </el-dropdown-menu>
@@ -521,6 +519,9 @@ const handleViewYaml = async (row: NamespaceVO) => {
 // 更多操作
 const handleMoreAction = (command: string, row: NamespaceVO) => {
   switch (command) {
+    case 'yaml':
+      handleViewYaml(row)
+      break
     case 'pods':
       handleViewPods(row)
       break
@@ -753,6 +754,8 @@ onMounted(() => {
 .namespace-form {
   padding: 0 20px;
 }
+
+
 
 .dialog-footer {
   text-align: right;

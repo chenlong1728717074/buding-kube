@@ -113,9 +113,12 @@
             <el-text v-else type="info">-</el-text>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right" header-align="center">
+        <el-table-column label="操作" width="200" fixed="right" header-align="center">
           <template #default="{ row }">
             <div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: nowrap;">
+              <el-button size="small" @click="handleDetail(row)">
+                详情
+              </el-button>
               <el-button size="small" @click="handleEdit(row)">
                 编辑
               </el-button>
@@ -552,6 +555,11 @@ const handleEdit = (row: DeploymentVO) => {
   editForm.alias = row.alias || ''
   editForm.describe = row.describe || ''
   editDialogVisible.value = true
+}
+
+// 查看详情
+const handleDetail = (row: DeploymentVO) => {
+  ElMessage.info('详情功能暂未开放')
 }
 
 // 更多操作处理

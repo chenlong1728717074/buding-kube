@@ -60,21 +60,6 @@
           </el-menu-item>
         </el-sub-menu>
         
-        <el-sub-menu index="/job">
-          <template #title>
-            <el-icon><Timer /></el-icon>
-            <span>任务调度</span>
-          </template>
-          <el-menu-item index="/job/job" @click="showComingSoon">
-            <el-icon><Clock /></el-icon>
-            <span>Job</span>
-          </el-menu-item>
-          <el-menu-item index="/job/cronjob" @click="showComingSoon">
-            <el-icon><AlarmClock /></el-icon>
-            <span>CronJob</span>
-          </el-menu-item>
-        </el-sub-menu>
-        
         <el-sub-menu index="/service">
           <template #title>
             <el-icon><Connection /></el-icon>
@@ -110,6 +95,21 @@
           <el-menu-item index="/config/serviceaccount" @click="showComingSoon">
             <el-icon><UserFilled /></el-icon>
             <span>ServiceAccount</span>
+          </el-menu-item>
+        </el-sub-menu>
+        
+        <el-sub-menu index="/job">
+          <template #title>
+            <el-icon><Timer /></el-icon>
+            <span>任务调度</span>
+          </template>
+          <el-menu-item index="/job/job" @click="showComingSoon">
+            <el-icon><Clock /></el-icon>
+            <span>Job</span>
+          </el-menu-item>
+          <el-menu-item index="/job/cronjob" @click="showComingSoon">
+            <el-icon><AlarmClock /></el-icon>
+            <span>CronJob</span>
           </el-menu-item>
         </el-sub-menu>
         

@@ -22,13 +22,14 @@ import (
 var (
 	clusterSrv                    *ClusterService
 	clusterOnce                   sync.Once
-	ClusterMap                           = make(ClusterCacheMap)
+	ClusterMap                           = NewClusterCacheMap()
 	ClusterConfigSecretLabelKey   string = "buding-kube.com/cluster.metadata"
 	ClusterConfigSecretLabelValue string = "true"
 )
 
 type ClusterService struct {
 }
+
 type ClusterStatus struct {
 	Name     string `json:"name"`
 	Alias    string `json:"alias"`
@@ -36,34 +37,53 @@ type ClusterStatus struct {
 	Version  string `json:"version"`
 	Status   string `json:"status"`
 }
-type ClusterCacheMap map[string]*ClusterCache
+
+type ClusterCacheMap struct {
+	caches map[string]*ClusterCache
+	mutex  sync.RWMutex
+}
+
+func NewClusterCacheMap() *ClusterCacheMap {
+	return &ClusterCacheMap{
+		caches: make(map[string]*ClusterCache),
+		mutex:  sync.RWMutex{},
+	}
+}
 
 type ClusterCache struct {
 	clientSet *kubernetes.Clientset
 	config    *rest.Config
 }
 
-func (m ClusterCacheMap) Put(key string, value *kubernetes.Clientset, restConfig *rest.Config) {
-	m[key] = &ClusterCache{
+func (m *ClusterCacheMap) Put(key string, value *kubernetes.Clientset, restConfig *rest.Config) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	m.caches[key] = &ClusterCache{
 		clientSet: value,
 		config:    restConfig,
 	}
 }
-func (m ClusterCacheMap) Delete(key string) {
-	delete(m, key)
+func (m *ClusterCacheMap) Delete(key string) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	delete(m.caches, key)
 }
 
-func (m ClusterCacheMap) Get(key string) (*kubernetes.Clientset, error) {
-	cache := m[key]
+func (m *ClusterCacheMap) Get(key string) (*kubernetes.Clientset, error) {
+	m.mutex.RLock()
+	cache := m.caches[key]
 	if cache != nil {
 		return cache.clientSet, nil
 	}
+	m.mutex.RUnlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	cli, _, err := m.InitCache(key)
 	return cli, err
 }
 
-func (m ClusterCacheMap) GetConfig(key string) (*rest.Config, error) {
-	cache := m[key]
+func (m *ClusterCacheMap) GetConfig(key string) (*rest.Config, error) {
+	cache := m.caches[key]
 	if cache != nil {
 		return cache.config, nil
 	}
@@ -71,16 +91,16 @@ func (m ClusterCacheMap) GetConfig(key string) (*rest.Config, error) {
 	return config, err
 }
 
-func (m ClusterCacheMap) GetCache(key string) (*ClusterCache, error) {
-	cache := m[key]
+func (m *ClusterCacheMap) GetCache(key string) (*ClusterCache, error) {
+	cache := m.caches[key]
 	if cache != nil {
 		return cache, nil
 	}
 	_, _, err := m.InitCache(key)
-	return m[key], err
+	return m.caches[key], err
 }
 
-func (m ClusterCacheMap) InitCache(key string) (*kubernetes.Clientset, *rest.Config, error) {
+func (m *ClusterCacheMap) InitCache(key string) (*kubernetes.Clientset, *rest.Config, error) {
 	item, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		Get(context.TODO(), key, metav1.GetOptions{})
 	if err != nil {
