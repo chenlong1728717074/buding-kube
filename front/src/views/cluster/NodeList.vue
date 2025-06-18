@@ -154,7 +154,7 @@ const fetchClusterList = async () => {
   try {
     const response = await clusterApi.getClusters({
       page: 1,
-      pageSize: 100 // 获取所有集群
+      pageSize: 10000 // 获取所有集群
     })
     
     if (response.code === 200 && response.data) {

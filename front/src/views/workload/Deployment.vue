@@ -17,36 +17,22 @@
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="集群">
-          <el-select 
-            v-model="searchForm.clusterId" 
-            placeholder="请选择集群"
+          <InfiniteSelect
+            v-model="searchForm.clusterId"
+            :fetch-data="clusterFetcher"
+            v-bind="clusterSelectConfig"
             style="width: 200px"
-            clearable
             @change="handleClusterChange"
-          >
-            <el-option
-              v-for="cluster in clusterList"
-              :key="cluster.id"
-              :label="cluster.name"
-              :value="cluster.id"
-            />
-          </el-select>
+          />
         </el-form-item>
         <el-form-item label="命名空间">
-          <el-select 
-            v-model="searchForm.namespace" 
-            placeholder="请选择命名空间"
+          <InfiniteSelect
+            v-model="searchForm.namespace"
+            :fetch-data="namespaceFetcher"
+            v-bind="namespaceSelectConfig"
             style="width: 200px"
-            clearable
             @change="handleNamespaceChange"
-          >
-            <el-option
-              v-for="namespace in namespaceList"
-              :key="namespace.name"
-              :label="namespace.name"
-              :value="namespace.name"
-            />
-          </el-select>
+          />
         </el-form-item>
         <el-form-item label="名称">
           <el-input 
@@ -233,18 +219,12 @@
         label-width="100px"
       >
         <el-form-item label="集群">
-          <el-select 
-            v-model="yamlForm.clusterId" 
-            placeholder="请选择集群" 
-            style="width: 300px;"
-          >
-            <el-option 
-              v-for="cluster in clusterList" 
-              :key="cluster.id" 
-              :label="cluster.name" 
-              :value="cluster.id" 
-            />
-          </el-select>
+          <InfiniteSelect
+            v-model="yamlForm.clusterId"
+            :fetch-data="clusterFetcher"
+            v-bind="clusterSelectConfig"
+            style="width: 300px"
+          />
         </el-form-item>
         
         <el-form-item label="YAML配置">
@@ -317,18 +297,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-vue'
 import { deploymentApi, type DeploymentVO, type DeploymentQueryDTO } from '@/api/deployment'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 
 // 响应式数据
 const loading = ref(false)
 const deploymentList = ref<DeploymentVO[]>([])
-const clusterList = ref<ClusterVO[]>([])
-const namespaceList = ref<NamespaceVO[]>([])
+
+// 渐进式加载的数据获取函数
+const clusterFetcher = useClusterFetcher()
+const namespaceFetcher = computed(() => useNamespaceFetcher(searchForm.clusterId))
 
 // 对话框状态
 const editDialogVisible = ref(false)
@@ -374,63 +358,14 @@ const pagination = reactive({
   total: 0
 })
 
-// 获取集群列表
-const fetchClusterList = async () => {
-  try {
-    const response = await clusterApi.getClusters({ page: 1, pageSize: 100 })
-    console.log('集群列表API响应:', response)
-    
-    if (response.code === 200 && response.data && response.data.items) {
-      clusterList.value = response.data.items
-      
-      // 如果没有选中集群且有集群数据，自动选择第一个
-      if (!searchForm.clusterId && clusterList.value.length > 0) {
-        searchForm.clusterId = clusterList.value[0].id
-        fetchNamespaceList()
-      }
-    }
-  } catch (error: any) {
-    console.error('获取集群列表失败:', error)
-    ElMessage.error('获取集群列表失败')
-  }
-}
 
-// 获取命名空间列表
-const fetchNamespaceList = async () => {
-  if (!searchForm.clusterId) {
-    namespaceList.value = []
-    return
-  }
-  
-  try {
-    const params = {
-      clusterId: searchForm.clusterId,
-      keyword: '',
-      page: 1,
-      pageSize: 1000
-    }
-    
-    const response = await namespaceApi.getList(params)
-    console.log('命名空间列表API响应:', response)
-    
-    if (response.code === 200 && response.data) {
-      namespaceList.value = response.data.items || []
-      
-      // 如果没有选中命名空间且有命名空间数据，自动选择第一个
-      if (!searchForm.namespace && namespaceList.value.length > 0) {
-        searchForm.namespace = namespaceList.value[0].name
-      }
-    }
-  } catch (error: any) {
-    console.error('获取命名空间列表失败:', error)
-    ElMessage.error('获取命名空间列表失败')
-  }
-}
 
 // 获取Deployment列表
 const fetchDeploymentList = async () => {
   if (!searchForm.clusterId) {
-    ElMessage.warning('请先选择集群')
+    // 没有集群时清空列表
+    deploymentList.value = []
+    pagination.total = 0
     return
   }
   
@@ -454,19 +389,7 @@ const fetchDeploymentList = async () => {
   }
 }
 
-// 集群变化处理
-const handleClusterChange = async () => {
-  searchForm.namespace = ''
-  namespaceList.value = []
-  if (searchForm.clusterId) {
-    await fetchNamespaceList()
-  }
-}
 
-// 命名空间变化处理
-const handleNamespaceChange = () => {
-  fetchDeploymentList()
-}
 
 // 搜索处理
 const handleSearch = () => {
@@ -530,26 +453,70 @@ const formatTime = (time: string) => {
   return new Date(time).toLocaleString('zh-CN')
 }
 
+// 处理集群变化
+const handleClusterChange = (clusterId: string) => {
+  searchForm.clusterId = clusterId
+  searchForm.namespace = '' // 重置命名空间选择
+  if (clusterId) {
+    // 命名空间下拉框会自动重新加载数据
+    // 如果有集群选择，立即加载Deployment列表
+    fetchDeploymentList()
+  } else {
+    // 清空列表
+    deploymentList.value = []
+    pagination.total = 0
+  }
+}
+
+// 处理命名空间变化
+const handleNamespaceChange = (namespace: string) => {
+  searchForm.namespace = namespace
+  // 只要有集群选择，就重新查询（无论命名空间是否为空）
+  if (searchForm.clusterId) {
+    fetchDeploymentList()
+  }
+}
+
 // 页面加载时获取数据
-onMounted(() => {
-  fetchClusterList().then(() => {
-    if (searchForm.clusterId) {
-      fetchNamespaceList().then(() => {
-        // 如果有命名空间参数或者自动选择了第一个命名空间，则加载Deployment列表
-        if (searchForm.namespace) {
-          fetchDeploymentList()
-        }
+onMounted(async () => {
+  // 自动选择第一个集群和第一个命名空间
+  try {
+    // 获取第一个集群
+    const clusterResponse = await clusterApi.getClusters({ page: 1, pageSize: 1 })
+    if (clusterResponse.code === 200 && clusterResponse.data.items && clusterResponse.data.items.length > 0) {
+      const firstCluster = clusterResponse.data.items[0]
+      searchForm.clusterId = firstCluster.id
+      
+      // 获取第一个命名空间
+      const namespaceResponse = await namespaceApi.getList({ 
+        page: 1, 
+        pageSize: 1, 
+        clusterId: firstCluster.id 
       })
+      if (namespaceResponse.code === 200 && namespaceResponse.data.items && namespaceResponse.data.items.length > 0) {
+        const firstName = namespaceResponse.data.items[0]
+        searchForm.namespace = firstName.name
+      }
+      
+      // 自动加载Deployment列表
+      fetchDeploymentList()
     }
-  })
+  } catch (error) {
+    console.error('自动选择集群和命名空间失败:', error)
+    // 如果自动选择失败，用户仍可以手动选择
+  }
 })
 
 // 编辑Deployment
-const handleEdit = (row: DeploymentVO) => {
+const handleEdit = async (row: DeploymentVO) => {
   currentDeployment.value = row
   // 获取集群名称
-  const cluster = clusterList.value.find(c => c.id === searchForm.clusterId)
-  editForm.clusterName = cluster?.name || ''
+  try {
+    const response = await clusterApi.getCluster(searchForm.clusterId)
+    editForm.clusterName = response.data?.name || ''
+  } catch (error) {
+    editForm.clusterName = searchForm.clusterId
+  }
   editForm.namespace = row.namespace
   editForm.name = row.name
   editForm.alias = row.alias || ''
@@ -581,8 +548,12 @@ const handleMoreAction = (command: string, row: DeploymentVO) => {
 const handleViewYaml = async (row: DeploymentVO) => {
   currentDeployment.value = row
   // 获取集群名称
-  const cluster = clusterList.value.find(c => c.id === searchForm.clusterId)
-  viewYamlForm.clusterName = cluster?.name || ''
+  try {
+    const response = await clusterApi.getCluster(searchForm.clusterId)
+    viewYamlForm.clusterName = response.data?.name || ''
+  } catch (error) {
+    viewYamlForm.clusterName = searchForm.clusterId
+  }
   viewYamlForm.namespace = row.namespace
   // TODO: 调用API获取YAML内容
   viewYamlForm.yaml = row.yaml || '# YAML内容加载中...'

@@ -391,7 +391,7 @@ const fetchNamespaceList = async () => {
 // 获取集群列表
 const fetchClusterList = async () => {
   try {
-    const response = await clusterApi.getClusters({ page: 1, pageSize: 100 })
+    const response = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
     console.log('集群列表API响应:', response)
     
     if (response.code === 200 && response.data) {

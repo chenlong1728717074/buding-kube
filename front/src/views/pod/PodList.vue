@@ -322,7 +322,7 @@ const pagination = reactive({
 // 获取集群列表
 const fetchClusterList = async () => {
   try {
-    const response = await clusterApi.getClusters()
+    const response = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
     console.log('集群列表API响应:', response)
     
     if (response.code === 200 && response.data && response.data.items) {
@@ -352,7 +352,7 @@ const fetchNamespaceList = async () => {
       clusterId: searchForm.clusterId,
       keyword: '',
       page: 1,
-      pageSize: 1000
+      pageSize: 10000
     }
     
     const response = await namespaceApi.getList(params)
@@ -374,7 +374,7 @@ const fetchNamespaceList = async () => {
 
 // 获取Pod列表
 const fetchPodList = async () => {
-  if (!searchForm.clusterId || !searchForm.namespace) {
+  if (!searchForm.clusterId) {
     podList.value = []
     pagination.total = 0
     return
@@ -384,7 +384,7 @@ const fetchPodList = async () => {
     loading.value = true
     const params: PodQueryDTO = {
       clusterId: searchForm.clusterId,
-      namespace: searchForm.namespace,
+      ...(searchForm.namespace && { namespace: searchForm.namespace }),
       status: searchForm.status,
       page: pagination.page,
       pageSize: pagination.pageSize

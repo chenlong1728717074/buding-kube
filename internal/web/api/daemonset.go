@@ -26,7 +26,7 @@ func (api *DaemonSetApi) Router() {
 	api.router.GET("/list", api.List)
 	api.router.DELETE("", middleware.Blocker(), api.Delete)
 	api.router.PUT("", middleware.Blocker(), api.Update)
-	api.router.PUT("/rollout", api.Rollout)
+	api.router.PUT("/rollout", middleware.Blocker(), api.Rollout)
 	api.router.POST("/apply", middleware.Blocker(), api.Apply)
 }
 

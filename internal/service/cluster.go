@@ -38,81 +38,103 @@ type ClusterStatus struct {
 	Status   string `json:"status"`
 }
 
-type ClusterCacheMap struct {
-	caches map[string]*ClusterCache
-	mutex  sync.RWMutex
-}
-
-func NewClusterCacheMap() *ClusterCacheMap {
-	return &ClusterCacheMap{
-		caches: make(map[string]*ClusterCache),
-		mutex:  sync.RWMutex{},
-	}
-}
-
 type ClusterCache struct {
 	clientSet *kubernetes.Clientset
 	config    *rest.Config
 }
 
+type ClusterCacheMap struct {
+	caches sync.Map
+}
+
+func NewClusterCacheMap() *ClusterCacheMap {
+	return &ClusterCacheMap{}
+}
+
 func (m *ClusterCacheMap) Put(key string, value *kubernetes.Clientset, restConfig *rest.Config) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	m.caches[key] = &ClusterCache{
+	m.caches.Store(key, &ClusterCache{
 		clientSet: value,
 		config:    restConfig,
-	}
+	})
 }
+
 func (m *ClusterCacheMap) Delete(key string) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	delete(m.caches, key)
+	m.caches.Delete(key)
 }
 
 func (m *ClusterCacheMap) Get(key string) (*kubernetes.Clientset, error) {
-	m.mutex.RLock()
-	cache := m.caches[key]
-	if cache != nil {
-		return cache.clientSet, nil
+	// 先尝试获取现有缓存
+	if cache, ok := m.caches.Load(key); ok {
+		return cache.(*ClusterCache).clientSet, nil
 	}
-	m.mutex.RUnlock()
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
+
+	// 如果不存在，初始化缓存
 	cli, _, err := m.InitCache(key)
 	return cli, err
 }
 
 func (m *ClusterCacheMap) GetConfig(key string) (*rest.Config, error) {
-	cache := m.caches[key]
-	if cache != nil {
-		return cache.config, nil
+	if cache, ok := m.caches.Load(key); ok {
+		return cache.(*ClusterCache).config, nil
 	}
+
+	// 如果不存在，初始化缓存
 	_, config, err := m.InitCache(key)
 	return config, err
 }
 
 func (m *ClusterCacheMap) GetCache(key string) (*ClusterCache, error) {
-	cache := m.caches[key]
-	if cache != nil {
-		return cache, nil
+	if cache, ok := m.caches.Load(key); ok {
+		return cache.(*ClusterCache), nil
 	}
+
+	// 如果不存在，初始化缓存
 	_, _, err := m.InitCache(key)
-	return m.caches[key], err
+	if err != nil {
+		return nil, err
+	}
+
+	// 重新获取，因为现在应该存在了
+	cache, ok := m.caches.Load(key)
+	if !ok {
+		return nil, errors.New("初始化缓存后仍未找到")
+	}
+	return cache.(*ClusterCache), nil
 }
 
 func (m *ClusterCacheMap) InitCache(key string) (*kubernetes.Clientset, *rest.Config, error) {
+	// 这里需要加载时双重检查，避免并发初始化
+	if cache, ok := m.caches.Load(key); ok {
+		c := cache.(*ClusterCache)
+		return c.clientSet, c.config, nil
+	}
+
 	item, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
 		Get(context.TODO(), key, metav1.GetOptions{})
 	if err != nil {
 		logs.Error("获取集群资源失败:%v", err)
 		return nil, nil, err
 	}
+
 	set, restConfig, err := buildClientSet(string(item.Data["kubeconfig"]))
 	if err != nil {
 		logs.Error("连接到集群资源失败:%v", err)
 		return nil, nil, err
 	}
-	m.Put(key, set, restConfig)
+
+	// 使用LoadOrStore来确保并发安全
+	cache := &ClusterCache{
+		clientSet: set,
+		config:    restConfig,
+	}
+
+	actual, loaded := m.caches.LoadOrStore(key, cache)
+	if loaded {
+		// 如果另一个goroutine已经初始化了，使用已存在的
+		actualCache := actual.(*ClusterCache)
+		return actualCache.clientSet, actualCache.config, nil
+	}
+
 	return set, restConfig, nil
 }
 

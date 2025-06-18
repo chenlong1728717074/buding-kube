@@ -377,7 +377,7 @@ const pagination = reactive({
 // 获取集群列表
 const fetchClusterList = async () => {
   try {
-    const response = await clusterApi.getClusters({ page: 1, pageSize: 100 })
+    const response = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
     console.log('集群列表API响应:', response)
     
     if (response.code === 200 && response.data && response.data.items) {
@@ -407,7 +407,7 @@ const fetchNamespaceList = async () => {
       clusterId: searchForm.clusterId,
       keyword: '',
       page: 1,
-      pageSize: 1000
+      pageSize: 10000
     }
     
     const response = await namespaceApi.getList(params)
