@@ -34,8 +34,8 @@ func (api *PodApi) Router() {
 	api.router.PUT("", middleware.Blocker(), api.Update)
 	api.router.GET("/list", api.List)
 	api.router.POST("/logs", api.Log)
-	api.router.POST("/download", api.Download)
-	api.router.POST("/upload", api.Upload)
+	api.router.POST("/download", middleware.Blocker(), api.Download)
+	api.router.POST("/upload", middleware.Blocker(), api.Upload)
 	api.router.GET("", api.Info)
 }
 
