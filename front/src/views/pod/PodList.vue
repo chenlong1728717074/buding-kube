@@ -366,11 +366,6 @@ const fetchNamespaceList = async () => {
     
     if (response.code === 200 && response.data) {
       namespaceList.value = response.data.items || []
-      
-      // 如果没有选中命名空间且有命名空间数据，自动选择第一个
-      if (!searchForm.namespace && namespaceList.value.length > 0) {
-        searchForm.namespace = namespaceList.value[0].name
-      }
     }
   } catch (error: any) {
     console.error('获取命名空间列表失败:', error)
@@ -900,8 +895,10 @@ onMounted(() => {
   fetchClusterList().then(() => {
     if (searchForm.clusterId) {
       fetchNamespaceList().then(() => {
-        // 如果有命名空间参数或者自动选择了第一个命名空间，则加载Pod列表
+        // 如果有命名空间参数，则加载Pod列表；否则用第一个集群查询所有命名空间的Pod
         if (searchForm.namespace) {
+          fetchPodList()
+        } else if (searchForm.clusterId) {
           fetchPodList()
         }
       })

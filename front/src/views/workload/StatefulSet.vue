@@ -425,11 +425,6 @@ const fetchNamespaceList = async () => {
     
     if (response.code === 200 && response.data) {
       namespaceList.value = response.data.items || []
-      
-      // 如果没有选中命名空间且有命名空间数据，自动选择第一个
-      if (!searchForm.namespace && namespaceList.value.length > 0) {
-        searchForm.namespace = namespaceList.value[0].name
-      }
     }
   } catch (error: any) {
     console.error('获取命名空间列表失败:', error)
@@ -762,17 +757,22 @@ const handleRestart = async (row: StatefulSetVO) => {
 }
 
 // 页面加载时获取数据
-onMounted(() => {
-  fetchClusterList().then(() => {
-    if (searchForm.clusterId) {
-      fetchNamespaceList().then(() => {
-        // 如果有命名空间参数或者自动选择了第一个命名空间，则加载StatefulSet列表
-        if (searchForm.namespace) {
-          fetchStatefulSetList()
-        }
-      })
+onMounted(async () => {
+  // 自动选择第一个集群并查询数据
+  try {
+    // 获取第一个集群
+    const clusterResponse = await clusterApi.getClusters({ page: 1, pageSize: 1 })
+    if (clusterResponse.code === 200 && clusterResponse.data.items && clusterResponse.data.items.length > 0) {
+      const firstCluster = clusterResponse.data.items[0]
+      searchForm.clusterId = firstCluster.id
+      
+      // 自动加载StatefulSet列表
+      fetchStatefulSetList()
     }
-  })
+  } catch (error) {
+    console.error('自动选择集群失败:', error)
+    // 如果自动选择失败，用户仍可以手动选择
+  }
 })
 </script>
 

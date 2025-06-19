@@ -500,7 +500,7 @@ const handleNamespaceChange = (namespace: string) => {
 
 // 页面加载时获取数据
 onMounted(async () => {
-  // 自动选择第一个集群和第一个命名空间
+  // 自动选择第一个集群并查询数据
   try {
     // 获取第一个集群
     const clusterResponse = await clusterApi.getClusters({ page: 1, pageSize: 1 })
@@ -508,22 +508,11 @@ onMounted(async () => {
       const firstCluster = clusterResponse.data.items[0]
       searchForm.clusterId = firstCluster.id
       
-      // 获取第一个命名空间
-      const namespaceResponse = await namespaceApi.getList({ 
-        page: 1, 
-        pageSize: 1, 
-        clusterId: firstCluster.id 
-      })
-      if (namespaceResponse.code === 200 && namespaceResponse.data.items && namespaceResponse.data.items.length > 0) {
-        const firstName = namespaceResponse.data.items[0]
-        searchForm.namespace = firstName.name
-      }
-      
       // 自动加载Deployment列表
       fetchDeploymentList()
     }
   } catch (error) {
-    console.error('自动选择集群和命名空间失败:', error)
+    console.error('自动选择集群失败:', error)
     // 如果自动选择失败，用户仍可以手动选择
   }
 })
