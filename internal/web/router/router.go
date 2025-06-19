@@ -92,6 +92,10 @@ func SetupRouter(engine *gin.RouterGroup) {
 	cronJob := engine.Group("/cronJob", middleware.JWTAuth())
 	api.NewCronJobApi(cronJob)
 
+	//job
+	job := engine.Group("/job", middleware.JWTAuth())
+	api.NewJobApi(job)
+
 	//apply
 	apply := engine.Group("/apply", middleware.JWTAuth())
 	api.NewApplyApi(apply)
