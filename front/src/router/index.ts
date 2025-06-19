@@ -216,6 +216,15 @@ const routes: Array<RouteRecordRaw> = [
               title: 'Endpoint',
               requiresAuth: true
             }
+          },
+          {
+            path: 'endpointslice',
+            name: 'EndpointSlice',
+            component: () => import('@/views/service/EndpointSlice.vue'),
+            meta: {
+              title: 'EndpointSlice',
+              requiresAuth: true
+            }
           }
         ]
       },

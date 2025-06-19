@@ -6,16 +6,18 @@ import (
 )
 
 type EndpointSliceVO struct {
-	Name       string    `json:"name"`
-	Namespace  string    `json:"namespace"`
-	CreateTime time.Time `json:"createTime"`
-	Yaml       string    `json:"yaml"`
+	Name        string    `json:"name"`
+	Namespace   string    `json:"namespace"`
+	AddressType string    `json:"addressType"`
+	CreateTime  time.Time `json:"createTime"`
+	Yaml        string    `json:"yaml"`
 }
 
 func EndpointSlice2VO(eps discoveryv1.EndpointSlice) EndpointSliceVO {
 	return EndpointSliceVO{
-		Name:       eps.Name,
-		Namespace:  eps.Namespace,
-		CreateTime: eps.CreationTimestamp.Time,
+		Name:        eps.Name,
+		Namespace:   eps.Namespace,
+		AddressType: string(eps.AddressType),
+		CreateTime:  eps.CreationTimestamp.Time,
 	}
 }

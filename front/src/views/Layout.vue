@@ -69,13 +69,17 @@
             <el-icon><Link /></el-icon>
             <span>Service</span>
           </el-menu-item>
-          <el-menu-item index="/service/ingress" @click="showComingSoon">
+          <el-menu-item index="/service/ingress">
             <el-icon><Share /></el-icon>
             <span>Ingress</span>
           </el-menu-item>
-          <el-menu-item index="/service/endpoint" @click="showComingSoon">
+          <el-menu-item index="/service/endpoint">
             <el-icon><Position /></el-icon>
             <span>Endpoint</span>
+          </el-menu-item>
+          <el-menu-item index="/service/endpointslice">
+            <el-icon><Position /></el-icon>
+            <span>EndpointSlice</span>
           </el-menu-item>
         </el-sub-menu>
         

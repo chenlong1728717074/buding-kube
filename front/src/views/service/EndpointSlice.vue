@@ -1,16 +1,8 @@
 <template>
-  <div class="endpoint-list">
+  <div class="endpointslice-list">
     <el-card class="header-card">
       <div class="page-header">
-        <h1 class="deprecated-title">Endpoint管理</h1>
-        <el-alert
-          title="功能已过时"
-          type="warning"
-          description="Endpoint功能已过时，建议使用EndpointSlice功能。"
-          show-icon
-          :closable="false"
-          style="margin-top: 10px;"
-        />
+        <h1>EndpointSlice管理</h1>
       </div>
     </el-card>
 
@@ -37,7 +29,7 @@
         <el-form-item label="名称">
           <el-input 
             v-model="searchForm.name" 
-            placeholder="输入Endpoint名称" 
+            placeholder="输入EndpointSlice名称" 
             clearable
             style="width: 200px"
           />
@@ -58,15 +50,11 @@
     <el-card class="table-card">
       <el-table 
         v-loading="loading" 
-        :data="endpointList" 
+        :data="endpointSliceList" 
         stripe
         style="width: 100%"
       >
-        <el-table-column prop="name" label="名称" min-width="120" header-align="center" align="center">
-          <template #default="{ row }">
-            <span class="deprecated-text">{{ row.name }}</span>
-          </template>
-        </el-table-column>
+        <el-table-column prop="name" label="名称" min-width="120" header-align="center" align="center" />
         <el-table-column prop="namespace" label="命名空间" min-width="100" header-align="center" align="center">
           <template #default="{ row }">
             <el-link type="primary" @click="handleNamespaceDetail(row)">
@@ -74,6 +62,7 @@
             </el-link>
           </template>
         </el-table-column>
+        <el-table-column prop="addressType" label="地址类型" min-width="100" header-align="center" align="center" />
         <el-table-column prop="createTime" label="创建时间" min-width="140" header-align="center" align="center">
           <template #default="{ row }">
             {{ formatTime(row.createTime) }}
@@ -83,7 +72,7 @@
           <template #default="{ row }">
             <div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: nowrap;">
               <el-dropdown @command="(command) => handleMoreAction(command, row)">
-                <el-button size="small" class="deprecated-button">
+                <el-button size="small">
                   更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
                 <template #dropdown>
@@ -166,7 +155,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
-import { endpointApi, type EndpointVO, type EndpointQueryDTO } from '@/api/endpoint'
+import { endpointSliceApi, type EndpointSliceVO, type EndpointSliceQueryDTO } from '@/api/endpointslice'
 import { clusterApi } from '@/api/cluster'
 import { namespaceApi } from '@/api/namespace'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
@@ -177,7 +166,7 @@ const router = useRouter()
 
 // 响应式数据
 const loading = ref(false)
-const endpointList = ref<EndpointVO[]>([])
+const endpointSliceList = ref<EndpointSliceVO[]>([])
 
 // 渐进式加载的数据获取函数
 const clusterFetcher = useClusterFetcher()
@@ -185,7 +174,7 @@ const namespaceFetcher = computed(() => useNamespaceFetcher(searchForm.clusterId
 
 // 对话框状态
 const viewYamlDialogVisible = ref(false)
-const currentEndpoint = ref<EndpointVO | null>(null)
+const currentEndpointSlice = ref<EndpointSliceVO | null>(null)
 
 // 查看YAML表单
 const viewYamlForm = reactive({
@@ -195,7 +184,7 @@ const viewYamlForm = reactive({
 })
 
 // 搜索表单
-const searchForm = reactive<EndpointQueryDTO>({
+const searchForm = reactive<EndpointSliceQueryDTO>({
   clusterId: '',
   namespace: '',
   name: '',
@@ -210,11 +199,11 @@ const pagination = reactive({
   total: 0
 })
 
-// 获取Endpoint列表
-const fetchEndpointList = async () => {
+// 获取EndpointSlice列表
+const fetchEndpointSliceList = async () => {
   if (!searchForm.clusterId) {
     // 没有集群时清空列表
-    endpointList.value = []
+    endpointSliceList.value = []
     pagination.total = 0
     return
   }
@@ -226,14 +215,14 @@ const fetchEndpointList = async () => {
       page: pagination.page,
       pageSize: pagination.pageSize
     }
-    const response = await endpointApi.getEndpointList(params)
+    const response = await endpointSliceApi.getEndpointSliceList(params)
     if (response.code === 200) {
-      endpointList.value = response.data.items || []
+      endpointSliceList.value = response.data.items || []
       pagination.total = response.data.total || 0
     }
   } catch (error) {
-    console.error('获取Endpoint列表失败:', error)
-    ElMessage.error('获取Endpoint列表失败')
+    console.error('获取EndpointSlice列表失败:', error)
+    ElMessage.error('获取EndpointSlice列表失败')
   } finally {
     loading.value = false
   }
@@ -242,7 +231,7 @@ const fetchEndpointList = async () => {
 // 搜索处理
 const handleSearch = () => {
   pagination.page = 1
-  fetchEndpointList()
+  fetchEndpointSliceList()
 }
 
 // 重置处理
@@ -250,24 +239,24 @@ const handleReset = () => {
   searchForm.namespace = ''
   searchForm.name = ''
   pagination.page = 1
-  fetchEndpointList()
+  fetchEndpointSliceList()
 }
 
 // 分页大小变化
 const handleSizeChange = (size: number) => {
   pagination.pageSize = size
   pagination.page = 1
-  fetchEndpointList()
+  fetchEndpointSliceList()
 }
 
 // 当前页变化
 const handleCurrentChange = (page: number) => {
   pagination.page = page
-  fetchEndpointList()
+  fetchEndpointSliceList()
 }
 
 // 跳转到命名空间详情
-const handleNamespaceDetail = (row: EndpointVO) => {
+const handleNamespaceDetail = (row: EndpointSliceVO) => {
   router.push({
     path: '/namespace/detail',
     query: {
@@ -289,11 +278,11 @@ const handleClusterChange = (clusterId: string) => {
   searchForm.namespace = '' // 重置命名空间选择
   if (clusterId) {
     // 命名空间下拉框会自动重新加载数据
-    // 如果有集群选择，立即加载Endpoint列表
-    fetchEndpointList()
+    // 如果有集群选择，立即加载EndpointSlice列表
+    fetchEndpointSliceList()
   } else {
     // 清空列表
-    endpointList.value = []
+    endpointSliceList.value = []
     pagination.total = 0
   }
 }
@@ -303,7 +292,7 @@ const handleNamespaceChange = (namespace: string) => {
   searchForm.namespace = namespace
   // 只要有集群选择，就重新查询（无论命名空间是否为空）
   if (searchForm.clusterId) {
-    fetchEndpointList()
+    fetchEndpointSliceList()
   }
 }
 
@@ -328,8 +317,8 @@ onMounted(async () => {
         searchForm.namespace = firstName.name
       }
       
-      // 自动加载Endpoint列表
-      fetchEndpointList()
+      // 自动加载EndpointSlice列表
+      fetchEndpointSliceList()
     }
   } catch (error) {
     console.error('自动选择集群和命名空间失败:', error)
@@ -338,7 +327,7 @@ onMounted(async () => {
 })
 
 // 更多操作处理
-const handleMoreAction = (command: string, row: EndpointVO) => {
+const handleMoreAction = (command: string, row: EndpointSliceVO) => {
   switch (command) {
     case 'yaml':
       handleViewYaml(row)
@@ -347,8 +336,8 @@ const handleMoreAction = (command: string, row: EndpointVO) => {
 }
 
 // 查看YAML
-const handleViewYaml = async (row: EndpointVO) => {
-  currentEndpoint.value = row
+const handleViewYaml = async (row: EndpointSliceVO) => {
+  currentEndpointSlice.value = row
   // 获取集群名称
   try {
     const response = await clusterApi.getCluster(searchForm.clusterId)
@@ -363,7 +352,7 @@ const handleViewYaml = async (row: EndpointVO) => {
 </script>
 
 <style scoped>
-.endpoint-list {
+.endpointslice-list {
   padding: 20px;
 }
 
@@ -376,21 +365,10 @@ const handleViewYaml = async (row: EndpointVO) => {
   flex-direction: column;
 }
 
-.deprecated-title {
+.page-header h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  text-decoration: line-through;
-  color: #909399;
-}
-
-.deprecated-text {
-  text-decoration: line-through;
-  color: #909399;
-}
-
-.deprecated-button {
-  text-decoration: line-through;
 }
 
 .search-card {

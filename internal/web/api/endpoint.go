@@ -15,10 +15,12 @@ type EndpointApi struct {
 }
 
 func NewEndpointApi(router *gin.RouterGroup) *EndpointApi {
-	return &EndpointApi{
+	api := EndpointApi{
 		router: router,
 		srv:    service.GetSingletonEndpointService(),
 	}
+	api.Router()
+	return &api
 }
 
 func (a *EndpointApi) Router() {
