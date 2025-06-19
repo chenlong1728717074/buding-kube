@@ -44,7 +44,59 @@ func SetupRouter(engine *gin.RouterGroup) {
 	daemonSet := engine.Group("/daemonSet", middleware.JWTAuth())
 	api.NewDaemonSetApi(daemonSet)
 
-	//daemonSet
+	//service
 	service := engine.Group("/service", middleware.JWTAuth())
 	api.NewKubeSrvApi(service)
+
+	//replicaSet
+	replicaSet := engine.Group("/replicaSet", middleware.JWTAuth())
+	api.NewReplicaSetApi(replicaSet)
+
+	//configMap
+	configMap := engine.Group("/configMap", middleware.JWTAuth())
+	api.NewConfigMapApi(configMap)
+
+	//secret
+	secret := engine.Group("/secret", middleware.JWTAuth())
+	api.NewSecretApi(secret)
+
+	//pv
+	pv := engine.Group("/pv", middleware.JWTAuth())
+	api.NewPVApi(pv)
+
+	//pvc
+	pvc := engine.Group("/pvc", middleware.JWTAuth())
+	api.NewPVCApi(pvc)
+
+	//storageClass
+	storageClass := engine.Group("/storageClass", middleware.JWTAuth())
+	api.NewStorageClassApi(storageClass)
+
+	//serviceAccount
+	serviceAccount := engine.Group("/serviceAccount", middleware.JWTAuth())
+	api.NewServiceAccountApi(serviceAccount)
+
+	//ingress
+	ingress := engine.Group("/ingress", middleware.JWTAuth())
+	api.NewIngressApi(ingress)
+
+	//endpoint (已过时，建议使用EndpointSlices)
+	endpoint := engine.Group("/endpoint", middleware.JWTAuth())
+	api.NewEndpointApi(endpoint)
+
+	//endpointSlice
+	endpointSlice := engine.Group("/endpointslice", middleware.JWTAuth())
+	api.NewEndpointSliceApi(endpointSlice)
+
+	//cronJob
+	cronJob := engine.Group("/cronJob", middleware.JWTAuth())
+	api.NewCronJobApi(cronJob)
+
+	//apply
+	apply := engine.Group("/apply", middleware.JWTAuth())
+	api.NewApplyApi(apply)
+
+	//tool
+	tool := engine.Group("/tool", middleware.JWTAuth())
+	api.NewToolApi(tool)
 }

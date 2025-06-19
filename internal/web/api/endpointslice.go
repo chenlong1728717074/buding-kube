@@ -6,27 +6,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type StorageClassApi struct {
+type EndpointSliceApi struct {
 	router *gin.RouterGroup
-	srv    *service.StorageClassService
+	srv    *service.EndpointSliceService
 	BaseApi
 }
 
-func NewStorageClassApi(router *gin.RouterGroup) *StorageClassApi {
-	api := StorageClassApi{
+func NewEndpointSliceApi(router *gin.RouterGroup) *EndpointSliceApi {
+	api := &EndpointSliceApi{
 		router: router,
-		srv:    service.GetSingletonStorageClassService(),
+		srv:    service.GetSingletonEndpointSliceService(),
 	}
 	api.Router()
-	return &api
+	return api
 }
 
-func (a *StorageClassApi) Router() {
+func (a *EndpointSliceApi) Router() {
 	a.router.GET("/list", a.List)
 }
 
-func (a *StorageClassApi) List(ctx *gin.Context) {
-	var query dto.StorageClassPageQueryBaseDTO
+func (a *EndpointSliceApi) List(ctx *gin.Context) {
+	var query dto.EndpointSlicePageQueryBaseDTO
 	if err := a.BindQuery(ctx, &query); err != nil {
 		a.ParamBindError(ctx, err)
 		return
