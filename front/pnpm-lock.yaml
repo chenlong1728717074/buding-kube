@@ -11,9 +11,18 @@ importers:
       '@codemirror/lang-yaml':
         specifier: ^6.1.2
         version: 6.1.2
+      '@codemirror/language':
+        specifier: ^6.11.1
+        version: 6.11.1
+      '@codemirror/search':
+        specifier: ^6.5.11
+        version: 6.5.11
       '@codemirror/theme-one-dark':
         specifier: ^6.1.2
         version: 6.1.2
+      '@codemirror/view':
+        specifier: ^6.37.2
+        version: 6.37.2
       '@element-plus/icons-vue':
         specifier: ^2.1.0
         version: 2.3.1(vue@3.5.16(typescript@5.8.3))
