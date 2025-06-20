@@ -163,25 +163,37 @@
     <!-- YAML查看对话框 -->
     <el-dialog 
       v-model="yamlDialogVisible" 
-      title="YAML配置" 
+      title="查看YAML" 
       width="80%"
       destroy-on-close
     >
-      <el-input 
-        v-model="yamlContent" 
-        type="textarea" 
-        :rows="25" 
-        readonly
-        style="font-family: 'Courier New', monospace;"
-      />
+      <div class="yaml-dialog-content">
+        <div class="yaml-info">
+          <div class="info-item">
+            <span class="label">集群:</span>
+            <span class="value">{{ route.query.clusterName || '-' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">命名空间:</span>
+            <span class="value">{{ namespaceInfo?.name }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">资源类型:</span>
+            <span class="value">Namespace</span>
+          </div>
+        </div>
+        
+        <div class="yaml-editor-wrapper">
+          <YamlEditor 
+            :model-value="yamlContent"
+            :readonly="true"
+          />
+        </div>
+      </div>
       
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="yamlDialogVisible = false">关闭</el-button>
-          <el-button type="primary" @click="handleCopyYaml">
-            <el-icon><CopyDocument /></el-icon>
-            复制
-          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -211,6 +223,7 @@ import {
 } from '@element-plus/icons-vue'
 import { namespaceApi, type NamespaceVO, type NamespaceBaseDTO } from '@/api/namespace'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import YamlEditor from '@/components/YamlEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -477,6 +490,46 @@ onMounted(() => {
 
 :deep(.el-card__body) {
   padding: 20px;
+}
+
+/* YAML对话框样式 */
+.yaml-dialog-content {
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+}
+
+.yaml-info {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  flex-wrap: wrap;
+}
+
+.yaml-info .info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.yaml-info .label {
+  font-weight: 500;
+  color: #606266;
+}
+
+.yaml-info .value {
+  color: #409eff;
+  font-weight: 500;
+}
+
+.yaml-editor-wrapper {
+  flex: 1;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 :deep(.el-descriptions__label) {

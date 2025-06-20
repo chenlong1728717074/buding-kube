@@ -270,18 +270,37 @@
     />
 
     <!-- YAML查看对话框 -->
-    <el-dialog
-      v-model="yamlDialogVisible"
-      title="查看YAML"
-      width="80%"
+    <el-dialog 
+      v-model="yamlDialogVisible" 
+      title="查看YAML" 
+      width="90%"
       :close-on-click-modal="false"
+      destroy-on-close
     >
-      <div v-loading="yamlLoading" class="yaml-container">
-        <pre class="yaml-content">{{ yamlContent }}</pre>
+      <div class="yaml-dialog-content">
+        <div class="yaml-info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="集群">{{ clusterName || clusterId }}</el-descriptions-item>
+            <el-descriptions-item label="命名空间">{{ podInfo?.namespace }}</el-descriptions-item>
+            <el-descriptions-item label="名称">{{ podInfo?.name }}</el-descriptions-item>
+            <el-descriptions-item label="类型">Pod</el-descriptions-item>
+          </el-descriptions>
+        </div>
+        
+        <div class="yaml-editor-wrapper">
+          <YamlEditor 
+            :model-value="yamlContent"
+            :loading="yamlLoading"
+            :readonly="true"
+            height="500px"
+          />
+        </div>
       </div>
+      
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="yamlDialogVisible = false">关闭</el-button>
+          <span style="color: #909399; font-size: 12px; margin-left: 10px;">注意：Pod不支持修改操作</span>
         </div>
       </template>
     </el-dialog>
@@ -506,6 +525,7 @@ import {
   type PodFileDTO
 } from '@/api/pod'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import YamlEditor from '@/components/YamlEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -1197,24 +1217,18 @@ onMounted(() => {
   font-style: italic;
 }
 
-.yaml-container {
-  max-height: 60vh;
-  overflow-y: auto;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  background-color: #f5f7fa;
+.yaml-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.yaml-content {
-  margin: 0;
-  padding: 16px;
-  font-family: 'Courier New', Consolas, monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #2c3e50;
-  background-color: #f5f7fa;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+.yaml-info {
+  margin-bottom: 16px;
+}
+
+.yaml-editor-wrapper {
+  flex: 1;
 }
 
 /* 日志相关样式 */

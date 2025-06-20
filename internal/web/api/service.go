@@ -23,6 +23,8 @@ func NewKubeSrvApi(router *gin.RouterGroup) *KubeSrvApi {
 
 func (api *KubeSrvApi) Router() {
 	api.router.GET("/list", api.List)
+	api.router.GET("", api.GetInfo)
+	api.router.GET("/yaml", api.GetYaml)
 }
 
 func (api *KubeSrvApi) List(ctx *gin.Context) {
@@ -38,4 +40,32 @@ func (api *KubeSrvApi) List(ctx *gin.Context) {
 	}
 	response := BuildPageResponse(list, query.Page, query.PageSize)
 	api.SuccessWithData(ctx, response)
+}
+
+func (api *KubeSrvApi) GetInfo(ctx *gin.Context) {
+	var query dto.ServiceBaseDTO
+	if err := api.BindQuery(ctx, &query); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	info, err := api.srv.GetInfo(query)
+	if err != nil {
+		api.InternalError(ctx, "获取详情失败:", err)
+		return
+	}
+	api.SuccessWithData(ctx, info)
+}
+
+func (api *KubeSrvApi) GetYaml(ctx *gin.Context) {
+	var query dto.ServiceBaseDTO
+	if err := api.BindQuery(ctx, &query); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	yaml, err := api.srv.GetYaml(query)
+	if err != nil {
+		api.InternalError(ctx, "获取YAML失败:", err)
+		return
+	}
+	api.SuccessWithData(ctx, yaml)
 }

@@ -256,46 +256,36 @@
     <el-dialog 
       v-model="viewYamlDialogVisible" 
       title="查看/编辑YAML" 
-      width="80%"
+      width="90%"
       :before-close="() => viewYamlDialogVisible = false"
       destroy-on-close
     >
-      <el-form 
-        :model="viewYamlForm" 
-        label-width="100px"
-      >
-        <el-form-item label="集群">
-          <el-input 
-            v-model="viewYamlForm.clusterName" 
-            placeholder="集群名称" 
-            disabled
-            style="width: 300px;"
-          />
-        </el-form-item>
+      <div class="yaml-dialog-content">
+        <div class="yaml-info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
+            <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
+            <el-descriptions-item label="名称">{{ currentDeployment?.name }}</el-descriptions-item>
+            <el-descriptions-item label="类型">Deployment</el-descriptions-item>
+          </el-descriptions>
+        </div>
         
-        <el-form-item label="命名空间">
-          <el-input 
-            v-model="viewYamlForm.namespace" 
-            placeholder="命名空间" 
-            disabled
-            style="width: 300px;"
+        <div class="yaml-editor-wrapper">
+          <YamlEditor
+            v-model="viewYamlForm.yaml"
+            :title="`${currentDeployment?.name} - Deployment YAML`"
+            :readonly="false"
+            height="500px"
+            :filename="`${currentDeployment?.name}-deployment.yaml`"
+            @change="handleYamlChange"
           />
-        </el-form-item>
-        
-        <el-form-item label="YAML配置">
-          <el-input 
-            v-model="viewYamlForm.yaml" 
-            type="textarea" 
-            :rows="20" 
-            style="font-family: 'Courier New', monospace;"
-          />
-        </el-form-item>
-      </el-form>
+        </div>
+      </div>
       
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="viewYamlDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleApplyEditYaml">应用修改</el-button>
+          <el-button type="primary" @click="handleApplyEditYaml" :loading="applyLoading">应用修改</el-button>
         </div>
       </template>
     </el-dialog>
@@ -311,6 +301,7 @@ import { deploymentApi, type DeploymentVO, type DeploymentQueryDTO } from '@/api
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import YamlEditor from '@/components/YamlEditor.vue'
 import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 
 // 路由
@@ -329,6 +320,7 @@ const editDialogVisible = ref(false)
 const yamlDialogVisible = ref(false)
 const viewYamlDialogVisible = ref(false)
 const currentDeployment = ref<DeploymentVO | null>(null)
+const applyLoading = ref(false)
 
 // 编辑表单
 const editForm = reactive({
@@ -685,6 +677,11 @@ const handleApplyYaml = async () => {
   }
 }
 
+// YAML内容变化处理
+const handleYamlChange = (value: string) => {
+  viewYamlForm.value.yaml = value
+}
+
 // 应用编辑YAML
 const handleApplyEditYaml = async () => {
   if (!viewYamlForm.yaml.trim()) {
@@ -694,6 +691,7 @@ const handleApplyEditYaml = async () => {
   
   if (!currentDeployment.value) return
   
+  applyLoading.value = true
   try {
     await deploymentApi.applyDeployment({
       clusterId: searchForm.clusterId,
@@ -706,6 +704,8 @@ const handleApplyEditYaml = async () => {
   } catch (error) {
     console.error('应用失败:', error)
     ElMessage.error('应用失败')
+  } finally {
+    applyLoading.value = false
   }
 }
 </script>
@@ -750,5 +750,19 @@ const handleApplyEditYaml = async () => {
   display: flex;
   justify-content: center;
   margin-top: 20px;
+}
+
+.yaml-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.yaml-info {
+  margin-bottom: 16px;
+}
+
+.yaml-editor-wrapper {
+  flex: 1;
 }
 </style>

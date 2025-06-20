@@ -203,25 +203,23 @@
       </template>
     </el-dialog>
 
-    <!-- YAML查看/编辑对话框 -->
+    <!-- YAML添加命名空间对话框 -->
     <el-dialog 
       v-model="yamlDialogVisible" 
-      title="YAML配置" 
+      title="YAML添加命名空间" 
       width="80%"
-      :before-close="handleYamlDialogClose"
+      :before-close="() => yamlDialogVisible = false"
       destroy-on-close
     >
       <el-form 
-        ref="yamlFormRef" 
         :model="yamlForm" 
-        :rules="yamlFormRules" 
         label-width="100px"
       >
-        <el-form-item label="集群" prop="clusterId">
+        <el-form-item label="集群">
           <el-select 
             v-model="yamlForm.clusterId" 
             placeholder="请选择集群" 
-            style="width: 300px;"
+            style="width: 300px"
           >
             <el-option 
               v-for="cluster in clusterList" 
@@ -232,23 +230,59 @@
           </el-select>
         </el-form-item>
         
-        <el-form-item label="YAML配置" prop="yaml">
-          <el-input 
-            v-model="yamlForm.yaml" 
-            type="textarea" 
-            :rows="20" 
-            placeholder="请输入YAML配置" 
-            style="font-family: 'Courier New', monospace;"
-          />
-        </el-form-item>
+        <el-form-item label="YAML配置" class="yaml-form-item">
+           <YamlEditor
+             v-model="yamlForm.yaml"
+             title="命名空间 YAML"
+             :readonly="false"
+             height="500px"
+             filename="namespace.yaml"
+           />
+         </el-form-item>
       </el-form>
       
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="handleYamlDialogClose">取消</el-button>
-          <el-button type="primary" @click="handleYamlSubmit" :loading="yamlSubmitLoading">
-            应用
-          </el-button>
+          <el-button @click="yamlDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleApplyYaml" :loading="yamlSubmitLoading">应用</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 查看/编辑YAML对话框 -->
+    <el-dialog 
+      v-model="viewYamlDialogVisible" 
+      title="查看/编辑YAML" 
+      width="90%"
+      :before-close="() => viewYamlDialogVisible = false"
+      destroy-on-close
+    >
+      <div class="yaml-dialog-content">
+        <div class="yaml-info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
+            <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
+            <el-descriptions-item label="名称">{{ currentNamespace?.name }}</el-descriptions-item>
+            <el-descriptions-item label="类型">Namespace</el-descriptions-item>
+          </el-descriptions>
+        </div>
+        
+        <div class="yaml-editor-wrapper">
+          <YamlEditor
+            v-model="viewYamlForm.yaml"
+            :title="`${currentNamespace?.name} - Namespace YAML`"
+            :readonly="false"
+            height="500px"
+            :filename="`${currentNamespace?.name}-namespace.yaml`"
+            @change="handleYamlChange"
+          />
+        </div>
+      </div>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="viewYamlDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleApplyEditYaml" :loading="applyLoading">应用修改</el-button>
         </div>
       </template>
     </el-dialog>
@@ -274,7 +308,8 @@ import {
   Search, 
   Refresh, 
   ArrowDown,
-  Document
+  Document,
+  Edit
 } from '@element-plus/icons-vue'
 import { 
   namespaceApi, 
@@ -286,11 +321,13 @@ import {
 } from '@/api/namespace'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import YamlEditor from '@/components/YamlEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const submitLoading = ref(false)
+const applyLoading = ref(false)
 const yamlSubmitLoading = ref(false)
 
 // 搜索表单
@@ -315,6 +352,7 @@ const pagination = reactive({
 
 // 对话框
 const dialogVisible = ref(false)
+const yamlDialogVisible = ref(false)
 const isEdit = ref(false)
 const dialogTitle = ref('')
 const formRef = ref()
@@ -327,11 +365,18 @@ const namespaceForm = reactive({
   describe: ''
 })
 
-// YAML对话框
-const yamlDialogVisible = ref(false)
-const yamlFormRef = ref()
+// YAML表单
 const yamlForm = reactive({
   clusterId: '',
+  yaml: ''
+})
+
+// 查看YAML对话框
+const viewYamlDialogVisible = ref(false)
+const currentNamespace = ref<NamespaceVO | null>(null)
+const viewYamlForm = reactive({
+  clusterName: '',
+  namespace: '',
   yaml: ''
 })
 
@@ -342,16 +387,7 @@ const formRules = {
   ],
   namespace: [
     { required: true, message: '请输入命名空间名称', trigger: 'blur' },
-    { pattern: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, message: '命名空间名称只能包含小写字母、数字和连字符，且必须以字母或数字开头和结尾', trigger: 'blur' }
-  ]
-}
-
-const yamlFormRules = {
-  clusterId: [
-    { required: true, message: '请选择集群', trigger: 'change' }
-  ],
-  yaml: [
-    { required: true, message: '请输入YAML配置', trigger: 'blur' }
+    { pattern: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, message: '命名空间名称格式不正确', trigger: 'blur' }
   ]
 }
 
@@ -476,6 +512,37 @@ metadata:
   yamlDialogVisible.value = true
 }
 
+// 应用YAML
+const handleApplyYaml = async () => {
+  if (!yamlForm.clusterId) {
+    ElMessage.warning('请选择集群')
+    return
+  }
+  
+  if (!yamlForm.yaml.trim()) {
+    ElMessage.warning('YAML内容不能为空')
+    return
+  }
+  
+  try {
+    yamlSubmitLoading.value = true
+    
+    const data: NamespaceApplyDTO = {
+      clusterId: yamlForm.clusterId,
+      yaml: yamlForm.yaml
+    }
+    
+    await namespaceApi.apply(data)
+    ElMessage.success('应用成功')
+    yamlDialogVisible.value = false
+    fetchNamespaceList()
+  } catch (error: any) {
+    ElMessage.error('应用失败')
+  } finally {
+    yamlSubmitLoading.value = false
+  }
+}
+
 // 编辑命名空间
 const handleEdit = (row: NamespaceVO) => {
   isEdit.value = true
@@ -503,14 +570,20 @@ const handleViewDetail = (row: NamespaceVO) => {
 // 查看YAML
 const handleViewYaml = async (row: NamespaceVO) => {
   try {
+    currentNamespace.value = row
+    
+    // 获取当前集群名称
+    const cluster = clusterList.value.find(c => c.id === searchForm.clusterId)
+    viewYamlForm.clusterName = cluster?.name || ''
+    viewYamlForm.namespace = row.name
+    
     const params: NamespaceBaseDTO = {
       clusterId: searchForm.clusterId,
       namespace: row.name
     }
     const response = await namespaceApi.getInfo(params)
-    yamlForm.clusterId = searchForm.clusterId
-    yamlForm.yaml = response.data.yaml || ''
-    yamlDialogVisible.value = true
+    viewYamlForm.yaml = response.data.yaml || '# YAML内容加载中...'
+    viewYamlDialogVisible.value = true
   } catch (error: any) {
     ElMessage.error('获取YAML配置失败')
   }
@@ -612,27 +685,29 @@ const handleSubmit = async () => {
   }
 }
 
-// YAML提交
-const handleYamlSubmit = async () => {
-  if (!yamlFormRef.value) return
+// 应用YAML修改
+const handleApplyEditYaml = async () => {
+  if (!viewYamlForm.yaml.trim()) {
+    ElMessage.warning('YAML内容不能为空')
+    return
+  }
   
   try {
-    await yamlFormRef.value.validate()
-    yamlSubmitLoading.value = true
+    applyLoading.value = true
     
     const data: NamespaceApplyDTO = {
-      clusterId: yamlForm.clusterId,
-      yaml: yamlForm.yaml
+      clusterId: searchForm.clusterId,
+      yaml: viewYamlForm.yaml
     }
     
     await namespaceApi.apply(data)
     ElMessage.success('应用成功')
-    yamlDialogVisible.value = false
+    viewYamlDialogVisible.value = false
     fetchNamespaceList()
   } catch (error: any) {
     ElMessage.error('应用失败')
   } finally {
-    yamlSubmitLoading.value = false
+    applyLoading.value = false
   }
 }
 
@@ -644,11 +719,9 @@ const handleDialogClose = () => {
   }
 }
 
-const handleYamlDialogClose = () => {
-  yamlDialogVisible.value = false
-  if (yamlFormRef.value) {
-    yamlFormRef.value.resetFields()
-  }
+// 处理YAML内容变化
+const handleYamlChange = (newYaml: string) => {
+  viewYamlForm.yaml = newYaml
 }
 
 // 状态相关
@@ -793,5 +866,37 @@ onMounted(() => {
 
 :deep(.el-button + .el-button) {
   margin-left: 8px;
+}
+
+.yaml-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.yaml-info {
+  margin-bottom: 16px;
+}
+
+.yaml-editor-wrapper {
+  flex: 1;
+}
+
+/* YAML添加对话框样式 */
+.yaml-form-item {
+  margin-bottom: 0;
+}
+
+.yaml-form-item :deep(.el-form-item__content) {
+  width: 100%;
+  max-width: none;
+}
+
+.yaml-form-item :deep(.yaml-editor) {
+  width: 100%;
+}
+
+.yaml-form-item :deep(.yaml-editor .editor-container) {
+  width: 100%;
 }
 </style>

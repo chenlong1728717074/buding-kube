@@ -102,9 +102,18 @@
         <el-table-column label="操作" width="120" fixed="right" header-align="center">
           <template #default="{ row }">
             <div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: nowrap;">
-              <el-button size="small" @click="handleDetail(row)">
-                详情
-              </el-button>
+              <el-dropdown @command="(command) => handleMoreAction(command, row)" trigger="click">
+                <el-button size="small">
+                  更多
+                  <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
+                    <el-dropdown-item command="detail">详情</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
           </template>
         </el-table-column>
@@ -123,6 +132,39 @@
         />
       </div>
     </el-card>
+
+    <!-- 查看YAML对话框 -->
+    <el-dialog 
+      v-model="viewYamlDialogVisible" 
+      title="查看YAML" 
+      width="80%" 
+      :close-on-click-modal="false"
+    >
+      <div class="yaml-dialog-content">
+        <div class="yaml-info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
+            <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
+            <el-descriptions-item label="名称" v-if="currentService">{{ currentService.name }}</el-descriptions-item>
+            <el-descriptions-item label="类型">Service</el-descriptions-item>
+          </el-descriptions>
+        </div>
+        
+        <div class="yaml-editor-wrapper">
+          <YamlEditor 
+            :modelValue="viewYamlForm.yaml"
+            @change="handleYamlChange"
+            :readonly="true"
+          />
+        </div>
+      </div>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="viewYamlDialogVisible = false">关闭</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -130,11 +172,12 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh } from '@element-plus/icons-vue'
-import { serviceApi, type ServiceVO, type ServiceQueryDTO } from '@/api/service'
+import { Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
+import { serviceApi, type ServiceVO, type ServiceQueryDTO, type ServiceBaseDTO } from '@/api/service'
 import { clusterApi } from '@/api/cluster'
 import { namespaceApi } from '@/api/namespace'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import YamlEditor from '@/components/YamlEditor.vue'
 import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 
 
@@ -144,6 +187,16 @@ const router = useRouter()
 // 响应式数据
 const loading = ref(false)
 const serviceList = ref<ServiceVO[]>([])
+const viewYamlDialogVisible = ref(false)
+const currentService = ref<ServiceVO | null>(null)
+const applyLoading = ref(false)
+
+// 查看YAML表单
+const viewYamlForm = reactive({
+  clusterName: '',
+  namespace: '',
+  yaml: ''
+})
 
 // 渐进式加载的数据获取函数
 const clusterFetcher = useClusterFetcher()
@@ -183,9 +236,15 @@ const fetchServiceList = async () => {
     }
     
     const response = await serviceApi.getServices(params)
+    console.log('Service API响应:', response)
     if (response.code === 200) {
       serviceList.value = response.data.items || []
       pagination.total = response.data.total || 0
+      // 调试：检查第一个项目的yaml字段
+      if (response.data.items && response.data.items.length > 0) {
+        console.log('第一个Service的yaml字段:', response.data.items[0].yaml ? '存在' : '不存在')
+        console.log('第一个Service数据:', response.data.items[0])
+      }
     }
   } catch (error) {
     console.error('获取Service列表失败:', error)
@@ -244,6 +303,43 @@ const handleSizeChange = (size: number) => {
 const handleCurrentChange = (page: number) => {
   pagination.page = page
   fetchServiceList()
+}
+
+// 更多操作处理
+const handleMoreAction = (command: string, row: ServiceVO) => {
+  switch (command) {
+    case 'yaml':
+      handleViewYaml(row)
+      break
+    case 'detail':
+      handleDetail(row)
+      break
+  }
+}
+
+// 查看YAML
+const handleViewYaml = async (row: ServiceVO) => {
+  if (!row.yaml) {
+    ElMessage.error('YAML数据不可用')
+    return
+  }
+  
+  try {
+    const clusterList = await clusterApi.getClusters({ page: 1, pageSize: 100 })
+    viewYamlForm.clusterName = clusterList.data.items?.find(c => c.id === searchForm.clusterId)?.name || ''
+    viewYamlForm.namespace = row.namespace
+    viewYamlForm.yaml = row.yaml
+    currentService.value = row
+    viewYamlDialogVisible.value = true
+  } catch (error: any) {
+    console.error('获取集群信息失败:', error)
+    ElMessage.error('获取集群信息失败')
+  }
+}
+
+// 处理YAML内容变化
+const handleYamlChange = (newYaml: string) => {
+  viewYamlForm.yaml = newYaml
 }
 
 // 查看详情
@@ -352,5 +448,20 @@ onMounted(async () => {
 
 :deep(.el-button + .el-button) {
   margin-left: 6px;
+}
+
+.yaml-dialog-content {
+  display: flex;
+  flex-direction: column;
+  height: 70vh;
+}
+
+.yaml-info {
+  margin-bottom: 16px;
+}
+
+.yaml-editor-wrapper {
+  flex: 1;
+  min-height: 0;
 }
 </style>

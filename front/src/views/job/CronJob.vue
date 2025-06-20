@@ -134,42 +134,30 @@
     <el-dialog 
       v-model="viewYamlDialogVisible" 
       title="查看YAML" 
-      width="80%"
+      width="90%"
       :before-close="() => viewYamlDialogVisible = false"
       destroy-on-close
     >
-      <el-form 
-        :model="viewYamlForm" 
-        label-width="100px"
-      >
-        <el-form-item label="集群">
-          <el-input 
-            v-model="viewYamlForm.clusterName" 
-            placeholder="集群名称" 
-            disabled
-            style="width: 300px;"
-          />
-        </el-form-item>
+      <div class="yaml-dialog-content">
+        <div class="yaml-info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
+            <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
+            <el-descriptions-item label="名称">{{ currentCronJob?.name }}</el-descriptions-item>
+            <el-descriptions-item label="类型">CronJob</el-descriptions-item>
+          </el-descriptions>
+        </div>
         
-        <el-form-item label="命名空间">
-          <el-input 
-            v-model="viewYamlForm.namespace" 
-            placeholder="命名空间" 
-            disabled
-            style="width: 300px;"
+        <div class="yaml-editor-wrapper">
+          <YamlEditor
+            v-model="viewYamlForm.yaml"
+            :title="`${currentCronJob?.name} - CronJob YAML`"
+            :readonly="true"
+            height="500px"
+            :filename="`${currentCronJob?.name}-cronjob.yaml`"
           />
-        </el-form-item>
-        
-        <el-form-item label="YAML配置">
-          <el-input 
-            v-model="viewYamlForm.yaml" 
-            type="textarea" 
-            :rows="20" 
-            readonly
-            style="font-family: 'Courier New', monospace;"
-          />
-        </el-form-item>
-      </el-form>
+        </div>
+      </div>
       
       <template #footer>
         <div class="dialog-footer">
@@ -188,6 +176,7 @@ import { Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
 import { cronJobApi, type CronJobVO, type CronJobQueryDTO } from '@/api/cronjob'
 import { clusterApi } from '@/api/cluster'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import YamlEditor from '@/components/YamlEditor.vue'
 import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 
 // 路由
@@ -428,6 +417,20 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   margin-top: 20px;
+}
+
+.yaml-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.yaml-info {
+  margin-bottom: 16px;
+}
+
+.yaml-editor-wrapper {
+  flex: 1;
 }
 
 .dialog-footer {

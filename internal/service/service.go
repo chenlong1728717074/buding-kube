@@ -48,7 +48,7 @@ func (s *KubeSrvService) List(query dto.ServiceQueryDTO) ([]vo.ServiceVO, error)
 		vi := vo.Service2VO(item)
 		yamlData, err := yaml.Marshal(item)
 		if err != nil {
-			logs.Error("序列化Deployment失败: %v", err)
+			logs.Error("序列化Service失败: %v", err)
 		}
 		vi.Yaml = string(yamlData)
 		result = append(result, vi)
@@ -57,4 +57,43 @@ func (s *KubeSrvService) List(query dto.ServiceQueryDTO) ([]vo.ServiceVO, error)
 		return result[i].CreateTime.After(result[j].CreateTime)
 	})
 	return result, nil
+}
+
+func (s *KubeSrvService) GetInfo(query dto.ServiceBaseDTO) (*vo.ServiceVO, error) {
+	clientSet, err := ClusterMap.Get(query.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
+		return nil, errors.New("获取集群失败")
+	}
+	item, err := clientSet.CoreV1().Services(query.Namespace).Get(context.TODO(), query.Name, metav1.GetOptions{})
+	if err != nil {
+		logs.Error("获取service详情失败: %v", err)
+		return nil, fmt.Errorf("获取service详情失败: %v", err)
+	}
+	vi := vo.Service2VO(*item)
+	yamlData, err := yaml.Marshal(item)
+	if err != nil {
+		logs.Error("序列化Service失败: %v", err)
+	}
+	vi.Yaml = string(yamlData)
+	return &vi, nil
+}
+
+func (s *KubeSrvService) GetYaml(query dto.ServiceBaseDTO) (string, error) {
+	clientSet, err := ClusterMap.Get(query.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
+		return "", errors.New("获取集群失败")
+	}
+	item, err := clientSet.CoreV1().Services(query.Namespace).Get(context.TODO(), query.Name, metav1.GetOptions{})
+	if err != nil {
+		logs.Error("获取service失败: %v", err)
+		return "", fmt.Errorf("获取service失败: %v", err)
+	}
+	yamlData, err := yaml.Marshal(item)
+	if err != nil {
+		logs.Error("序列化Service失败: %v", err)
+		return "", fmt.Errorf("序列化Service失败: %v", err)
+	}
+	return string(yamlData), nil
 }

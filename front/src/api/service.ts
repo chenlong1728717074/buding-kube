@@ -28,10 +28,24 @@ export interface ServiceVO {
   createTime: string
 }
 
+// Service基础参数
+export interface ServiceBaseDTO {
+  clusterId: string
+  namespace: string
+  name: string
+}
+
 // Service API
 export const serviceApi = {
   // 获取Service列表
   getServices: (params: ServiceQueryDTO): Promise<ApiResponse<PageResponse<ServiceVO>>> => {
     return request.get('/service/list', { params })
-  }
+  },
+
+  // 获取Service详情
+  getServiceInfo: (params: ServiceBaseDTO): Promise<ApiResponse<ServiceVO>> => {
+    return request.get('/service', { params })
+  },
+
+
 }

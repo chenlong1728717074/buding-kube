@@ -276,46 +276,36 @@
     <el-dialog 
       v-model="viewYamlDialogVisible" 
       title="查看/编辑YAML" 
-      width="80%"
+      width="90%"
       :before-close="() => viewYamlDialogVisible = false"
       destroy-on-close
     >
-      <el-form 
-        :model="viewYamlForm" 
-        label-width="100px"
-      >
-        <el-form-item label="集群">
-          <el-input 
-            v-model="viewYamlForm.clusterName" 
-            placeholder="集群名称" 
-            disabled
-            style="width: 300px;"
-          />
-        </el-form-item>
+      <div class="yaml-dialog-content">
+        <div class="yaml-info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
+            <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
+            <el-descriptions-item label="名称">{{ currentStatefulSet?.name }}</el-descriptions-item>
+            <el-descriptions-item label="类型">StatefulSet</el-descriptions-item>
+          </el-descriptions>
+        </div>
         
-        <el-form-item label="命名空间">
-          <el-input 
-            v-model="viewYamlForm.namespace" 
-            placeholder="命名空间" 
-            disabled
-            style="width: 300px;"
+        <div class="yaml-editor-wrapper">
+          <YamlEditor
+            v-model="viewYamlForm.yaml"
+            :title="`${currentStatefulSet?.name} - StatefulSet YAML`"
+            :readonly="false"
+            height="500px"
+            :filename="`${currentStatefulSet?.name}-statefulset.yaml`"
+            @change="handleYamlChange"
           />
-        </el-form-item>
-        
-        <el-form-item label="YAML配置">
-          <el-input 
-            v-model="viewYamlForm.yaml" 
-            type="textarea" 
-            :rows="20" 
-            style="font-family: 'Courier New', monospace;"
-          />
-        </el-form-item>
-      </el-form>
+        </div>
+      </div>
       
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="viewYamlDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleApplyEditYaml">应用修改</el-button>
+          <el-button type="primary" @click="handleApplyEditYaml" :loading="applyLoading">应用修改</el-button>
         </div>
       </template>
     </el-dialog>
@@ -330,6 +320,7 @@ import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-
 import { statefulSetApi, type StatefulSetVO, type StatefulSetQueryDTO } from '@/api/statefulset'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import YamlEditor from '@/components/YamlEditor.vue'
 
 // 路由
 const router = useRouter()
@@ -345,6 +336,7 @@ const editDialogVisible = ref(false)
 const yamlDialogVisible = ref(false)
 const viewYamlDialogVisible = ref(false)
 const currentStatefulSet = ref<StatefulSetVO | null>(null)
+const applyLoading = ref(false)
 
 // 编辑表单
 const editForm = reactive({
@@ -663,11 +655,17 @@ const handleViewYaml = (row: StatefulSetVO) => {
   viewYamlDialogVisible.value = true
 }
 
+// 处理YAML内容变化
+const handleYamlChange = (newYaml: string) => {
+  viewYamlForm.yaml = newYaml
+}
+
 // 应用编辑的YAML
 const handleApplyEditYaml = async () => {
   if (!currentStatefulSet.value) return
   
   try {
+    applyLoading.value = true
     const params = {
       clusterId: searchForm.clusterId,
       namespace: currentStatefulSet.value.namespace,
@@ -685,6 +683,8 @@ const handleApplyEditYaml = async () => {
   } catch (error: any) {
     console.error('应用YAML失败:', error)
     ElMessage.error('应用失败')
+  } finally {
+    applyLoading.value = false
   }
 }
 

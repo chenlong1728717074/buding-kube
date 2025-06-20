@@ -157,19 +157,38 @@
       </div>
     </el-card>
 
-    <!-- YAML查看对话框 -->
-    <el-dialog
-      v-model="yamlDialogVisible"
-      title="查看YAML"
-      width="80%"
-      :close-on-click-modal="false"
+    <!-- 查看YAML对话框 -->
+    <el-dialog 
+      v-model="yamlDialogVisible" 
+      title="查看YAML" 
+      width="90%"
+      :before-close="() => yamlDialogVisible = false"
+      destroy-on-close
     >
-      <div v-loading="yamlLoading" class="yaml-container">
-        <pre class="yaml-content">{{ yamlContent }}</pre>
+      <div class="yaml-dialog-content">
+        <div class="yaml-info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="集群">{{ currentClusterName }}</el-descriptions-item>
+            <el-descriptions-item label="命名空间">{{ selectedPod?.namespace }}</el-descriptions-item>
+            <el-descriptions-item label="名称">{{ selectedPod?.name }}</el-descriptions-item>
+            <el-descriptions-item label="类型">Pod</el-descriptions-item>
+          </el-descriptions>
+        </div>
+        
+        <div class="yaml-editor-wrapper">
+          <YamlEditor 
+            :model-value="yamlContent"
+            :loading="yamlLoading"
+            :readonly="true"
+            height="500px"
+          />
+        </div>
       </div>
+      
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="yamlDialogVisible = false">关闭</el-button>
+          <span style="color: #909399; font-size: 12px; margin-left: 10px;">注意：Pod不支持修改操作</span>
         </div>
       </template>
     </el-dialog>
@@ -284,7 +303,8 @@ import {
   ArrowDown,
   Download,
   VideoPlay,
-  VideoPause
+  VideoPause,
+  Document
 } from '@element-plus/icons-vue'
 import { 
   podApi, 
@@ -294,6 +314,7 @@ import {
   type PodLogDTO
 } from '@/api/pod'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import YamlEditor from '@/components/YamlEditor.vue'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 
@@ -314,9 +335,12 @@ const selectedPods = ref<PodVO[]>([])
 
 // 集群列表
 const clusterList = ref<ClusterVO[]>([])
+const currentClusterName = ref('')
 
 // 命名空间列表
 const namespaceList = ref<NamespaceVO[]>([])
+
+
 
 // 分页
 const pagination = reactive({
@@ -540,6 +564,11 @@ const handleViewYaml = async (row: PodVO) => {
     yamlLoading.value = true
     yamlDialogVisible.value = true
     yamlContent.value = ''
+    selectedPod.value = row
+    
+    // 获取当前集群名称
+    const cluster = clusterList.value.find(c => c.id === searchForm.clusterId)
+    currentClusterName.value = cluster?.name || ''
     
     const params: PodDTO = {
       clusterId: searchForm.clusterId,
@@ -1066,4 +1095,35 @@ onUnmounted(() => {
 .log-content::-webkit-scrollbar-thumb:hover {
   background: #777;
 }
+
+.yaml-dialog-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.yaml-info {
+  margin-bottom: 16px;
+}
+
+.yaml-info .info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.yaml-info .label {
+  font-weight: 500;
+  color: #606266;
+}
+
+.yaml-info .value {
+  color: #303133;
+  font-weight: 600;
+}
+
+.yaml-editor-wrapper {
+  flex: 1;
+  min-height: 0;
+}
+
 </style>

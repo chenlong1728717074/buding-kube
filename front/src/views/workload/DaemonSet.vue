@@ -272,50 +272,35 @@
       </template>
     </el-dialog>
 
-    <!-- 查看/编辑YAML对话框 -->
+    <!-- 查看YAML对话框 -->
     <el-dialog 
       v-model="viewYamlDialogVisible" 
-      title="查看/编辑YAML" 
-      width="80%"
-      :before-close="() => viewYamlDialogVisible = false"
-      destroy-on-close
+      title="查看YAML" 
+      width="80%" 
+      :close-on-click-modal="false"
     >
-      <el-form 
-        :model="viewYamlForm" 
-        label-width="100px"
-      >
-        <el-form-item label="集群">
-          <el-input 
-            v-model="viewYamlForm.clusterName" 
-            placeholder="集群名称" 
-            disabled
-            style="width: 300px;"
-          />
-        </el-form-item>
+      <div class="yaml-dialog-content">
+        <div class="yaml-info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
+            <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
+            <el-descriptions-item label="名称" v-if="currentDaemonSet">{{ currentDaemonSet.name }}</el-descriptions-item>
+            <el-descriptions-item label="类型">DaemonSet</el-descriptions-item>
+          </el-descriptions>
+        </div>
         
-        <el-form-item label="命名空间">
-          <el-input 
-            v-model="viewYamlForm.namespace" 
-            placeholder="命名空间" 
-            disabled
-            style="width: 300px;"
+        <div class="yaml-editor-wrapper">
+          <YamlEditor 
+            :modelValue="viewYamlForm.yaml"
+            @change="handleYamlChange"
           />
-        </el-form-item>
-        
-        <el-form-item label="YAML配置">
-          <el-input 
-            v-model="viewYamlForm.yaml" 
-            type="textarea" 
-            :rows="20" 
-            style="font-family: 'Courier New', monospace;"
-          />
-        </el-form-item>
-      </el-form>
+        </div>
+      </div>
       
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="viewYamlDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleApplyEditYaml">应用修改</el-button>
+          <el-button type="primary" @click="handleApplyEditYaml" :loading="applyLoading">应用修改</el-button>
         </div>
       </template>
     </el-dialog>
@@ -330,6 +315,7 @@ import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-
 import { daemonSetApi, type DaemonSetVO, type DaemonSetQueryDTO } from '@/api/daemonset'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import YamlEditor from '@/components/YamlEditor.vue'
 
 // 路由
 const router = useRouter()
@@ -345,6 +331,7 @@ const editDialogVisible = ref(false)
 const yamlDialogVisible = ref(false)
 const viewYamlDialogVisible = ref(false)
 const currentDaemonSet = ref<DaemonSetVO | null>(null)
+const applyLoading = ref(false)
 
 // 编辑表单
 const editForm = reactive({
@@ -448,9 +435,15 @@ const fetchDaemonSetList = async () => {
       pageSize: pagination.pageSize
     }
     const response = await daemonSetApi.getDaemonSets(params)
+    console.log('DaemonSet API响应:', response)
     if (response.code === 200) {
       daemonSetList.value = response.data.items || []
       pagination.total = response.data.total || 0
+      // 调试：检查第一个项目的yaml字段
+      if (response.data.items && response.data.items.length > 0) {
+        console.log('第一个DaemonSet的yaml字段:', response.data.items[0].yaml ? '存在' : '不存在')
+        console.log('第一个DaemonSet数据:', response.data.items[0])
+      }
     }
   } catch (error) {
     console.error('获取DaemonSet列表失败:', error)
@@ -650,17 +643,32 @@ const handleMoreAction = (command: string, row: DaemonSetVO) => {
 }
 
 // 查看YAML
-const handleViewYaml = (row: DaemonSetVO) => {
+const handleViewYaml = async (row: DaemonSetVO) => {
   if (!row.yaml) {
     ElMessage.error('YAML数据不可用')
     return
   }
   
-  viewYamlForm.clusterName = clusterList.value.find(c => c.id === searchForm.clusterId)?.name || ''
-  viewYamlForm.namespace = row.namespace
-  viewYamlForm.yaml = row.yaml
-  currentDaemonSet.value = row
-  viewYamlDialogVisible.value = true
+  try {
+    // 确保有集群列表数据
+    if (clusterList.value.length === 0) {
+      await fetchClusterList()
+    }
+    
+    viewYamlForm.clusterName = clusterList.value.find(c => c.id === searchForm.clusterId)?.name || ''
+    viewYamlForm.namespace = row.namespace
+    viewYamlForm.yaml = row.yaml
+    currentDaemonSet.value = row
+    viewYamlDialogVisible.value = true
+  } catch (error: any) {
+    console.error('获取集群信息失败:', error)
+    ElMessage.error('获取集群信息失败')
+  }
+}
+
+// 处理YAML内容变化
+const handleYamlChange = (newYaml: string) => {
+  viewYamlForm.yaml = newYaml
 }
 
 // 应用编辑的YAML
@@ -668,6 +676,7 @@ const handleApplyEditYaml = async () => {
   if (!currentDaemonSet.value) return
   
   try {
+    applyLoading.value = true
     const params = {
       clusterId: searchForm.clusterId,
       namespace: currentDaemonSet.value.namespace,
@@ -685,6 +694,8 @@ const handleApplyEditYaml = async () => {
   } catch (error: any) {
     console.error('应用YAML失败:', error)
     ElMessage.error('应用失败')
+  } finally {
+    applyLoading.value = false
   }
 }
 
@@ -825,6 +836,21 @@ onMounted(async () => {
 
 .daemonset-form {
   padding: 0 20px;
+}
+
+.yaml-dialog-content {
+  display: flex;
+  flex-direction: column;
+  height: 70vh;
+}
+
+.yaml-info {
+  margin-bottom: 16px;
+}
+
+.yaml-editor-wrapper {
+  flex: 1;
+  min-height: 0;
 }
 
 .dialog-footer {
