@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/gin-gonic/gin v1.10.1
-	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible

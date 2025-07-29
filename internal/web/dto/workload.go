@@ -21,3 +21,26 @@ type WorkloadApplyDTO struct {
 	WorkloadBaseDTO
 	Yaml string `json:"yaml"`
 }
+
+type WorkloadAddInformationDTO struct {
+	Namespace string `json:"namespace" form:"namespace" binding:"required"`
+	Alias     string `json:"alias"`
+	Describe  string `json:"describe"`
+}
+
+type WorkloadAddContainerImageDTO struct {
+	ImageName     string
+	ContainerName string
+	ContainerType int
+}
+
+type WorkloadAddContainerDTO struct {
+	Images   []WorkloadAddContainerImageDTO
+	Replicas int
+}
+
+type WorkloadAddDTO struct {
+	NamespaceBaseDTO
+	Information WorkloadAddInformationDTO
+	Containers  WorkloadAddContainerDTO
+}

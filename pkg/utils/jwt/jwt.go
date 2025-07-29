@@ -3,7 +3,7 @@ package jwt
 import (
 	"buding-kube/internal/model"
 	"errors"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"time"
 )
 
@@ -46,6 +46,10 @@ func ParseToken(token string) (*Claims, error) {
 	}
 
 	if claims, ok := tokenClaims.Claims.(*Claims); ok && tokenClaims.Valid {
+		// 添加显式的过期时间检查
+		if time.Now().Unix() > claims.ExpiresAt {
+			return nil, errors.New("token has expired")
+		}
 		return claims, nil
 	}
 
