@@ -7,8 +7,10 @@ import (
 
 func StatefulSet2WorkloadVO(item v1.StatefulSet) WorkloadVO {
 	return WorkloadVO{
-		Name:          item.Name,
-		Namespace:     item.Namespace,
+		BaseVO: BaseVO{
+			Name:      item.Name,
+			Namespace: item.Namespace,
+		},
 		Alias:         item.Annotations["alias"],
 		Describe:      item.Annotations["describe"],
 		Status:        GetStatefulSetStatusText(item),

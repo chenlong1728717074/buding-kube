@@ -6,8 +6,7 @@ import (
 )
 
 type CronJobVO struct {
-	Name               string    `json:"name"`
-	Namespace          string    `json:"namespace"`
+	BaseVO
 	Alias              string    `json:"alias"`
 	Describe           string    `json:"describe"`
 	CreateTime         time.Time `json:"createTime"`
@@ -19,8 +18,10 @@ type CronJobVO struct {
 
 func CronJob2VO(cj batchv1.CronJob) CronJobVO {
 	result := CronJobVO{
-		Name:       cj.Name,
-		Namespace:  cj.Namespace,
+		BaseVO: BaseVO{
+			Name:      cj.Name,
+			Namespace: cj.Namespace,
+		},
 		Alias:      cj.Annotations["alias"],
 		Describe:   cj.Annotations["describe"],
 		CreateTime: cj.CreationTimestamp.Time,

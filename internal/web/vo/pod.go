@@ -31,9 +31,8 @@ func Pod2VO(item corev1.Pod, yaml string) PodVO {
 }
 
 type PodInfoVO struct {
+	BaseVO
 	CreationTimestamp time.Time         `json:"creationTimestamp"`
-	Namespace         string            `json:"namespace"`
-	Name              string            `json:"name"`
 	Status            string            `json:"status"`
 	NodeName          string            `json:"nodeName"`
 	HostIP            string            `json:"hostIP"`
@@ -76,18 +75,20 @@ type PodPortVO struct {
 func Pod2InfoVO(item *corev1.Pod, events *corev1.EventList) PodInfoVO {
 	return PodInfoVO{
 		CreationTimestamp: item.CreationTimestamp.Time,
-		Name:              item.Name,
-		Namespace:         item.Namespace,
-		Status:            string(item.Status.Phase),
-		HostIP:            item.Status.HostIP,
-		PodIP:             item.Status.PodIP,
-		NodeName:          item.Spec.NodeName,
-		Containers:        buildPodContainer(item),
-		Annotations:       item.Annotations,
-		Labels:            item.Labels,
-		MetaData:          item.ObjectMeta,
-		Spec:              item.Spec,
-		Events:            buildNodeEvents(events),
+		BaseVO: BaseVO{
+			Name:      item.Name,
+			Namespace: item.Namespace,
+		},
+		Status:      string(item.Status.Phase),
+		HostIP:      item.Status.HostIP,
+		PodIP:       item.Status.PodIP,
+		NodeName:    item.Spec.NodeName,
+		Containers:  buildPodContainer(item),
+		Annotations: item.Annotations,
+		Labels:      item.Labels,
+		MetaData:    item.ObjectMeta,
+		Spec:        item.Spec,
+		Events:      buildNodeEvents(events),
 	}
 }
 

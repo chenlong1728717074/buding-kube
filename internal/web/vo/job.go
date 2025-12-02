@@ -6,8 +6,7 @@ import (
 )
 
 type JobVO struct {
-	Name        string    `json:"name"`
-	Namespace   string    `json:"namespace"`
+	BaseVO
 	Alias       string    `json:"alias"`
 	Describe    string    `json:"describe"`
 	CreateTime  time.Time `json:"createTime"`
@@ -22,8 +21,10 @@ func Job2VO(job batchv1.Job) JobVO {
 	}
 
 	return JobVO{
-		Name:        job.Name,
-		Namespace:   job.Namespace,
+		BaseVO: BaseVO{
+			Name:      job.Name,
+			Namespace: job.Namespace,
+		},
 		Alias:       job.Annotations["alias"],
 		Describe:    job.Annotations["describe"],
 		CreateTime:  job.CreationTimestamp.Time,

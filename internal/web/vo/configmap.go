@@ -7,8 +7,7 @@ import (
 )
 
 type ConfigMapVO struct {
-	Name              string            `json:"name"`
-	Namespace         string            `json:"namespace"`
+	BaseVO
 	Data              map[string]string `json:"data"`
 	BinaryData        map[string][]byte `json:"binaryData"`
 	Generation        int64             `json:"generation"`
@@ -25,8 +24,10 @@ type ConfigMapVO struct {
 
 func ConfigMap2VO(cm corev1.ConfigMap) ConfigMapVO {
 	return ConfigMapVO{
-		Name:              cm.Name,
-		Namespace:         cm.Namespace,
+		BaseVO: BaseVO{
+			Name:      cm.Name,
+			Namespace: cm.Namespace,
+		},
 		Data:              cm.Data,
 		BinaryData:        cm.BinaryData,
 		Generation:        cm.Generation,

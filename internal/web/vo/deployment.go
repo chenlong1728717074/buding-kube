@@ -7,8 +7,10 @@ import (
 
 func Deployment2WorkloadVO(item v1.Deployment) WorkloadVO {
 	return WorkloadVO{
-		Name:          item.Name,
-		Namespace:     item.Namespace,
+		BaseVO: BaseVO{
+			Name:      item.Name,
+			Namespace: item.Namespace,
+		},
 		Alias:         item.Annotations["alias"],
 		Describe:      item.Annotations["describe"],
 		Status:        GetDeploymentStatusText(item),

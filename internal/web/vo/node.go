@@ -56,8 +56,7 @@ type NodeRuntimeVO struct {
 }
 
 type NodePodVO struct {
-	Name        string    `json:"name"`        // Pod名称
-	Namespace   string    `json:"namespace"`   // 命名空间
+	BaseVO
 	Image       string    `json:"image"`       // 镜像信息
 	Status      string    `json:"status"`      // 运行状态
 	Ready       string    `json:"ready"`       // 就绪状态 "1/1"
@@ -80,8 +79,10 @@ func buildNodePods(pods *corev1.PodList) []NodePodVO {
 		//	continue
 		//}
 		podVO := NodePodVO{
-			Name:        pod.Name,
-			Namespace:   pod.Namespace,
+			BaseVO: BaseVO{
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+			},
 			Image:       getMainContainerImage(&pod),
 			Status:      string(pod.Status.Phase),
 			Ready:       getPodReadyStatus(&pod),

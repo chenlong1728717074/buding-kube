@@ -7,8 +7,7 @@ import (
 )
 
 type PVCVO struct {
-	Name              string                                  `json:"name"`
-	Namespace         string                                  `json:"namespace"`
+	BaseVO
 	AccessModes       []corev1.PersistentVolumeAccessMode     `json:"accessModes"`
 	Resources         corev1.VolumeResourceRequirements       `json:"resources"`
 	StorageClassName  *string                                 `json:"storageClassName"`
@@ -31,8 +30,10 @@ type PVCVO struct {
 
 func PVC2VO(pvc corev1.PersistentVolumeClaim) PVCVO {
 	return PVCVO{
-		Name:              pvc.Name,
-		Namespace:         pvc.Namespace,
+		BaseVO: BaseVO{
+			Name:      pvc.Name,
+			Namespace: pvc.Namespace,
+		},
 		AccessModes:       pvc.Spec.AccessModes,
 		Resources:         pvc.Spec.Resources,
 		StorageClassName:  pvc.Spec.StorageClassName,

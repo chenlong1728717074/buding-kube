@@ -7,8 +7,7 @@ import (
 )
 
 type SecretVO struct {
-	Name              string            `json:"name"`
-	Namespace         string            `json:"namespace"`
+	BaseVO
 	Type              corev1.SecretType `json:"type"`
 	Data              map[string][]byte `json:"data"`
 	StringData        map[string]string `json:"stringData"`
@@ -27,8 +26,10 @@ type SecretVO struct {
 
 func Secret2VO(secret corev1.Secret) SecretVO {
 	return SecretVO{
-		Name:              secret.Name,
-		Namespace:         secret.Namespace,
+		BaseVO: BaseVO{
+			Name:      secret.Name,
+			Namespace: secret.Namespace,
+		},
 		Type:              secret.Type,
 		Data:              secret.Data,
 		StringData:        secret.StringData,

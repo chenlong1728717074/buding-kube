@@ -8,8 +8,7 @@ import (
 )
 
 type ServiceVO struct {
-	Name           string    `json:"name"`
-	Namespace      string    `json:"namespace"`
+	BaseVO
 	Alias          string    `json:"alias"`
 	Describe       string    `json:"describe"`
 	Yaml           string    `json:"yaml"`
@@ -114,8 +113,10 @@ func getServiceStatus(svc corev1.Service) string {
 
 func Service2VO(item corev1.Service) ServiceVO {
 	return ServiceVO{
-		Name:           item.Name,
-		Namespace:      item.Namespace,
+		BaseVO: BaseVO{
+			Name:      item.Name,
+			Namespace: item.Namespace,
+		},
 		Alias:          item.Annotations["alias"],
 		Describe:       item.Annotations["describe"],
 		Status:         getServiceStatus(item),

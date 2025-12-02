@@ -23,6 +23,7 @@ func NewConfigMapApi(router *gin.RouterGroup) *ConfigMapApi {
 
 func (a *ConfigMapApi) Router() {
 	a.router.GET("/list", a.List)
+	a.router.GET("/list", a.Add)
 }
 
 func (a *ConfigMapApi) List(ctx *gin.Context) {
@@ -38,4 +39,8 @@ func (a *ConfigMapApi) List(ctx *gin.Context) {
 	}
 	response := BuildPageResponse(list, query.Page, query.PageSize)
 	a.SuccessWithData(ctx, response)
+}
+
+func (a *ConfigMapApi) Add(ctx *gin.Context) {
+
 }

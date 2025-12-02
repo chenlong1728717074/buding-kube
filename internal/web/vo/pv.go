@@ -7,7 +7,7 @@ import (
 )
 
 type PVVO struct {
-	Name                          string                               `json:"name"`
+	BaseVO
 	Capacity                      corev1.ResourceList                  `json:"capacity"`
 	AccessModes                   []corev1.PersistentVolumeAccessMode  `json:"accessModes"`
 	PersistentVolumeReclaimPolicy corev1.PersistentVolumeReclaimPolicy `json:"persistentVolumeReclaimPolicy"`
@@ -30,7 +30,10 @@ type PVVO struct {
 
 func PV2VO(pv corev1.PersistentVolume) PVVO {
 	return PVVO{
-		Name:                          pv.Name,
+		BaseVO: BaseVO{
+			Name:      pv.Name,
+			Namespace: pv.Namespace,
+		},
 		Capacity:                      pv.Spec.Capacity,
 		AccessModes:                   pv.Spec.AccessModes,
 		PersistentVolumeReclaimPolicy: pv.Spec.PersistentVolumeReclaimPolicy,

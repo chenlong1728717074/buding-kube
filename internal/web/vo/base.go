@@ -98,3 +98,8 @@ func (c SSEChan) SSEChunk(chunk string) {
 		},
 	}
 }
+
+type BaseVO struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+}

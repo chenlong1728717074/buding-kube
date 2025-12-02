@@ -6,8 +6,7 @@ import (
 )
 
 type WorkloadVO struct {
-	Name          string     `json:"name"`
-	Namespace     string     `json:"namespace"`
+	BaseVO
 	Alias         string     `json:"alias"`
 	Describe      string     `json:"describe"`
 	Yaml          string     `json:"yaml"`
@@ -48,8 +47,10 @@ func ReplicaSet2VO(rs *appsv1.ReplicaSet) WorkloadVO {
 	}
 
 	return WorkloadVO{
-		Name:          rs.Name,
-		Namespace:     rs.Namespace,
+		BaseVO: BaseVO{
+			Name:      rs.Name,
+			Namespace: rs.Namespace,
+		},
 		Alias:         alias,
 		Describe:      describe,
 		Status:        status,

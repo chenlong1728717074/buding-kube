@@ -6,8 +6,7 @@ import (
 )
 
 type IngressVO struct {
-	Name             string    `json:"name"`             // 入口资源名称
-	Namespace        string    `json:"namespace"`        // 资源所属命名空间
+	BaseVO
 	Alias            string    `json:"alias"`            // 资源别名
 	Describe         string    `json:"describe"`         // 资源描述信息
 	IngressClassName *string   `json:"ingressClassName"` // Ingress类名称，指定使用的Ingress控制器
@@ -17,8 +16,10 @@ type IngressVO struct {
 
 func Ingress2VO(ing networkingv1.Ingress) IngressVO {
 	return IngressVO{
-		Name:             ing.Name,
-		Namespace:        ing.Namespace,
+		BaseVO: BaseVO{
+			Name:      ing.Name,
+			Namespace: ing.Namespace,
+		},
 		Alias:            ing.Annotations["alias"],
 		Describe:         ing.Annotations["describe"],
 		IngressClassName: ing.Spec.IngressClassName,

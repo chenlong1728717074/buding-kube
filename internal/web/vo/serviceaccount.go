@@ -7,8 +7,7 @@ import (
 )
 
 type ServiceAccountVO struct {
-	Name                         string                        `json:"name"`
-	Namespace                    string                        `json:"namespace"`
+	BaseVO
 	Secrets                      []corev1.ObjectReference      `json:"secrets"`
 	ImagePullSecrets             []corev1.LocalObjectReference `json:"imagePullSecrets"`
 	AutomountServiceAccountToken *bool                         `json:"automountServiceAccountToken"`
@@ -26,8 +25,10 @@ type ServiceAccountVO struct {
 
 func ServiceAccount2VO(sa corev1.ServiceAccount) ServiceAccountVO {
 	return ServiceAccountVO{
-		Name:                         sa.Name,
-		Namespace:                    sa.Namespace,
+		BaseVO: BaseVO{
+			Name:      sa.Name,
+			Namespace: sa.Namespace,
+		},
 		Secrets:                      sa.Secrets,
 		ImagePullSecrets:             sa.ImagePullSecrets,
 		AutomountServiceAccountToken: sa.AutomountServiceAccountToken,

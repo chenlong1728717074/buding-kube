@@ -8,7 +8,7 @@ import (
 )
 
 type StorageClassVO struct {
-	Name                 string                            `json:"name"`
+	BaseVO
 	Provisioner          string                            `json:"provisioner"`
 	Parameters           map[string]string                 `json:"parameters"`
 	ReclaimPolicy        *v1.PersistentVolumeReclaimPolicy `json:"reclaimPolicy"`
@@ -29,7 +29,10 @@ type StorageClassVO struct {
 
 func StorageClass2VO(sc storagev1.StorageClass) StorageClassVO {
 	return StorageClassVO{
-		Name:                 sc.Name,
+		BaseVO: BaseVO{
+			Name:      sc.Name,
+			Namespace: sc.Namespace,
+		},
 		Provisioner:          sc.Provisioner,
 		Parameters:           sc.Parameters,
 		ReclaimPolicy:        sc.ReclaimPolicy,
