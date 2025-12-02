@@ -23,7 +23,7 @@ func NewConfigMapApi(router *gin.RouterGroup) *ConfigMapApi {
 
 func (a *ConfigMapApi) Router() {
 	a.router.GET("/list", a.List)
-	a.router.GET("/list", a.Add)
+	a.router.GET("/add", a.Add)
 }
 
 func (a *ConfigMapApi) List(ctx *gin.Context) {

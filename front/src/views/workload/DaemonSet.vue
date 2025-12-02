@@ -17,24 +17,23 @@
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="集群">
-          <el-select 
-            v-model="searchForm.clusterId" 
-            placeholder="请选择集群"
-            style="width: 200px"
-            clearable
-            @change="handleClusterChange"
-          >
-            <el-option
-              v-for="cluster in clusterList"
-              :key="cluster.id"
-              :label="cluster.name"
-              :value="cluster.id"
-            />
-          </el-select>
+          <el-select
+              v-model="searchForm.clusterId"
+              placeholder="请选择集群"
+              style="width: 200px"
+              @change="handleClusterChange"
+            >
+              <el-option
+                v-for="cluster in clusterList"
+                :key="cluster.id || cluster.name"
+                :label="cluster.name"
+                :value="cluster.id"
+              />
+            </el-select>
         </el-form-item>
         <el-form-item label="命名空间">
-          <el-select 
-            v-model="searchForm.namespace" 
+          <el-select
+            v-model="searchForm.namespace"
             placeholder="请选择命名空间"
             style="width: 200px"
             clearable
@@ -49,9 +48,9 @@
           </el-select>
         </el-form-item>
         <el-form-item label="名称">
-          <el-input 
-            v-model="searchForm.name" 
-            placeholder="输入DaemonSet名称" 
+          <el-input
+            v-model="searchForm.name"
+            placeholder="输入DaemonSet名称"
             clearable
             style="width: 200px"
           />
@@ -70,9 +69,9 @@
     </el-card>
 
     <el-card class="table-card">
-      <el-table 
-        v-loading="loading" 
-        :data="daemonSetList" 
+      <el-table
+        v-loading="loading"
+        :data="daemonSetList"
         stripe
         style="width: 100%"
       >
@@ -160,64 +159,64 @@
     </el-card>
 
     <!-- 编辑DaemonSet对话框 -->
-    <el-dialog 
-      v-model="editDialogVisible" 
-      title="编辑DaemonSet" 
+    <el-dialog
+      v-model="editDialogVisible"
+      title="编辑DaemonSet"
       width="600px"
       :before-close="() => editDialogVisible = false"
       destroy-on-close
     >
-      <el-form 
-        :model="editForm" 
+      <el-form
+        :model="editForm"
         label-width="100px"
         class="daemonset-form"
       >
         <el-form-item label="集群">
-          <el-input 
-            v-model="editForm.clusterName" 
-            placeholder="集群名称" 
+          <el-input
+            v-model="editForm.clusterName"
+            placeholder="集群名称"
             disabled
             style="width: 100%;"
           />
         </el-form-item>
-        
+
         <el-form-item label="命名空间">
-          <el-input 
-            v-model="editForm.namespace" 
-            placeholder="命名空间" 
+          <el-input
+            v-model="editForm.namespace"
+            placeholder="命名空间"
             disabled
             style="width: 100%;"
           />
         </el-form-item>
-        
+
         <el-form-item label="名称">
-          <el-input 
-            v-model="editForm.name" 
-            placeholder="DaemonSet名称" 
+          <el-input
+            v-model="editForm.name"
+            placeholder="DaemonSet名称"
             disabled
             style="width: 100%;"
           />
         </el-form-item>
-        
+
         <el-form-item label="别名">
-          <el-input 
-            v-model="editForm.alias" 
-            placeholder="请输入别名" 
+          <el-input
+            v-model="editForm.alias"
+            placeholder="请输入别名"
             style="width: 100%;"
           />
         </el-form-item>
-        
+
         <el-form-item label="描述">
-          <el-input 
-            v-model="editForm.describe" 
-            type="textarea" 
-            :rows="3" 
-            placeholder="请输入描述" 
+          <el-input
+            v-model="editForm.describe"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入描述"
             style="width: 100%;"
           />
         </el-form-item>
       </el-form>
-      
+
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="editDialogVisible = false">取消</el-button>
@@ -227,43 +226,43 @@
     </el-dialog>
 
     <!-- YAML添加对话框 -->
-    <el-dialog 
-      v-model="yamlDialogVisible" 
-      title="YAML添加DaemonSet" 
+    <el-dialog
+      v-model="yamlDialogVisible"
+      title="YAML添加DaemonSet"
       width="80%"
       :before-close="() => yamlDialogVisible = false"
       destroy-on-close
     >
-      <el-form 
-        :model="yamlForm" 
+      <el-form
+        :model="yamlForm"
         label-width="100px"
       >
-        <el-form-item label="集群">
-          <el-select 
-            v-model="yamlForm.clusterId" 
-            placeholder="请选择集群" 
-            style="width: 300px;"
+        <el-form-item label="集群" prop="clusterId">
+          <el-select
+            v-model="yamlForm.clusterId"
+            placeholder="请选择集群"
+            style="width: 100%;"
           >
-            <el-option 
-              v-for="cluster in clusterList" 
-              :key="cluster.id" 
-              :label="cluster.name" 
-              :value="cluster.id" 
+            <el-option
+              v-for="cluster in clusterList"
+              :key="cluster.id"
+              :label="cluster.name"
+              :value="cluster.id"
             />
           </el-select>
         </el-form-item>
-        
+
         <el-form-item label="YAML配置">
-          <el-input 
-            v-model="yamlForm.yaml" 
-            type="textarea" 
-            :rows="20" 
-            placeholder="请输入DaemonSet的YAML配置" 
+          <el-input
+            v-model="yamlForm.yaml"
+            type="textarea"
+            :rows="20"
+            placeholder="请输入DaemonSet的YAML配置"
             style="font-family: 'Courier New', monospace;"
           />
         </el-form-item>
       </el-form>
-      
+
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="yamlDialogVisible = false">取消</el-button>
@@ -273,10 +272,10 @@
     </el-dialog>
 
     <!-- 查看YAML对话框 -->
-    <el-dialog 
-      v-model="viewYamlDialogVisible" 
-      title="查看YAML" 
-      width="80%" 
+    <el-dialog
+      v-model="viewYamlDialogVisible"
+      title="查看YAML"
+      width="80%"
       :close-on-click-modal="false"
     >
       <div class="yaml-dialog-content">
@@ -288,15 +287,15 @@
             <el-descriptions-item label="类型">DaemonSet</el-descriptions-item>
           </el-descriptions>
         </div>
-        
+
         <div class="yaml-editor-wrapper">
-          <YamlEditor 
+          <YamlEditor
             :modelValue="viewYamlForm.yaml"
             @change="handleYamlChange"
           />
         </div>
       </div>
-      
+
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="viewYamlDialogVisible = false">取消</el-button>
@@ -376,10 +375,10 @@ const fetchClusterList = async () => {
   try {
     const response = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
     console.log('集群列表API响应:', response)
-    
+
     if (response.code === 200 && response.data && response.data.items) {
       clusterList.value = response.data.items
-      
+
       // 如果没有选中集群且有集群数据，自动选择第一个
       if (!searchForm.clusterId && clusterList.value.length > 0) {
         searchForm.clusterId = clusterList.value[0].id
@@ -398,7 +397,7 @@ const fetchNamespaceList = async () => {
     namespaceList.value = []
     return
   }
-  
+
   try {
     const params = {
       clusterId: searchForm.clusterId,
@@ -406,10 +405,10 @@ const fetchNamespaceList = async () => {
       page: 1,
       pageSize: 10000
     }
-    
+
     const response = await namespaceApi.getList(params)
     console.log('命名空间列表API响应:', response)
-    
+
     if (response.code === 200 && response.data) {
       namespaceList.value = response.data.items || []
     }
@@ -425,7 +424,7 @@ const fetchDaemonSetList = async () => {
     ElMessage.warning('请先选择集群')
     return
   }
-  
+
   loading.value = true
   try {
     const params = {
@@ -545,20 +544,26 @@ const handleDetail = (row: DaemonSetVO) => {
 }
 
 // 编辑DaemonSet
-const handleEdit = (row: DaemonSetVO) => {
+const handleEdit = async (row: DaemonSetVO) => {
   currentDaemonSet.value = row
+  editDialogVisible.value = true
+  // 确保有集群列表数据
+  if (clusterList.value.length === 0) {
+    await fetchClusterList()
+  }
+
+  // 查找当前集群名称
   editForm.clusterName = clusterList.value.find(c => c.id === searchForm.clusterId)?.name || ''
   editForm.namespace = row.namespace
   editForm.name = row.name
   editForm.alias = row.alias || ''
   editForm.describe = row.describe || ''
-  editDialogVisible.value = true
 }
 
 // 保存编辑
 const handleSaveEdit = async () => {
   if (!currentDaemonSet.value) return
-  
+
   try {
     const params = {
       clusterId: searchForm.clusterId,
@@ -567,7 +572,7 @@ const handleSaveEdit = async () => {
       alias: editForm.alias,
       describe: editForm.describe
     }
-    
+
     const response = await daemonSetApi.updateDaemonSet(params)
     if (response.code === 200) {
       ElMessage.success('修改成功')
@@ -600,19 +605,19 @@ const handleApplyYaml = async () => {
     ElMessage.warning('请选择集群')
     return
   }
-  
+
   if (!yamlForm.yaml.trim()) {
     ElMessage.warning('请输入YAML配置')
     return
   }
-  
+
   try {
     const params = {
       clusterId: yamlForm.clusterId,
       namespace: searchForm.namespace || 'default',
       yaml: yamlForm.yaml
     }
-    
+
     const response = await daemonSetApi.applyDaemonSet(params)
     if (response.code === 200) {
       ElMessage.success('应用成功')
@@ -648,13 +653,13 @@ const handleViewYaml = async (row: DaemonSetVO) => {
     ElMessage.error('YAML数据不可用')
     return
   }
-  
+
   try {
     // 确保有集群列表数据
     if (clusterList.value.length === 0) {
       await fetchClusterList()
     }
-    
+
     viewYamlForm.clusterName = clusterList.value.find(c => c.id === searchForm.clusterId)?.name || ''
     viewYamlForm.namespace = row.namespace
     viewYamlForm.yaml = row.yaml
@@ -674,7 +679,7 @@ const handleYamlChange = (newYaml: string) => {
 // 应用编辑的YAML
 const handleApplyEditYaml = async () => {
   if (!currentDaemonSet.value) return
-  
+
   try {
     applyLoading.value = true
     const params = {
@@ -682,7 +687,7 @@ const handleApplyEditYaml = async () => {
       namespace: currentDaemonSet.value.namespace,
       yaml: viewYamlForm.yaml
     }
-    
+
     const response = await daemonSetApi.applyDaemonSet(params)
     if (response.code === 200) {
       ElMessage.success('应用成功')
@@ -711,13 +716,13 @@ const handleDelete = async (row: DaemonSetVO) => {
         type: 'warning',
       }
     )
-    
+
     const params = {
       clusterId: searchForm.clusterId,
       namespace: row.namespace,
       name: row.name
     }
-    
+
     const response = await daemonSetApi.deleteDaemonSet(params)
     if (response.code === 200) {
       ElMessage.success('删除成功')
@@ -745,13 +750,13 @@ const handleRestart = async (row: DaemonSetVO) => {
         type: 'warning',
       }
     )
-    
+
     const params = {
       clusterId: searchForm.clusterId,
       namespace: row.namespace,
       name: row.name
     }
-    
+
     const response = await daemonSetApi.rolloutDaemonSet(params)
     if (response.code === 200) {
       ElMessage.success('重建成功')
@@ -769,20 +774,14 @@ const handleRestart = async (row: DaemonSetVO) => {
 
 // 页面加载时获取数据
 onMounted(async () => {
-  // 自动选择第一个集群并查询数据
   try {
-    // 获取第一个集群
-    const clusterResponse = await clusterApi.getClusters({ page: 1, pageSize: 1 })
-    if (clusterResponse.code === 200 && clusterResponse.data.items && clusterResponse.data.items.length > 0) {
-      const firstCluster = clusterResponse.data.items[0]
-      searchForm.clusterId = firstCluster.id
-      
-      // 自动加载DaemonSet列表
+    await fetchClusterList()
+    if (searchForm.clusterId) {
+      await fetchNamespaceList()
       fetchDaemonSetList()
     }
   } catch (error) {
-    console.error('自动选择集群失败:', error)
-    // 如果自动选择失败，用户仍可以手动选择
+    console.error('自动加载集群失败:', error)
   }
 })
 </script>

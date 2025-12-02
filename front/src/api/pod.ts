@@ -1,4 +1,6 @@
 import request from '@/utils/request'
+import router from '@/router'
+import { ElMessage } from 'element-plus'
 import type { ApiResponse, PageResponse } from '@/utils/request'
 
 // Pod基础信息
@@ -138,6 +140,14 @@ export const podApi = {
         body: JSON.stringify(params),
         signal: signal // 添加AbortSignal支持
       })
+      
+      if (response.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('userInfo')
+        ElMessage.error('登录已过期，请重新登录')
+        router.push('/login')
+        throw new Error('未授权')
+      }
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)

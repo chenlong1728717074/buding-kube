@@ -279,7 +279,7 @@ const showComingSoon = (event: Event) => {
 }
 
 .sidebar {
-  background-color: #304156;
+  background-color: #2f3b52;
   overflow: hidden;
 }
 
@@ -311,11 +311,11 @@ const showComingSoon = (event: Event) => {
 }
 
 .sidebar-menu .el-menu-item:hover {
-  background-color: #263445 !important;
+  background-color: #394863 !important;
 }
 
 .sidebar-menu .el-menu-item.is-active {
-  background-color: #409EFF !important;
+  background-color: #1f6feb !important;
   color: #fff !important;
 }
 
@@ -342,6 +342,7 @@ const showComingSoon = (event: Event) => {
 .header {
   background-color: #fff;
   border-bottom: 1px solid #e6e6e6;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -372,7 +373,7 @@ const showComingSoon = (event: Event) => {
 }
 
 .main-content {
-  background-color: #f5f5f5;
+  background-color: #f6f8fa;
   padding: 20px;
   overflow-y: auto;
 }
