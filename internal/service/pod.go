@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	v1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -119,6 +120,26 @@ func (s *PodService) GetById(query dto.PodDTO) (*vo.PodInfoVO, error) {
 	result := vo.Pod2InfoVO(pod, events)
 	result.Yaml = string(yamlData)
 	return &result, nil
+}
+
+func (s *PodService) Expel(query dto.PodDTO) error {
+	clientSet, err := ClusterMap.Get(query.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
+		return errors.New("获取集群失败")
+	}
+	//构建 Eviction 对象
+	eviction := &policyv1.Eviction{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      query.Name,
+			Namespace: query.Namespace,
+		},
+		// 设置退出时间
+		DeleteOptions: &metav1.DeleteOptions{
+			// GracePeriodSeconds: pointer.Int64(30),
+		},
+	}
+	return clientSet.PolicyV1().Evictions(eviction.Namespace).Evict(context.TODO(), eviction)
 }
 
 func (*PodService) PodLog(query dto.PodLogDTO) (io.ReadCloser, error) {

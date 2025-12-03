@@ -132,8 +132,8 @@
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
-                    <el-dropdown-item command="logs">查看日志</el-dropdown-item>
-                    <el-dropdown-item command="exec">进入容器</el-dropdown-item>
+                    <el-dropdown-item command="logs" :disabled="row.status !== 'Running'">查看日志</el-dropdown-item>
+                    <el-dropdown-item command="exec" :disabled="row.status !== 'Running'">进入容器</el-dropdown-item>
                     <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -293,7 +293,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick, onActivated } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
@@ -593,6 +593,10 @@ const handleViewYaml = async (row: PodVO) => {
 
 // 查看日志
 const handleViewLogs = async (row: PodVO) => {
+  if (row.status !== 'Running') {
+    ElMessage.warning('Pod未运行，无法查看日志')
+    return
+  }
   try {
     selectedPod.value = row
     logDialogVisible.value = true
@@ -814,6 +818,10 @@ const handleCloseLogDialog = () => {
 
 // 进入容器
 const handleExec = (row: PodVO) => {
+  if (row.status !== 'Running') {
+    ElMessage.warning('Pod未运行，无法进入容器')
+    return
+  }
   ElMessage.info('进入容器功能开发中')
 }
 
@@ -933,6 +941,14 @@ onMounted(() => {
       })
     }
   })
+})
+
+// keep-alive恢复时根据刷新参数与现有筛选条件刷新列表
+onActivated(() => {
+  const refresh = route.query.refresh as string
+  if (refresh === '1' && searchForm.clusterId) {
+    fetchNamespaceList().then(() => fetchPodList())
+  }
 })
 
 // 组件卸载时清理日志流

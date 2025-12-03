@@ -124,6 +124,11 @@ export const podApi = {
     return request.delete('/pod', { params })
   },
 
+  // 驱逐Pod
+  expel(params: PodDTO): Promise<ApiResponse<void>> {
+    return request.get('/pod/expel', { params })
+  },
+
   // 获取Pod日志 - 流式处理
   async getLogs(params: PodLogDTO, onData: (data: string) => void, onError?: (error: Error) => void, signal?: AbortSignal): Promise<void> {
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'

@@ -9,13 +9,16 @@
         <h1>Pod详情</h1>
       </div>
       <div class="header-actions" v-if="podInfo">
-        <el-button size="small" @click="handleViewLogs">
+        <el-button size="small" @click="handleViewLogs" :disabled="podInfo.status !== 'Running'">
           <el-icon><Document /></el-icon>
           查看日志
         </el-button>
         <el-button size="small" @click="handleViewYaml" v-if="podInfo.yaml">
           <el-icon><Document /></el-icon>
           查看YAML
+        </el-button>
+        <el-button size="small" type="warning" @click="handleExpel">
+          驱逐
         </el-button>
         <el-button size="small" type="danger" @click="handleDelete">
           <el-icon><Delete /></el-icon>
@@ -136,6 +139,7 @@
                   size="small" 
                   @click="handleContainerLogs(row)"
                   title="查看日志"
+                  :disabled="!isContainerRunning(row)"
                 >
                   <el-icon><Document /></el-icon>
                 </el-button>
@@ -144,6 +148,7 @@
                   size="small" 
                   @click="handleContainerDownload(row)"
                   title="下载文件"
+                  :disabled="!isContainerRunning(row)"
                 >
                   <el-icon><Download /></el-icon>
                 </el-button>
@@ -152,6 +157,7 @@
                   size="small" 
                   @click="handleContainerUpload(row)"
                   title="上传文件"
+                  :disabled="!isContainerRunning(row)"
                 >
                   <el-icon><Upload /></el-icon>
                 </el-button>
@@ -623,6 +629,41 @@ const fetchPodDetail = async () => {
   }
 }
 
+// 驱逐Pod
+const handleExpel = async () => {
+  if (!podInfo.value) return
+  try {
+    await ElMessageBox.confirm(
+      '确定要驱逐该Pod吗？驱逐会向调度器发起逐出请求。',
+      '驱逐确认',
+      { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' }
+    )
+    const params: PodDTO = {
+      clusterId: route.query.clusterId as string,
+      namespace: podInfo.value.namespace,
+      name: podInfo.value.name
+    }
+    const resp = await podApi.expel(params)
+    if ((resp as any)?.code === 200) {
+      ElMessage.success('已触发驱逐，正在返回列表')
+      router.push({
+        path: '/pod',
+        query: {
+          clusterId: route.query.clusterId as string,
+          namespace: podInfo.value.namespace,
+          refresh: '1'
+        }
+      })
+    } else {
+      ElMessage.error('驱逐失败')
+    }
+  } catch (e: any) {
+    if (e && e !== 'cancel') {
+      ElMessage.error('驱逐失败')
+    }
+  }
+}
+
 // 查看YAML
 const handleViewYaml = () => {
   if (podInfo.value?.yaml) {
@@ -924,6 +965,11 @@ const getContainerStateText = (state: any) => {
     return `${reason} (${exitCode})`
   }
   return '未知'
+}
+
+// 判断容器是否运行中
+const isContainerRunning = (container: any) => {
+  return !!(container && container.state && container.state.running)
 }
 
 // 格式化日期

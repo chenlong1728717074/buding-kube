@@ -374,15 +374,15 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
-  
+
   // 初始化用户信息
   userStore.initUserInfo()
-  
+
   // 设置页面标题
   if (to.meta.title) {
-    document.title = `${to.meta.title} - K8s多集群管理平台`
+    document.title = `${to.meta.title} - Buding k8s多集群管理平台`
   }
-  
+
   // 如果是公开页面，直接放行
   if (to.meta.public) {
     // 如果已登录且访问登录页，重定向到首页
@@ -393,21 +393,21 @@ router.beforeEach(async (to, from, next) => {
     next()
     return
   }
-  
+
   // 检查是否需要登录
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
     next('/login')
     return
   }
-  
+
   // 检查是否需要管理员权限
   if (to.meta.requiresAdmin && !userStore.isAdmin) {
     ElMessage.error('没有权限访问该页面')
     next('/dashboard')
     return
   }
-  
+
   next()
 })
 

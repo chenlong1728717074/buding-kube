@@ -13,9 +13,8 @@ const (
 	UserConfigSecretLabelKey   string   = "buding-kube.com/username"
 	UserConfigSecretLabelValue string   = "admin"
 	UserPass                   string   = "123456"
-
-	UserStatusActive   int = 1 // 用户状态: 正常
-	UserStatusDisabled int = 0 // 用户状态: 禁用
+	UserStatusActive           int      = 1 // 用户状态: 正常
+	UserStatusDisabled         int      = 0 // 用户状态: 禁用
 )
 
 type User struct {

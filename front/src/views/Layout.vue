@@ -1,9 +1,9 @@
 <template>
   <el-container class="layout-container">
     <!-- 侧边栏 -->
-    <el-aside width="250px" class="sidebar">
+    <el-aside :width="isCollapsed ? '72px' : '250px'" class="sidebar">
       <div class="logo">
-        <h2>K8s管理平台</h2>
+        <h2>{{ isCollapsed ? 'K' : 'K8s管理平台' }}</h2>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -12,6 +12,9 @@
         background-color="#304156"
         text-color="#bfcbd9"
         active-text-color="#409EFF"
+        :collapse="isCollapsed"
+        :collapse-transition="false"
+        unique-opened
       >
         <el-menu-item index="/dashboard">
           <el-icon><House /></el-icon>
@@ -159,6 +162,9 @@
       <!-- 顶部导航 -->
       <el-header class="header">
         <div class="header-left">
+          <el-button text class="collapse-btn" @click="toggleCollapse">
+            <el-icon><Fold v-if="!isCollapsed" /><Expand v-else /></el-icon>
+          </el-button>
           <span class="page-title">{{ pageTitle }}</span>
         </div>
         <div class="header-right">
@@ -178,11 +184,16 @@
         </div>
       </el-header>
 
+      <!-- 顶部标签导航 -->
+      <TagsView />
+
       <!-- 主要内容 -->
       <el-main class="main-content">
         <router-view v-slot="{ Component }">
           <transition name="fade-transform" mode="out-in">
-            <component :is="Component" />
+            <keep-alive>
+              <component :is="Component" :key="route.fullPath" />
+            </keep-alive>
           </transition>
         </router-view>
       </el-main>
@@ -191,7 +202,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import {
@@ -223,7 +234,9 @@ import {
   DataBoard
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import TagsView from '@/components/TagsView.vue'
 
+import { Fold, Expand } from '@element-plus/icons-vue'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
@@ -261,6 +274,19 @@ const handleCommand = (command: string) => {
   }
 }
 
+const isCollapsed = ref(false)
+const toggleCollapse = () => {
+  isCollapsed.value = !isCollapsed.value
+  try {
+    localStorage.setItem('sidebarCollapsed', isCollapsed.value ? '1' : '0')
+  } catch {}
+}
+
+try {
+  const saved = localStorage.getItem('sidebarCollapsed')
+  isCollapsed.value = saved === '1'
+} catch {}
+
 // 显示暂未开放提示
 const showComingSoon = (event: Event) => {
   event.preventDefault()
@@ -279,7 +305,7 @@ const showComingSoon = (event: Event) => {
 }
 
 .sidebar {
-  background-color: #2f3b52;
+  background: linear-gradient(180deg, #0b1020, #101a33);
   overflow: hidden;
 }
 
@@ -288,12 +314,12 @@ const showComingSoon = (event: Event) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #2b3a4b;
-  border-bottom: 1px solid #1f2d3d;
+  background: linear-gradient(90deg, #0e1426, #16213e);
+  border-bottom: 1px solid rgba(64,158,255,0.25);
 }
 
 .logo h2 {
-  color: #fff;
+  color: #9ec9ff;
   margin: 0;
   font-size: 18px;
   font-weight: 600;
@@ -306,17 +332,26 @@ const showComingSoon = (event: Event) => {
 }
 
 .sidebar-menu .el-menu-item {
-  height: 50px;
-  line-height: 50px;
+  height: 48px;
+  line-height: 48px;
+  border-radius: 12px;
+  margin: 4px 10px;
+}
+
+.sidebar-menu .el-sub-menu__title {
+  height: 48px;
+  line-height: 48px;
+  border-radius: 12px;
+  margin: 4px 10px;
 }
 
 .sidebar-menu .el-menu-item:hover {
-  background-color: #394863 !important;
+  background-color: rgba(64,158,255,0.12) !important;
 }
 
 .sidebar-menu .el-menu-item.is-active {
-  background-color: #1f6feb !important;
-  color: #fff !important;
+  background-color: rgba(79,70,229,0.35) !important;
+  color: #e0e7ff !important;
 }
 
 .sidebar-menu .el-menu-item.is-active span {
@@ -328,7 +363,7 @@ const showComingSoon = (event: Event) => {
 }
 
 .sidebar-menu .el-sub-menu.is-active .el-sub-menu__title {
-  color: #409EFF !important;
+  color: #93c5fd !important;
 }
 
 .sidebar-menu .el-sub-menu.is-active .el-sub-menu__title span {
@@ -340,32 +375,41 @@ const showComingSoon = (event: Event) => {
 }
 
 .header {
-  background-color: #fff;
-  border-bottom: 1px solid #e6e6e6;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  height: 60px !important;
+  height: 64px !important;
 }
 
 .header-left .page-title {
-  font-size: 18px;
-  font-weight: 500;
-  color: #303133;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.collapse-btn {
+  margin-right: 8px;
+  color: #64748b;
 }
 
 .header-right .user-info {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   cursor: pointer;
-  color: #606266;
+  color: #1e3a8a;
   font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
 }
-
 .header-right .user-info:hover {
-  color: #409EFF;
+  background: rgba(59, 130, 246, 0.18);
+  color: #0f1e5a;
 }
 
 .header-right .user-info .el-icon {
@@ -373,8 +417,8 @@ const showComingSoon = (event: Event) => {
 }
 
 .main-content {
-  background-color: #f6f8fa;
-  padding: 20px;
+  background: linear-gradient(180deg, #f5faff 0%, #fbfdff 100%);
+  padding: 24px;
   overflow-y: auto;
 }
 

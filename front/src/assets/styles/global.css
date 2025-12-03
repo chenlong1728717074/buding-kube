@@ -15,6 +15,38 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* 全局主题变量（提升可读性与圆润风格） */
+:root {
+  --el-color-primary: #3b82f6;
+  --el-color-success: #10b981;
+  --el-color-warning: #f59e0b;
+  --el-color-danger: #ef4444;
+  --el-text-color-primary: #1f2937;
+  --el-text-color-regular: #374151;
+  --el-text-color-secondary: #6b7280;
+}
+
+/* 圆润与对比度优化 */
+.el-button {
+  border-radius: 10px !important;
+}
+
+.el-card {
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06) !important;
+}
+
+.el-dialog {
+  border-radius: 12px !important;
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  border-radius: 10px !important;
+}
+
 /* 响应式字体大小 */
 @media (max-width: 768px) {
   html {
@@ -97,7 +129,25 @@ body {
 
 /* 抽屉响应式 */
 @media (max-width: 768px) {
-  .el-drawer {
-    width: 100% !important;
-  }
+.el-drawer {
+  width: 100% !important;
+}
+}
+
+.el-button {
+  border-radius: 10px !important;
+}
+
+.el-card {
+  border-radius: 12px !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06) !important;
+}
+
+.el-input__wrapper,
+.el-select__wrapper {
+  border-radius: 10px !important;
+}
+
+.el-dialog {
+  border-radius: 12px !important;
 }

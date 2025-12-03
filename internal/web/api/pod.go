@@ -37,6 +37,22 @@ func (api *PodApi) Router() {
 	api.router.POST("/download", middleware.Blocker(), api.Download)
 	api.router.POST("/upload", middleware.Blocker(), api.Upload)
 	api.router.GET("", api.Info)
+	api.router.GET("/expel", api.Expel)
+}
+
+// Expel 驱逐pod
+func (api *PodApi) Expel(ctx *gin.Context) {
+	var query dto.PodDTO
+	if err := api.BindQuery(ctx, &query); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	err := api.srv.Expel(query)
+	if err != nil {
+		api.InternalError(ctx, "驱逐失败:", err)
+		return
+	}
+	api.SuccessMsg(ctx, "驱逐成功")
 }
 
 func (api *PodApi) Add(ctx *gin.Context) {

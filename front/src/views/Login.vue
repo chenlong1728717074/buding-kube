@@ -9,7 +9,7 @@
           <div class="brand-icon">
             <el-icon size="48"><Monitor /></el-icon>
           </div>
-          <h1 class="brand-title">K8s多集群管理平台</h1>
+          <h1 class="brand-title">Buding k8s多集群管理平台</h1>
           <p class="brand-desc">统一管理多个Kubernetes集群，简化运维操作</p>
         </div>
         <el-card class="login-card" shadow="always">
@@ -19,30 +19,30 @@
           </div>
           <el-form :model="loginForm" :rules="rules" ref="formRef" class="login-form" @keyup.enter="onSubmit">
             <el-form-item prop="username">
-              <el-input 
-                v-model="loginForm.username" 
+              <el-input
+                v-model="loginForm.username"
                 placeholder="请输入用户名"
                 prefix-icon="User"
                 size="large"
-                autocomplete="username" 
+                autocomplete="username"
               />
             </el-form-item>
             <el-form-item prop="password">
-              <el-input 
-                v-model="loginForm.password" 
-                type="password" 
+              <el-input
+                v-model="loginForm.password"
+                type="password"
                 placeholder="请输入密码"
                 prefix-icon="Lock"
                 size="large"
                 show-password
-                autocomplete="current-password" 
+                autocomplete="current-password"
               />
             </el-form-item>
             <el-form-item>
-              <el-button 
-                type="primary" 
-                :loading="loading" 
-                @click="onSubmit" 
+              <el-button
+                type="primary"
+                :loading="loading"
+                @click="onSubmit"
                 size="large"
                 class="login-btn"
               >
@@ -64,7 +64,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElNotification } from 'element-plus'
 import { Monitor, Check } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 
@@ -87,6 +87,14 @@ const onSubmit = async () => {
     try {
       const success = await userStore.login(loginForm.value)
       if (success) {
+        const hour = new Date().getHours()
+        const greet = hour < 12 ? '早上好' : hour < 18 ? '下午好' : '晚上好'
+        const emoji = hour < 12 ? '☀️' : hour < 18 ? '🌤️' : '🌛'
+        ElNotification({
+          message: `${greet} ${emoji}${loginForm.value.username} 欢迎登录 Buding k8s多集群管理平台！`,
+          type: 'success',
+          duration: 3000
+        })
         router.push('/')
       }
     } catch (error) {
@@ -112,7 +120,7 @@ const onSubmit = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #eaf4ff 0%, #f5faff 100%);
   z-index: 1;
 }
 
@@ -151,7 +159,7 @@ const onSubmit = async () => {
 
 .brand-header {
   text-align: center;
-  color: white;
+  color: #1e3a8a;
   margin-bottom: 40px;
 }
 
@@ -169,16 +177,13 @@ const onSubmit = async () => {
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 12px;
-  background: linear-gradient(45deg, #ffffff, #e3f2fd);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #1e3a8a;
 }
 
 .brand-desc {
   font-size: 16px;
   margin: 0;
-  opacity: 0.9;
+  color: rgba(30, 58, 138, 0.9);
   line-height: 1.6;
 }
 
@@ -235,8 +240,8 @@ const onSubmit = async () => {
   height: 48px;
   font-size: 16px;
   font-weight: 500;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
   border: none;
   transition: all 0.3s ease;
 }
@@ -276,23 +281,23 @@ const onSubmit = async () => {
   .login-content {
     padding: 20px 15px;
   }
-  
+
   .login-center {
     max-width: 100%;
   }
-  
+
   .brand-header {
     margin-bottom: 30px;
   }
-  
+
   .brand-title {
     font-size: 28px;
   }
-  
+
   .brand-desc {
     font-size: 14px;
   }
-  
+
   .login-card {
     padding: 24px;
     margin: 0 10px;
@@ -303,7 +308,7 @@ const onSubmit = async () => {
   .brand-title {
     font-size: 24px;
   }
-  
+
   .login-card {
     padding: 20px;
   }

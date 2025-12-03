@@ -97,19 +97,21 @@ func buildPodContainer(item *corev1.Pod) []PodContainerVO {
 	containers := item.Spec.Containers
 	for index, status := range item.Status.ContainerStatuses {
 		container := containers[index]
-
-		result = append(result, PodContainerVO{
+		vo := PodContainerVO{
 			Name:         container.Name,
 			Ready:        status.Ready,
 			RestartCount: status.RestartCount,
 			Image:        container.Image,
 			Started:      *status.Started,
 			VolumeMounts: container.VolumeMounts,
-			StartedAt:    status.State.Running.StartedAt.Time,
 			Args:         container.Args,
 			Envs:         buildPodEnvVO(container.Env),
 			Ports:        buildPodPorts(container.Ports),
-		})
+		}
+		if status.State.Running != nil {
+			vo.StartedAt = status.State.Running.StartedAt.Time
+		}
+		result = append(result, vo)
 	}
 	return result
 }
