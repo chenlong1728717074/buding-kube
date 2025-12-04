@@ -16,8 +16,7 @@ type PodLogDTO struct {
 	SinceTime     *CustomTime `json:"sinceTime"`
 	ContainerName string      `json:"containerName"`
 	Follow        bool        `json:"follow"`
-	TailLines     *int64      `json:"tailLines"`
-	Container     string      `json:"container"`
+	TailLines     int64       `json:"tailLines"`
 }
 
 type PodDownloadDTO struct {

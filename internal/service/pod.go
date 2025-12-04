@@ -14,6 +14,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 	"mime/multipart"
@@ -142,23 +143,14 @@ func (s *PodService) Expel(query dto.PodDTO) error {
 	return clientSet.PolicyV1().Evictions(eviction.Namespace).Evict(context.TODO(), eviction)
 }
 
-func (*PodService) PodLog(query dto.PodLogDTO) (io.ReadCloser, error) {
+func (ps *PodService) PodLog(query dto.PodLogDTO) (io.ReadCloser, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	options := v1.PodLogOptions{
-		Follow:     query.Follow,
-		Timestamps: true,
-		Previous:   false,
-	}
-	if query.SinceTime != nil {
-		time := metav1.NewTime(query.SinceTime.ToTime())
-		options.SinceTime = &time
-	}
-
-	req := clientSet.CoreV1().Pods(query.Namespace).GetLogs(query.Name, &options)
+	options, err := ps.buildLogOption(clientSet, query)
+	req := clientSet.CoreV1().Pods(query.Namespace).GetLogs(query.Name, options)
 	if req.Error() != nil {
 		logs.Error("连接到pod日志失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("连接到pod日志失败")
@@ -277,7 +269,7 @@ func formatTargetPath(basePath string, filename string) string {
 	return basePath + "/" + filename
 }
 
-// 使用 tar 方式上传（推荐，更稳定）
+// UploadWithTar 使用 tar 方式上传（推荐，更稳定）
 func (s *PodService) UploadWithTar(query dto.PodDownloadDTO, file multipart.File, header *multipart.FileHeader) error {
 	cache, err := ClusterMap.GetCache(query.ClusterId)
 	if err != nil {
@@ -381,4 +373,35 @@ func (s *PodService) UploadWithTar(query dto.PodDownloadDTO, file multipart.File
 
 	logs.Info("文件上传成功: %s", targetPath)
 	return nil
+}
+
+func (s *PodService) buildLogOption(clientSet *kubernetes.Clientset, query dto.PodLogDTO) (*v1.PodLogOptions, error) {
+	containerName := query.ContainerName
+	if containerName == "" {
+		pod, err := clientSet.CoreV1().Pods(query.Namespace).Get(context.TODO(), query.Name, metav1.GetOptions{})
+		if err != nil {
+			logs.Error("获取Pod详情失败，无法确认容器名称: %s", err.Error())
+			return nil, errors.New("获取Pod详情失败")
+		}
+		containers := pod.Spec.Containers
+		if len(containers) == 0 {
+			return nil, errors.New("pod 中没有定义容器")
+		}
+		containerName = containers[0].Name
+	}
+	options := v1.PodLogOptions{
+		Follow:     query.Follow,
+		Timestamps: true,
+		Previous:   false,
+		Container:  containerName,
+	}
+	if query.SinceTime != nil {
+		time := metav1.NewTime(query.SinceTime.ToTime())
+		options.SinceTime = &time
+	}
+	if options.SinceTime == nil && query.TailLines == 0 {
+		var defaultLines int64 = 1000
+		options.TailLines = &defaultLines
+	}
+	return &options, nil
 }
