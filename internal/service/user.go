@@ -140,8 +140,10 @@ func (s *UserService) CreateUser(req dto.CreateUserDTO, currentUser *model.User)
 		return errors.New("用户已存在")
 	}
 	// 创建用户
-	var user model.User
-	copier.Copy(&user, &req)
+	user := model.NewUser(req.Username, req.Password, req.Email, req.Role)
+	user.Department = req.Department
+	user.Phone = req.Phone
+	user.Cluster = req.Cluster
 	// 序列化用户信息
 	userData, err := json.Marshal(user)
 	if err != nil {

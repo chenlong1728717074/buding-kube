@@ -1,16 +1,16 @@
 # buding-kube
 
-![License](https://img.shields.io/github/license/goaigc/buding-kube)
+![License](https://img.shields.io/github/license/chenlong1728717074/buding-kube)
 ![Go Version](https://img.shields.io/badge/Go-1.18+-blue)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-1.20+-blue)
 
 ## 📝 介绍
 
-buding-kube 是一款轻量级的 Kubernetes 多集群管理工具，支持跨集群资源统一查看、权限集中控制、应用便捷发布，帮助运维和开发团队高效管理多套 K8s 集群。
+buding-kube（buding k8s多集群管理平台）是一款轻量级的 Kubernetes 多集群管理工具，支持跨集群资源统一查看、权限集中控制、应用便捷发布，帮助运维和开发团队高效管理多套 K8s 集群。
 
-### 🔗 演示环境
+### 🔗 项目地址
 
-**在线演示**: [https://kube.goaigc.fun/](https://kube.goaigc.fun/)
+GitHub: https://github.com/chenlong1728717074/buding-kube
 
 ## 🏗️ 软件架构
 
@@ -36,6 +36,14 @@ buding-kube 采用前后端分离的架构设计：
   - Pod 日志查看
   - Pod 终端操作
   - Pod 删除操作
+  - Pod 驱逐
+  - 文件上传/下载（运行态）
+  - 运行态操作守卫（非运行态禁用日志/上传/下载/进入容器）
+
+### 体验优化
+- 标签式导航与页面状态保留
+- 登录与管理页浅蓝灰主题、圆润风格
+- 统一错误提示与 401 自动跳转登录
 
 ### 系统功能
 - RESTful API
@@ -84,10 +92,10 @@ buding-kube 采用前后端分离的架构设计：
 
 ```bash
 # 克隆仓库
-git clone https://github.com/goaigc/buding-kube.git
+git clone https://github.com/chenlong1728717074/buding-kube.git
 cd buding-kube
 
-# 部署到 Kubernetes
+# 部署到 Kubernetes（示例）
 kubectl apply -f devlop.yaml
 ```
 
@@ -102,6 +110,10 @@ go run main.go
 cd front
 pnpm install
 pnpm dev
+
+# 构建与预览
+pnpm build
+pnpm preview
 ```
 
 ## 🤝 参与贡献

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 	"sort"
@@ -48,7 +49,12 @@ func (s *JobService) List(query dto.JobPageQueryBaseDTO) ([]vo.JobVO, error) {
 	for _, item := range items.Items {
 		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
 			vi := vo.Job2VO(item)
-			yamlData, err := yaml.Marshal(item)
+			copy := item.DeepCopy()
+			copy.ObjectMeta.ManagedFields = nil
+			copy.ObjectMeta.ResourceVersion = ""
+			copy.ObjectMeta.CreationTimestamp = metav1.Time{}
+			copy.Status = batchv1.JobStatus{}
+			yamlData, err := yaml.Marshal(copy)
 			if err != nil {
 				logs.Error("序列化Job失败: %v", err)
 			}

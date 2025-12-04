@@ -48,7 +48,11 @@ func (s *EndpointSliceService) List(query dto.EndpointSlicePageQueryBaseDTO) ([]
 	for _, item := range items.Items {
 		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
 			vi := vo.EndpointSlice2VO(item)
-			yamlData, err := yaml.Marshal(&item)
+			copy := item.DeepCopy()
+			copy.ObjectMeta.ManagedFields = nil
+			copy.ObjectMeta.ResourceVersion = ""
+			copy.ObjectMeta.CreationTimestamp = metav1.Time{}
+			yamlData, err := yaml.Marshal(copy)
 			if err != nil {
 				logs.Error("序列化EndpointSlice失败: %v", err)
 			}

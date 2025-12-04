@@ -36,7 +36,7 @@ func init() {
 	}
 
 	if err := initSuperUser(clientSet); err != nil {
-		logs.Fatal("初始化命名空间失败")
+		logs.Fatal("初始化超级用户失败")
 	}
 
 	InClusterClientSet = clientSet

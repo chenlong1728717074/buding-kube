@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 	"sort"
@@ -46,7 +47,12 @@ func (s *KubeSrvService) List(query dto.ServiceQueryDTO) ([]vo.ServiceVO, error)
 	result := make([]vo.ServiceVO, 0)
 	for _, item := range items.Items {
 		vi := vo.Service2VO(item)
-		yamlData, err := yaml.Marshal(item)
+		copy := item.DeepCopy()
+		copy.ObjectMeta.ManagedFields = nil
+		copy.ObjectMeta.ResourceVersion = ""
+		copy.ObjectMeta.CreationTimestamp = metav1.Time{}
+		copy.Status = corev1.ServiceStatus{}
+		yamlData, err := yaml.Marshal(copy)
 		if err != nil {
 			logs.Error("序列化Service失败: %v", err)
 		}
@@ -71,7 +77,12 @@ func (s *KubeSrvService) GetInfo(query dto.ServiceBaseDTO) (*vo.ServiceVO, error
 		return nil, fmt.Errorf("获取service详情失败: %v", err)
 	}
 	vi := vo.Service2VO(*item)
-	yamlData, err := yaml.Marshal(item)
+	copy := item.DeepCopy()
+	copy.ObjectMeta.ManagedFields = nil
+	copy.ObjectMeta.ResourceVersion = ""
+	copy.ObjectMeta.CreationTimestamp = metav1.Time{}
+	copy.Status = corev1.ServiceStatus{}
+	yamlData, err := yaml.Marshal(copy)
 	if err != nil {
 		logs.Error("序列化Service失败: %v", err)
 	}
@@ -90,7 +101,12 @@ func (s *KubeSrvService) GetYaml(query dto.ServiceBaseDTO) (string, error) {
 		logs.Error("获取service失败: %v", err)
 		return "", fmt.Errorf("获取service失败: %v", err)
 	}
-	yamlData, err := yaml.Marshal(item)
+	copy := item.DeepCopy()
+	copy.ObjectMeta.ManagedFields = nil
+	copy.ObjectMeta.ResourceVersion = ""
+	copy.ObjectMeta.CreationTimestamp = metav1.Time{}
+	copy.Status = corev1.ServiceStatus{}
+	yamlData, err := yaml.Marshal(copy)
 	if err != nil {
 		logs.Error("序列化Service失败: %v", err)
 		return "", fmt.Errorf("序列化Service失败: %v", err)

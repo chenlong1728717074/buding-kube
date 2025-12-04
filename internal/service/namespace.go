@@ -190,7 +190,12 @@ func (s *NamespaceService) GetById(base dto.NamespaceBaseDTO) (*vo.NamespaceVO, 
 		logs.Error("获取命名空间失败: %v", err)
 		return nil, err
 	}
-	yamlData, err := yaml.Marshal(ns)
+	nsCopy := ns.DeepCopy()
+	nsCopy.ObjectMeta.ManagedFields = nil
+	nsCopy.ObjectMeta.ResourceVersion = ""
+	nsCopy.ObjectMeta.CreationTimestamp = metav1.Time{}
+	nsCopy.Status = corev1.NamespaceStatus{}
+	yamlData, err := yaml.Marshal(nsCopy)
 	if err != nil {
 		logs.Error("序列化命名空间失败: %v", err)
 		return nil, err

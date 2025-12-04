@@ -168,6 +168,12 @@
           <span class="page-title">{{ pageTitle }}</span>
         </div>
         <div class="header-right">
+          <div class="header-extras">
+            <el-tag size="small" type="info" effect="plain">{{ nowText }}</el-tag>
+            <el-link :underline="false" href="https://github.com/chenlong1728717074/buding-kube" target="_blank" type="primary" class="gh-link">
+              GitHub
+            </el-link>
+          </div>
           <el-dropdown @command="handleCommand">
             <span class="user-info">
               <el-icon><Avatar /></el-icon>
@@ -202,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import {
@@ -414,6 +420,15 @@ const showComingSoon = (event: Event) => {
   background: rgba(59, 130, 246, 0.12);
   border: 1px solid rgba(59, 130, 246, 0.25);
 }
+.header-extras {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 12px;
+}
+.gh-link {
+  color: #1e3a8a;
+}
 .header-right .user-info:hover {
   background: rgba(59, 130, 246, 0.18);
   color: #0f1e5a;
@@ -445,3 +460,16 @@ const showComingSoon = (event: Event) => {
   transform: translateX(-30px);
 }
 </style>
+const nowText = ref('')
+let clockTimer: number | undefined
+const updateClock = () => {
+  const d = new Date()
+  nowText.value = d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+onMounted(() => {
+  updateClock()
+  clockTimer = window.setInterval(updateClock, 1000)
+})
+onUnmounted(() => {
+  if (clockTimer) window.clearInterval(clockTimer)
+})
