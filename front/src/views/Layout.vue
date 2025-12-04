@@ -233,7 +233,7 @@ import {
   Cpu,
   DataBoard
 } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import TagsView from '@/components/TagsView.vue'
 
 import { Fold, Expand } from '@element-plus/icons-vue'
@@ -269,7 +269,14 @@ const handleCommand = (command: string) => {
       router.push('/user/profile')
       break
     case 'logout':
-      userStore.logout()
+      ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' })
+        .then(async () => {
+          await userStore.logout()
+          const hour = new Date().getHours()
+          const greet = hour < 12 ? '期待你下次回来 ☀️' : hour < 18 ? '期待你下次回来 🌤️' : '期待你下次回来 🌛'
+          ElNotification({ message: `${greet}`, type: 'success', duration: 2500 })
+        })
+        .catch(() => {})
       break
   }
 }
@@ -376,7 +383,7 @@ const showComingSoon = (event: Event) => {
 
 .header {
   background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(59,130,246,0.16);
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   display: flex;
   align-items: center;
@@ -388,7 +395,7 @@ const showComingSoon = (event: Event) => {
 .header-left .page-title {
   font-size: 20px;
   font-weight: 600;
-  color: #1f2937;
+  color: #1e3a8a;
 }
 
 .collapse-btn {

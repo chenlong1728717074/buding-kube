@@ -73,10 +73,8 @@ export const useUserStore = defineStore('user', () => {
     } catch (error) {
       console.error('登出接口调用失败:', error)
     } finally {
-      // 无论接口是否成功，都清除本地数据
       clearUserData()
       router.push('/login')
-      ElMessage.success('已退出登录')
     }
   }
 

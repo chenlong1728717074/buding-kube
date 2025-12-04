@@ -766,8 +766,8 @@ const fetchPodLogs = async (fromContainerList = false) => {
       clusterId: clusterId.value,
       namespace: podInfo.value.namespace,
       name: podInfo.value.name,
-      // 只有从容器列表进入时才传递container参数
-      container: fromContainerList ? selectedContainer.value : undefined,
+      // 只有从容器列表进入时才传递容器名称
+      containerName: fromContainerList ? selectedContainer.value : undefined,
       follow: followLogs.value,
       sinceTime: sinceTime.value || undefined,
       tailLines: tailLines.value
@@ -969,7 +969,9 @@ const getContainerStateText = (state: any) => {
 
 // 判断容器是否运行中
 const isContainerRunning = (container: any) => {
-  return !!(container && container.state && container.state.running)
+  const podRunning = podInfo.value?.status === 'Running'
+  const containerReady = !!(container && (container.ready || container.started))
+  return !!(podRunning && containerReady)
 }
 
 // 格式化日期

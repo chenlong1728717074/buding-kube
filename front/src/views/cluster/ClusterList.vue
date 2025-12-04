@@ -133,7 +133,7 @@
       width="800px"
       @close="handleDialogClose"
     >
-      <el-form ref="formRef" :model="clusterForm" :rules="formRules" label-width="100px" class="centered-form">
+      <el-form ref="formRef" :model="clusterForm" :rules="formRules" label-width="100px">
         <el-form-item label="集群名称" prop="name">
           <el-input v-model="clusterForm.name" placeholder="请输入集群名称" />
         </el-form-item>

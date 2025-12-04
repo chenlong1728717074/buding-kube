@@ -92,7 +92,7 @@ export interface PodLogDTO {
   clusterId: string
   namespace: string
   name: string
-  container?: string
+  containerName?: string
   follow?: boolean
   tailLines?: number
   sinceTime?: string

@@ -81,7 +81,12 @@ func (s *PodService) List(query dto.PodQueryDTO) ([]vo.PodVO, error) {
 	result := make([]vo.PodVO, 0)
 	for _, item := range pods.Items {
 		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
-			yamlData, err := yaml.Marshal(&item)
+			podCopy := item.DeepCopy()
+			podCopy.ObjectMeta.ManagedFields = nil
+			podCopy.ObjectMeta.ResourceVersion = ""
+			podCopy.ObjectMeta.CreationTimestamp = metav1.Time{}
+			podCopy.Status = v1.PodStatus{}
+			yamlData, err := yaml.Marshal(podCopy)
 			if err != nil {
 				logs.Error("序列化pod失败: %v", err)
 			}
@@ -106,7 +111,12 @@ func (s *PodService) GetById(query dto.PodDTO) (*vo.PodInfoVO, error) {
 		logs.Error("获取命pod失败: %v", err)
 		return nil, err
 	}
-	yamlData, err := yaml.Marshal(pod)
+	podCopy := pod.DeepCopy()
+	podCopy.ObjectMeta.ManagedFields = nil
+	podCopy.ObjectMeta.ResourceVersion = ""
+	podCopy.ObjectMeta.CreationTimestamp = metav1.Time{}
+	podCopy.Status = v1.PodStatus{}
+	yamlData, err := yaml.Marshal(podCopy)
 	if err != nil {
 		logs.Error("序列化pod失败: %v", err)
 		return nil, err
@@ -395,13 +405,18 @@ func (s *PodService) buildLogOption(clientSet *kubernetes.Clientset, query dto.P
 		Previous:   false,
 		Container:  containerName,
 	}
+	// 时间和条数二选一
 	if query.SinceTime != nil {
-		time := metav1.NewTime(query.SinceTime.ToTime())
-		options.SinceTime = &time
+		t := metav1.NewTime(query.SinceTime.ToTime())
+		options.SinceTime = &t
+		options.Timestamps = true
+	} else {
+		tailLines := query.TailLines
+		if tailLines == 0 {
+			tailLines = 1000
+		}
+		options.TailLines = &tailLines
 	}
-	if options.SinceTime == nil && query.TailLines == 0 {
-		var defaultLines int64 = 1000
-		options.TailLines = &defaultLines
-	}
+
 	return &options, nil
 }
