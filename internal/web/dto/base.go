@@ -6,3 +6,21 @@ type PageQueryDTO struct {
 	PageSize int    `form:"pageSize" json:"pageSize" example:"10"` // 每页数量，默认为10
 	Keyword  string `form:"keyword" json:"keyword" example:"关键词"`  // 搜索关键词
 }
+
+type BaseYamlApplyDTO struct {
+	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`
+	Namespace string `json:"namespace" form:"namespace"`
+	Yaml      string `json:"yaml" binding:"required"`
+}
+
+type BaseDTO struct {
+	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+}
+
+type BaseInfoDTO struct {
+	BaseDTO
+	Alias    string `json:"alias"`
+	Describe string `json:"describe"`
+}

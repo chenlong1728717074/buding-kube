@@ -248,6 +248,15 @@ const routes: Array<RouteRecordRaw> = [
             }
           },
           {
+            path: 'configmap/detail',
+            name: 'ConfigMapDetail',
+            component: () => import('@/views/config/ConfigMapDetail.vue'),
+            meta: {
+              title: 'ConfigMap详情',
+              requiresAuth: true
+            }
+          },
+          {
             path: 'secret',
             name: 'Secret',
             component: () => import('@/views/config/Secret.vue'),

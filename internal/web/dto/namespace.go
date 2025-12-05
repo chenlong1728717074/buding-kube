@@ -6,7 +6,6 @@ type NamespaceCreateDTO struct {
 	Alias       string            `json:"alias"`
 	Describe    string            `json:"describe"`
 	Annotations map[string]string `json:"annotations"`
-	Yaml        string            `json:"yaml"`
 }
 
 type NamespaceBaseDTO struct {

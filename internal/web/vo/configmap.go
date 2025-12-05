@@ -23,10 +23,12 @@ type ConfigMapVO struct {
 }
 
 func ConfigMap2VO(cm corev1.ConfigMap) ConfigMapVO {
-	return ConfigMapVO{
+	vo := ConfigMapVO{
 		BaseVO: BaseVO{
 			Name:      cm.Name,
 			Namespace: cm.Namespace,
+			Alias:     cm.Annotations["alias"],
+			Describe:  cm.Annotations["describe"],
 		},
 		Data:              cm.Data,
 		BinaryData:        cm.BinaryData,
@@ -40,4 +42,5 @@ func ConfigMap2VO(cm corev1.ConfigMap) ConfigMapVO {
 		CreateTime:        cm.CreationTimestamp.Time,
 		Metadata:          cm.ObjectMeta,
 	}
+	return vo
 }

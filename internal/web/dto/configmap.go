@@ -1,9 +1,7 @@
 package dto
 
 type ConfigMapCreateDTO struct {
-	ClusterId   string            `json:"clusterId" form:"clusterId" binding:"required"`
-	Namespace   string            `json:"namespace" form:"namespace" binding:"required"`
-	Name        string            `json:"name" form:"name" binding:"required"`
+	BaseInfoDTO
 	Data        map[string]string `json:"data"`
 	BinaryData  map[string][]byte `json:"binaryData"`
 	Annotations map[string]string `json:"annotations"`
@@ -23,7 +21,7 @@ type ConfigMapPageQueryBaseDTO struct {
 	ConfigMapBaseDTO
 }
 
-type ConfigMapApplyDTO struct {
-	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`
-	Yaml      string `json:"yaml" binding:"required"`
+type ConfigMapDataDTO struct {
+	BaseInfoDTO
+	Data map[string]string `json:"data"`
 }

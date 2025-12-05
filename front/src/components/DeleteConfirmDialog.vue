@@ -118,6 +118,9 @@ const handleConfirm = () => {
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff7f7;
 }
 
 .warning-icon {
@@ -170,5 +173,14 @@ const handleConfirm = () => {
 
 :deep(.el-dialog__footer) {
   padding: 8px 20px 16px 20px;
+}
+
+:deep(.el-dialog) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+:deep(.el-button--danger) {
+  border-radius: 20px;
 }
 </style>
