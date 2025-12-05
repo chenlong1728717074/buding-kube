@@ -52,7 +52,7 @@ func (api *ConfigMapApi) Apply(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	err := api.srv.BaseYamlApplyDTO(apply)
+	err := api.srv.Apply(apply)
 	if err != nil {
 		api.InternalError(ctx, "执行失败:", err)
 		return

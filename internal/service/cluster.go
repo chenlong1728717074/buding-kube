@@ -62,12 +62,20 @@ func (m *ClusterCacheMap) Delete(key string) {
 	m.caches.Delete(key)
 }
 
+func (m *ClusterCacheMap) GetClientSet(clusterId string) (*kubernetes.Clientset, error) {
+	clientSet, err := ClusterMap.Get(clusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", clusterId, err.Error())
+		return nil, errors.New("获取集群失败")
+	}
+	return clientSet, nil
+}
+
 func (m *ClusterCacheMap) Get(key string) (*kubernetes.Clientset, error) {
 	// 先尝试获取现有缓存
 	if cache, ok := m.caches.Load(key); ok {
 		return cache.(*ClusterCache).clientSet, nil
 	}
-
 	// 如果不存在，初始化缓存
 	cli, _, err := m.InitCache(key)
 	return cli, err

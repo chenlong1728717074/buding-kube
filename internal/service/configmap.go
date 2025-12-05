@@ -69,7 +69,7 @@ func (s *ConfigMapService) List(query dto.ConfigMapPageQueryBaseDTO) ([]vo.Confi
 	return result, nil
 }
 
-func (s *ConfigMapService) BaseYamlApplyDTO(apply dto.BaseYamlApplyDTO) error {
+func (s *ConfigMapService) Apply(apply dto.BaseYamlApplyDTO) error {
 	clientSet, err := ClusterMap.Get(apply.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", apply.ClusterId, err.Error())

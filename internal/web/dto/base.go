@@ -14,8 +14,11 @@ type BaseYamlApplyDTO struct {
 }
 
 type BaseDTO struct {
+	// 集群ID
 	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`
-	Name      string `json:"name"`
+	// Name 资源名称
+	Name string `json:"name"`
+	// Namespace 命名空间
 	Namespace string `json:"namespace"`
 }
 
@@ -23,4 +26,9 @@ type BaseInfoDTO struct {
 	BaseDTO
 	Alias    string `json:"alias"`
 	Describe string `json:"describe"`
+}
+
+type ResourcePageQueryBaseDTO struct {
+	PageQueryDTO
+	BaseDTO
 }

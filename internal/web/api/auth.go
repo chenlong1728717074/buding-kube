@@ -29,6 +29,7 @@ func (api *AuthApi) Router() {
 	api.router.POST("/logout", api.Logout)
 }
 
+// Login
 // @Summary 用户登录
 // @Description 用户登录，返回用户信息和Token
 // @Tags 用户认证
