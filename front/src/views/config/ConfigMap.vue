@@ -93,7 +93,7 @@
 
     
     <!-- YAML添加 -->
-    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加" width="80%" :close-on-click-modal="false" destroy-on-close>
+    <UnifiedDialog v-model="yamlAddDialogVisible" title="YAML添加" subtitle="通过 YAML 快速创建 ConfigMap" width="80%">
       <el-form :model="yamlAddForm" label-width="100px">
         <el-form-item label="集群">
           <el-select v-model="yamlAddForm.clusterId" placeholder="请选择集群" style="width: 240px">
@@ -108,62 +108,78 @@
         <el-button @click="yamlAddDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 添加ConfigMap（表单） -->
-    <el-dialog v-model="createDialogVisible" title="添加ConfigMap" width="600px" :close-on-click-modal="false">
-      <el-form :model="createForm" label-width="100px">
-        <el-form-item label="集群">
-          <el-select v-model="createForm.clusterId" placeholder="请选择集群" style="width: 240px">
-            <el-option v-for="c in clusterList" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="命名空间">
-          <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 240px">
-            <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="名称">
-          <el-input v-model="createForm.name" placeholder="请输入名称" />
-        </el-form-item>
-        <el-form-item label="别名">
-          <el-input v-model="createForm.alias" placeholder="可选" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="createForm.describe" type="textarea" :rows="2" placeholder="可选" />
-        </el-form-item>
-      </el-form>
-      <div class="kv-editor">
-        <div class="kv-toolbar">
-          <el-button size="small" type="primary" @click="addCreateDataRow">新增键值</el-button>
-          <el-button size="small" @click="resetCreateDataRows">重置</el-button>
-        </div>
-        <el-table :data="createDataRows" size="small" style="width: 100%">
-          <el-table-column label="键" width="220">
-            <template #default="{ row }">
-              <el-input v-model="row.key" placeholder="例如: app.properties" />
-            </template>
-          </el-table-column>
-          <el-table-column label="值">
-            <template #default="{ row }">
-              <el-input v-model="row.value" type="textarea" :rows="3" placeholder="内容" />
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="100" align="center">
-            <template #default="{ $index }">
-              <el-button type="danger" size="small" @click="removeCreateDataRow($index)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+    <StepWizardDialog
+      v-model="createDialogVisible"
+      title="创建配置字典"
+      :steps="createSteps"
+      :active="createActive"
+      :yaml="createYaml"
+      :loading="createLoading"
+      confirm-text="创建"
+      @update:active="val => createActive = val"
+      @update:yaml="val => createYaml = val"
+      @confirm="confirmCreate"
+    >
+      <div v-if="createActive === 0">
+        <el-form :model="createForm" label-width="100px" class="two-col">
+          <el-form-item label="名称" required>
+            <el-input v-model="createForm.name" placeholder="" />
+            <div class="helper">名称只能包含小写字母、数字和连字符（-），必须以小写字母或数字开头和结尾，最长 63 个字符。</div>
+          </el-form-item>
+          <el-form-item label="别名">
+            <el-input v-model="createForm.alias" placeholder="" />
+            <div class="helper">别名只能包含中文、字母、数字和连字符（-），不得以连字符（-）开头或结尾，最长 63 个字符。</div>
+          </el-form-item>
+          <el-form-item label="集群" required>
+            <el-select v-model="createForm.clusterId" placeholder="请选择集群" style="width: 240px">
+              <el-option v-for="c in clusterList" :key="c.id" :label="c.name" :value="c.id" />
+            </el-select>
+            <div class="helper">选择将要创建资源的集群。</div>
+          </el-form-item>
+          <el-form-item label="命名空间" required>
+            <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 240px">
+              <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
+            </el-select>
+            <div class="helper">选择将要创建资源的命名空间。</div>
+          </el-form-item>
+          <el-form-item label="描述">
+            <el-input v-model="createForm.describe" type="textarea" :rows="2" placeholder="" />
+            <div class="helper">描述可包含任意字符，最长 256 个字符。</div>
+          </el-form-item>
+        </el-form>
       </div>
-      <template #footer>
-        <el-button @click="createDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="createLoading" @click="confirmCreate">创建</el-button>
-      </template>
-    </el-dialog>
+      <div v-else>
+        <div class="kv-editor">
+          <div class="kv-toolbar">
+            <el-button size="small" type="primary" @click="addCreateDataRow">新增键值</el-button>
+            <el-button size="small" @click="resetCreateDataRows">重置</el-button>
+          </div>
+          <el-table :data="createDataRows" size="small" style="width: 100%">
+            <el-table-column label="键" width="220">
+              <template #default="{ row }">
+                <el-input v-model="row.key" placeholder="例如: app.properties" />
+              </template>
+            </el-table-column>
+            <el-table-column label="值">
+              <template #default="{ row }">
+                <el-input v-model="row.value" type="textarea" :rows="3" placeholder="内容" />
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="100" align="center">
+              <template #default="{ $index }">
+                <el-button type="danger" size="small" @click="removeCreateDataRow($index)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+    </StepWizardDialog>
 
     <!-- 修改别名/备注 -->
-    <el-dialog v-model="editInfoDialogVisible" title="修改别名/备注" width="500px" :close-on-click-modal="false">
+    <UnifiedDialog v-model="editInfoDialogVisible" title="编辑信息" subtitle="修改别名与备注" width="500px">
       <el-form :model="editInfoForm" label-width="100px">
         <el-form-item label="别名">
           <el-input v-model="editInfoForm.alias" placeholder="请输入别名" />
@@ -176,10 +192,10 @@
         <el-button @click="editInfoDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="editInfoLoading" @click="confirmEditInfo">确定</el-button>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 修改数据（仅 data） -->
-    <el-dialog v-model="editDataDialogVisible" title="修改数据" width="700px" :close-on-click-modal="false">
+    <UnifiedDialog v-model="editDataDialogVisible" title="编辑设置" subtitle="仅修改 data 键值" width="700px">
       <div class="kv-editor">
         <div class="kv-toolbar">
           <el-button size="small" type="primary" @click="addDataRow">新增键值</el-button>
@@ -207,10 +223,10 @@
         <el-button @click="editDataDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="editDataLoading" @click="confirmEditData">保存</el-button>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 查看/编辑YAML -->
-    <el-dialog v-model="yamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" destroy-on-close>
+    <UnifiedDialog v-model="yamlDialogVisible" title="查看/编辑YAML" subtitle="仅应用到当前集群" width="90%">
       <div class="yaml-editor-wrapper">
         <YamlEditor :model-value="yamlContent" :loading="yamlLoading" height="500px" @update:modelValue="val => yamlContent = val" />
       </div>
@@ -218,10 +234,9 @@
         <el-button @click="yamlDialogVisible = false">关闭</el-button>
         <template v-if="!yamlReadOnly">
           <el-button type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
-          <span style="color: #909399; font-size: 12px; margin-left: 10px;">仅应用到当前集群</span>
         </template>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 删除确认对话框 -->
     <DeleteConfirmDialog
@@ -244,6 +259,8 @@ import { configMapApi, type ConfigMapVO, type ConfigMapPageQueryDTO } from '@/ap
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
+import StepWizardDialog from '@/components/StepWizardDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 
 const loading = ref(false)
@@ -489,6 +506,9 @@ const createDialogVisible = ref(false)
 const createLoading = ref(false)
 const createForm = reactive({ clusterId: '' as string, namespace: '' as string, name: '' as string, alias: '' as string, describe: '' as string })
 const createDataRows = ref<{ key: string; value: string }[]>([])
+const createSteps = [ { key: 'base', label: '基本信息' }, { key: '数据设置', label: '数据设置' } ]
+let createActive = ref(0)
+let createYaml = ref('')
 const openCreate = () => {
   createForm.clusterId = searchForm.clusterId || ''
   createForm.namespace = searchForm.namespace || ''
@@ -496,22 +516,26 @@ const openCreate = () => {
   createForm.alias = ''
   createForm.describe = ''
   createDataRows.value = []
+  createActive.value = 0
+  createYaml.value = ''
   createDialogVisible.value = true
 }
 const addCreateDataRow = () => { createDataRows.value.push({ key: '', value: '' }) }
 const removeCreateDataRow = (idx: number) => { createDataRows.value.splice(idx, 1) }
 const resetCreateDataRows = () => { createDataRows.value = [] }
 const confirmCreate = async () => {
-  if (!createForm.clusterId || !createForm.namespace || !createForm.name) { ElMessage.warning('请填写集群、命名空间与名称'); return }
+  if (!createForm.clusterId || !createForm.namespace || !createForm.name) { ElMessage.warning('请填写必填项'); return }
   const ann: Record<string, string> = {}
   if (createForm.alias) ann['alias'] = createForm.alias
   if (createForm.describe) ann['describe'] = createForm.describe
   const data: Record<string, string> = {}
   for (const { key, value } of createDataRows.value) { if (key) data[key] = value }
   const yaml = `apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: ${createForm.name}\n  namespace: ${createForm.namespace}${Object.keys(ann).length ? '\n  annotations:' : ''}${Object.entries(ann).map(([k,v]) => '\n    ' + k + ': ' + v).join('')}\n${Object.keys(data).length ? 'data:' : ''}${Object.entries(data).map(([k,v]) => '\n  ' + k + ': |\n' + v.split('\n').map(l => '    ' + l).join('\n')).join('')}\n`
+  createYaml.value = yaml
   createLoading.value = true
   try {
-    await configMapApi.applyYaml({ clusterId: createForm.clusterId, yaml })
+    const toApply = createYaml.value || yaml
+    await configMapApi.applyYaml({ clusterId: createForm.clusterId, yaml: toApply })
     ElMessage.success('创建成功')
     createDialogVisible.value = false
     fetchList()
@@ -563,10 +587,10 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: var(--gap-4);
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
 }
 .page-header h1 {
   margin: 0;
@@ -575,10 +599,10 @@ onMounted(async () => {
   color: #2c3e50;
 }
 .header-actions { display: flex; gap: 12px; }
-.header-actions :deep(.el-button) { border-radius: 20px; }
-.search-card { margin-bottom: 20px; }
-.table-card { margin-bottom: 20px; }
+.search-card { margin-bottom: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
+.table-card { margin-bottom: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
 .pagination-wrapper { display: flex; justify-content: flex-end; margin-top: 20px; }
+.kv-toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
 .kv-toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
 
 /* 下拉菜单圆润样式 */

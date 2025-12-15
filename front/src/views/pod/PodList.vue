@@ -158,12 +158,11 @@
     </el-card>
 
     <!-- 查看YAML对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="yamlDialogVisible" 
       title="查看YAML" 
+      subtitle="Pod 配置"
       width="90%"
-      :before-close="() => yamlDialogVisible = false"
-      destroy-on-close
     >
       <div class="yaml-dialog-content">
         <div class="yaml-info">
@@ -191,7 +190,7 @@
           <span style="color: #909399; font-size: 12px; margin-left: 10px;">注意：Pod不支持修改操作</span>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 日志查看对话框 -->
      <el-dialog
@@ -315,6 +314,7 @@ import {
 } from '@/api/pod'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 
@@ -972,10 +972,10 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: var(--gap-4);
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
 }
 
 .page-header h1 {

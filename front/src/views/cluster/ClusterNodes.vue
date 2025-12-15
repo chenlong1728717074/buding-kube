@@ -193,11 +193,11 @@
     </el-card>
 
     <!-- 节点详情对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="detailDialogVisible" 
       title="节点详情" 
+      subtitle="基础信息与资源"
       width="80%"
-      :before-close="handleDetailDialogClose"
     >
       <div v-if="selectedNode" class="node-detail">
         <!-- 基本信息 -->
@@ -265,7 +265,7 @@
           </div>
         </div>
       </div>
-    </el-dialog>
+    </UnifiedDialog>
   </div>
 </template>
 
@@ -273,6 +273,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import { 
   ArrowLeft, 
   Refresh, 

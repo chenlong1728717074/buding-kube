@@ -126,12 +126,11 @@
     </el-card>
 
     <!-- 查看YAML对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="viewYamlDialogVisible" 
       title="查看YAML" 
+      subtitle="Ingress 配置"
       width="90%"
-      :before-close="() => viewYamlDialogVisible = false"
-      destroy-on-close
     >
       <div class="yaml-dialog-content">
         <div class="yaml-info">
@@ -169,7 +168,7 @@
           <el-button @click="viewYamlDialogVisible = false">关闭</el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
   </div>
 </template>
 
@@ -183,6 +182,7 @@ import { clusterApi } from '@/api/cluster'
 import { namespaceApi } from '@/api/namespace'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 
 // 路由

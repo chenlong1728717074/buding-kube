@@ -1,0 +1,71 @@
+.el-button--primary {
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-400));
+  border: none;
+}
+.el-button--success,
+.el-button--danger,
+.el-button--info,
+.el-button--warning {
+  border-radius: 999px;
+}
+.el-dropdown-menu {
+  border-radius: var(--radius-md);
+  padding: var(--gap-1) var(--gap-2);
+}
+.el-dropdown-menu__item {
+  border-radius: 14px;
+  margin: 2px 4px;
+}
+.el-dropdown-menu__item:hover {
+  background: #eef2ff;
+  color: var(--brand-500);
+}
+.el-dialog {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.el-dialog__header {
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(59,130,246,0.12);
+}
+.el-dialog__footer {
+  border-top: 1px solid rgba(59,130,246,0.08);
+}
+.el-dialog__headerbtn .el-dialog__close {
+  color: var(--text-secondary);
+}
+.el-overlay {
+  backdrop-filter: blur(4px);
+}
+.el-button--primary {
+  box-shadow: 0 8px 20px rgba(59,130,246,0.25);
+}
+.el-button--danger {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  border: none;
+  box-shadow: 0 8px 20px rgba(239,68,68,0.25);
+}
+.el-card {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+.el-table th {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 1;
+}
+.el-table tr:hover > td {
+  background: #f5f8ff;
+}
+.el-pagination {
+  padding: var(--gap-2) 0;
+}
+.el-message {
+  border-radius: var(--radius-md);
+}
+.el-tag {
+  border-radius: 10px;
+}

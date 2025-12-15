@@ -61,7 +61,7 @@
     </div>
 
     <!-- 编辑信息 -->
-    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="500px" :close-on-click-modal="false">
+    <UnifiedDialog v-model="editInfoDialogVisible" title="编辑信息" subtitle="修改别名与备注" width="500px">
       <el-form :model="editInfoForm" label-width="100px">
         <el-form-item label="别名"><el-input v-model="editInfoForm.alias" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="editInfoForm.describe" type="textarea" :rows="3" /></el-form-item>
@@ -70,10 +70,10 @@
         <el-button @click="editInfoDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="editInfoLoading" @click="confirmEditInfo">确定</el-button>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 编辑设置（data） -->
-    <el-dialog v-model="editDataDialogVisible" title="编辑设置" width="700px" :close-on-click-modal="false">
+    <UnifiedDialog v-model="editDataDialogVisible" title="编辑设置" subtitle="仅修改 data 键值" width="700px">
       <div class="kv-editor">
         <div class="kv-toolbar">
           <el-button size="small" type="primary" @click="addDataRow">新增键值</el-button>
@@ -95,10 +95,10 @@
         <el-button @click="editDataDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="editDataLoading" @click="confirmEditData">保存</el-button>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 查看/编辑YAML（修改时不允许选择集群） -->
-    <el-dialog v-model="yamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" destroy-on-close>
+    <UnifiedDialog v-model="yamlDialogVisible" title="查看/编辑YAML" subtitle="应用到当前集群" width="90%">
       <div class="yaml-editor-wrapper">
         <YamlEditor :model-value="yamlContent" height="500px" @update:modelValue="val => yamlContent = val" />
       </div>
@@ -107,7 +107,7 @@
         <el-button type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
         <span style="color:#909399;font-size:12px;margin-left:10px;">应用到当前集群：{{ clusterId }}</span>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 删除确认 -->
     <DeleteConfirmDialog
@@ -129,6 +129,7 @@ import { ArrowLeft, ArrowDown } from '@element-plus/icons-vue'
 import { configMapApi, type ConfigMapVO } from '@/api/configmap'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 
 const route = useRoute()
 const router = useRouter()

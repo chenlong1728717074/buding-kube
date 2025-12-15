@@ -1,7 +1,7 @@
 <template>
   <el-container class="layout-container">
     <!-- 侧边栏 -->
-    <el-aside :width="isCollapsed ? '72px' : '250px'" class="sidebar">
+<el-aside :width="isCollapsed ? '72px' : '250px'" class="sidebar">
       <div class="logo">
         <h2>{{ isCollapsed ? 'K' : 'K8s管理平台' }}</h2>
       </div>
@@ -9,9 +9,6 @@
         :default-active="activeMenu"
         router
         class="sidebar-menu"
-        background-color="#304156"
-        text-color="#bfcbd9"
-        active-text-color="#409EFF"
         :collapse="isCollapsed"
         :collapse-transition="false"
         unique-opened
@@ -169,7 +166,7 @@
         </div>
         <div class="header-right">
           <div class="header-extras">
-            <el-tag size="small" type="info" effect="plain">{{ nowText }}</el-tag>
+            <el-tag size="small" type="info" effect="plain" class="capsule">{{ nowText }}</el-tag>
             <el-link :underline="false" href="https://github.com/chenlong1728717074/buding-kube" target="_blank" type="primary" class="gh-link">
               GitHub
             </el-link>
@@ -318,7 +315,8 @@ const showComingSoon = (event: Event) => {
 }
 
 .sidebar {
-  background: linear-gradient(180deg, #0b1020, #101a33);
+  background: #ffffff;
+  border-right: 1px solid rgba(59,130,246,0.16);
   overflow: hidden;
 }
 
@@ -327,12 +325,12 @@ const showComingSoon = (event: Event) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(90deg, #0e1426, #16213e);
-  border-bottom: 1px solid rgba(64,158,255,0.25);
+  background: #ffffff;
+  border-bottom: 1px solid rgba(59,130,246,0.12);
 }
 
 .logo h2 {
-  color: #9ec9ff;
+  color: var(--brand-500);
   margin: 0;
   font-size: 18px;
   font-weight: 600;
@@ -359,21 +357,16 @@ const showComingSoon = (event: Event) => {
 }
 
 .sidebar-menu .el-menu-item:hover {
-  background-color: rgba(64,158,255,0.12) !important;
+  background-color: #f5f8ff !important;
 }
 
 .sidebar-menu .el-menu-item.is-active {
-  background-color: rgba(79,70,229,0.35) !important;
-  color: #e0e7ff !important;
+  background-color: #eef2ff !important;
+  color: var(--brand-600) !important;
 }
 
-.sidebar-menu .el-menu-item.is-active span {
-  color: #fff !important;
-}
-
-.sidebar-menu .el-menu-item.is-active .el-icon {
-  color: #fff !important;
-}
+.sidebar-menu .el-menu-item.is-active span { color: var(--brand-600) !important; }
+.sidebar-menu .el-menu-item.is-active .el-icon { color: var(--brand-600) !important; }
 
 .sidebar-menu .el-sub-menu.is-active .el-sub-menu__title {
   color: #93c5fd !important;
@@ -390,7 +383,7 @@ const showComingSoon = (event: Event) => {
 .header {
   background: #ffffff;
   border-bottom: 1px solid rgba(59,130,246,0.16);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-card);
   display: flex;
   align-items: center;
   justify-content: space-between;

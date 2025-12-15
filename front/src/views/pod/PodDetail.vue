@@ -276,12 +276,11 @@
     />
 
     <!-- YAML查看对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="yamlDialogVisible" 
       title="查看YAML" 
+      subtitle="Pod 配置"
       width="90%"
-      :close-on-click-modal="false"
-      destroy-on-close
     >
       <div class="yaml-dialog-content">
         <div class="yaml-info">
@@ -309,7 +308,7 @@
           <span style="color: #909399; font-size: 12px; margin-left: 10px;">注意：Pod不支持修改操作</span>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 文件下载对话框 -->
     <el-dialog
@@ -532,6 +531,7 @@ import {
 } from '@/api/pod'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 
 const route = useRoute()
 const router = useRouter()

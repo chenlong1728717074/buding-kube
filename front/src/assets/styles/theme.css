@@ -1,0 +1,36 @@
+:root {
+  --brand-600: #2563eb;
+  --brand-500: #3b82f6;
+  --brand-400: #60a5fa;
+  --bg-page: #f6f9fc;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --shadow-card: 0 6px 18px rgba(31,41,55,0.08);
+  --shadow-hover: 0 8px 24px rgba(31,41,55,0.12);
+  --gap-1: 6px;
+  --gap-2: 10px;
+  --gap-3: 16px;
+  --gap-4: 20px;
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+
+.page-header {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.card {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.capsule {
+  border-radius: 999px;
+}

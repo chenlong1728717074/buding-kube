@@ -161,11 +161,11 @@
     </div>
 
     <!-- YAML查看对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="yamlDialogVisible" 
       title="查看YAML" 
+      subtitle="Namespace 配置"
       width="80%"
-      destroy-on-close
     >
       <div class="yaml-dialog-content">
         <div class="yaml-info">
@@ -196,7 +196,7 @@
           <el-button @click="yamlDialogVisible = false">关闭</el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 删除确认对话框 -->
     <DeleteConfirmDialog
@@ -224,6 +224,7 @@ import {
 import { namespaceApi, type NamespaceVO, type NamespaceBaseDTO } from '@/api/namespace'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 
 const route = useRoute()
 const router = useRouter()

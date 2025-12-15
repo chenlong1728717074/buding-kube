@@ -203,11 +203,11 @@
     </el-card>
 
     <!-- Pod详情对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="detailDialogVisible" 
       title="Pod详情" 
+      subtitle="基础信息与容器"
       width="80%"
-      :before-close="handleDetailDialogClose"
     >
       <div v-if="selectedPod" class="pod-detail">
         <!-- 基本信息 -->
@@ -298,14 +298,14 @@
           </div>
         </div>
       </div>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 日志对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="logDialogVisible" 
       title="Pod日志" 
+      subtitle="容器日志查看"
       width="80%"
-      :before-close="handleLogDialogClose"
     >
       <div class="log-container">
         <div class="log-header">
@@ -368,7 +368,7 @@
           <pre v-loading="logLoading" :style="{ color: logTextColor, backgroundColor: logBackgroundColor }">{{ logContent }}</pre>
         </div>
       </div>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 删除确认对话框 -->
     <DeleteConfirmDialog
@@ -386,6 +386,7 @@
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import { 
   ArrowLeft, 
   Refresh, 

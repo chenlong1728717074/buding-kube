@@ -159,12 +159,11 @@
     </el-card>
 
     <!-- 编辑StatefulSet对话框 -->
-    <el-dialog
+    <UnifiedDialog
       v-model="editDialogVisible"
       title="编辑StatefulSet"
+      subtitle="修改别名与描述"
       width="600px"
-      :before-close="() => editDialogVisible = false"
-      destroy-on-close
     >
       <el-form
         :model="editForm"
@@ -223,15 +222,14 @@
           <el-button type="primary" @click="handleSaveEdit">保存</el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- YAML添加对话框 -->
-    <el-dialog
+    <UnifiedDialog
       v-model="yamlDialogVisible"
       title="YAML添加StatefulSet"
+      subtitle="通过 YAML 快速创建"
       width="80%"
-      :before-close="() => yamlDialogVisible = false"
-      destroy-on-close
     >
       <el-form
         :model="yamlForm"
@@ -269,15 +267,14 @@
           <el-button type="primary" @click="handleApplyYaml">应用</el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 查看/编辑YAML对话框 -->
-    <el-dialog
+    <UnifiedDialog
       v-model="viewYamlDialogVisible"
       title="查看/编辑YAML"
+      subtitle="StatefulSet 配置"
       width="90%"
-      :before-close="() => viewYamlDialogVisible = false"
-      destroy-on-close
     >
       <div class="yaml-dialog-content">
         <div class="yaml-info">
@@ -307,7 +304,7 @@
           <el-button type="primary" @click="handleApplyEditYaml" :loading="applyLoading">应用修改</el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
   </div>
 </template>
 
@@ -320,6 +317,7 @@ import { statefulSetApi, type StatefulSetVO, type StatefulSetQueryDTO } from '@/
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import YamlEditor from '@/components/YamlEditor.vue'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 
 // 路由
 const router = useRouter()

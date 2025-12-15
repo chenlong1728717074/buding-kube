@@ -138,12 +138,11 @@
     </el-card>
 
     <!-- 新增/编辑命名空间对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="dialogVisible" 
       :title="dialogTitle" 
+      subtitle="命名空间基础信息"
       width="600px"
-      :before-close="handleDialogClose"
-      destroy-on-close
     >
       <el-form 
         ref="formRef" 
@@ -196,20 +195,17 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="handleDialogClose">取消</el-button>
-          <el-button type="primary" @click="handleSubmit" :loading="submitLoading">
-            确定
-          </el-button>
+          <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- YAML添加命名空间对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="yamlDialogVisible" 
       title="YAML添加命名空间" 
+      subtitle="通过 YAML 快速创建"
       width="80%"
-      :before-close="() => yamlDialogVisible = false"
-      destroy-on-close
     >
       <el-form 
         :model="yamlForm" 
@@ -247,15 +243,14 @@
           <el-button type="primary" @click="handleApplyYaml" :loading="yamlSubmitLoading">应用</el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 查看/编辑YAML对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="viewYamlDialogVisible" 
       title="查看/编辑YAML" 
+      subtitle="命名空间配置"
       width="90%"
-      :before-close="() => viewYamlDialogVisible = false"
-      destroy-on-close
     >
       <div class="yaml-dialog-content">
         <div class="yaml-info">
@@ -285,7 +280,7 @@
           <el-button type="primary" @click="handleApplyEditYaml" :loading="applyLoading">应用修改</el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 删除确认对话框 -->
     <DeleteConfirmDialog
@@ -321,6 +316,7 @@ import {
 } from '@/api/namespace'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 
 const route = useRoute()

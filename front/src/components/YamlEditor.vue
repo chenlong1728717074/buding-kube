@@ -231,7 +231,7 @@ defineExpose({
 <style scoped>
 .yaml-editor {
   border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: #fff;
 }
@@ -241,7 +241,7 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #f8f9fa;
+  background: #fff;
   border-bottom: 1px solid #e4e7ed;
   font-size: 12px;
 }

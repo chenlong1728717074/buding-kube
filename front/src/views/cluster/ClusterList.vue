@@ -127,11 +127,11 @@
     />
 
     <!-- 添加/编辑集群对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="dialogVisible" 
       :title="dialogTitle" 
+      subtitle="填写集群基础信息与配置"
       width="800px"
-      @close="handleDialogClose"
     >
       <el-form ref="formRef" :model="clusterForm" :rules="formRules" label-width="100px">
         <el-form-item label="集群名称" prop="name">
@@ -164,11 +164,9 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">
-          确定
-        </el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
   </div>
 </template>
 
@@ -187,6 +185,7 @@ import { Codemirror } from 'vue-codemirror'
 import { yaml } from '@codemirror/lang-yaml'
 import { oneDark } from '@codemirror/theme-one-dark'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 
 const router = useRouter()
 
@@ -539,10 +538,10 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: var(--gap-4);
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
 }
 
 .page-header h1 {
@@ -557,13 +556,9 @@ onMounted(() => {
   gap: 12px;
 }
 
-.search-card {
-  margin-bottom: 20px;
-}
+.search-card { margin-bottom: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
 
-.table-card {
-  margin-bottom: 20px;
-}
+.table-card { margin-bottom: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
 
 .pagination-wrapper {
   display: flex;

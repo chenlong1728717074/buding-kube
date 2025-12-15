@@ -25,6 +25,7 @@
           @keyup.enter="handleConfirm"
           ref="inputRef"
           size="small"
+          :class="{ 'ok-border': confirmInput === itemName }"
         />
       </div>
     </div>
@@ -182,5 +183,9 @@ const handleConfirm = () => {
 
 :deep(.el-button--danger) {
   border-radius: 20px;
+}
+
+.ok-border :deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px #22c55e inset !important;
 }
 </style>

@@ -166,21 +166,21 @@ restore()
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
-  background: linear-gradient(180deg, #f5faff, #ffffff);
-  border-bottom: 1px solid #e5e7eb;
+  padding: var(--gap-3) var(--gap-4);
+  background: #ffffff;
+  border-bottom: 1px solid rgba(59,130,246,0.12);
 }
 
 .tags-list {
   display: flex;
-  gap: 12px;
+  gap: var(--gap-2);
   overflow-x: auto;
   white-space: nowrap;
 }
 
 .tag-item {
   cursor: pointer;
-  padding: 10px 16px;
+  padding: 8px 14px;
   font-size: 14px;
   border-radius: 999px;
   border-color: #cfe0ff !important;
