@@ -28,10 +28,10 @@
 .el-dialog__header {
   font-weight: 600;
   color: var(--text-primary);
-  border-bottom: 1px solid rgba(59,130,246,0.12);
+  border-bottom: 1px solid #e4e7ed;
 }
 .el-dialog__footer {
-  border-top: 1px solid rgba(59,130,246,0.08);
+  border-top: 1px solid #e4e7ed;
 }
 .el-dialog__headerbtn .el-dialog__close {
   color: var(--text-secondary);

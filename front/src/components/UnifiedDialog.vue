@@ -1,7 +1,6 @@
 <template>
   <el-dialog
     v-model="visible"
-    :title="title"
     :width="width"
     :close-on-click-modal="false"
     destroy-on-close
@@ -50,17 +49,17 @@ watch(visible, v => emit('update:modelValue', v))
 </script>
 
 <style scoped>
-.unified-dialog :deep(.el-dialog__header) { padding: 0; background: transparent; }
+.unified-dialog :deep(.el-dialog__header) { display: none; }
 .unified-dialog :deep(.el-dialog__body) { padding: 0; }
 .unified-dialog :deep(.el-dialog__footer) { padding: 12px 16px; }
 .unified-dialog__header {
   background: #ffffff;
   color: var(--text-primary);
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(59,130,246,0.08);
+  border-bottom: 1px solid #e4e7ed;
 }
 .unified-dialog__title { font-size: 15px; font-weight: 600; }
 .unified-dialog__subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 .unified-dialog__body { padding: 12px 16px; background: #fff; }
-.unified-dialog__footer { background: #fff; border-top: 1px solid rgba(59,130,246,0.08); }
+.unified-dialog__footer { background: #fff; border-top: 1px solid #e4e7ed; }
 </style>

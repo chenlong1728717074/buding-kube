@@ -182,7 +182,7 @@
     </div>
 
     <!-- 修改密码对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="passwordDialogVisible" 
       title="修改密码" 
       width="400px"
@@ -227,7 +227,7 @@
           </el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
   </div>
 </template>
 
@@ -245,6 +245,7 @@ import {
 } from '@element-plus/icons-vue'
 import { userApi } from '@/api/user'
 import { useUserStore } from '@/stores/user'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
 
 const userStore = useUserStore()
 

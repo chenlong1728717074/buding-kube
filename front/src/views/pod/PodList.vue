@@ -193,13 +193,10 @@
     </UnifiedDialog>
 
     <!-- 日志查看对话框 -->
-     <el-dialog
+     <UnifiedDialog
        v-model="logDialogVisible"
        :title="`查看日志 - ${selectedPod?.name || ''}`"
        width="90%"
-       :close-on-click-modal="false"
-       class="log-dialog"
-       @close="handleCloseLogDialog"
      >
        <div class="log-header">
          <div class="log-controls">
@@ -277,7 +274,7 @@
            <el-button @click="handleCloseLogDialog">关闭</el-button>
          </div>
        </template>
-     </el-dialog>
+     </UnifiedDialog>
 
     <!-- 删除确认对话框 -->
     <DeleteConfirmDialog

@@ -1,7 +1,6 @@
 <template>
   <el-dialog
     v-model="visible"
-    :title="title"
     :width="width"
     :close-on-click-modal="false"
     destroy-on-close
@@ -86,11 +85,11 @@ const steps = computed(() => props.steps)
 </script>
 
 <style scoped>
-.step-wizard-dialog :deep(.el-dialog__header) { padding: 0; }
-.header-line { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid rgba(59,130,246,0.08); }
+.step-wizard-dialog :deep(.el-dialog__header) { display: none; }
+.header-line { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e4e7ed; }
 .title { font-size: 15px; font-weight: 600; color: #2E3A59; }
 .actions :deep(.el-switch) { --el-switch-on-color: #e5e7eb; --el-switch-off-color: #e5e7eb; }
-.steps { display: flex; gap: 16px; padding: 8px 16px; border-bottom: 1px solid rgba(59,130,246,0.08); background: #fff; }
+.steps { display: flex; gap: 16px; padding: 8px 16px; border-bottom: 1px solid #e4e7ed; background: #fff; }
 .step { display: flex; align-items: center; gap: 8px; color: #8A93A6; cursor: pointer; }
 .step.active { color: #2E3A59; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; }

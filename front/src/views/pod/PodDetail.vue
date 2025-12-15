@@ -311,11 +311,10 @@
     </UnifiedDialog>
 
     <!-- 文件下载对话框 -->
-    <el-dialog
+    <UnifiedDialog
       v-model="downloadDialogVisible"
       title="下载文件"
       width="500px"
-      :close-on-click-modal="false"
     >
       <el-alert
         title="重要提示"
@@ -352,14 +351,13 @@
           </el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 文件上传对话框 -->
-    <el-dialog
+    <UnifiedDialog
       v-model="uploadDialogVisible"
       title="上传文件"
       width="500px"
-      :close-on-click-modal="false"
     >
       <el-form :model="uploadForm" label-width="100px">
         <el-form-item label="容器名称:">
@@ -402,16 +400,13 @@
           </el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 日志查看对话框 -->
-    <el-dialog
+    <UnifiedDialog
       v-model="logDialogVisible"
       :title="`查看日志 - ${podInfo?.name || ''}`"
       width="90%"
-      :close-on-click-modal="false"
-      class="log-dialog"
-      @close="handleCloseLogDialog"
     >
       <div class="log-header">
         <div class="log-controls">
@@ -503,7 +498,7 @@
           <el-button @click="handleCloseLogDialog">关闭</el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
   </div>
 </template>
 

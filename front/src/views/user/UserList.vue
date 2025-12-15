@@ -214,12 +214,10 @@
     </el-card>
 
     <!-- 新增/编辑用户对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="dialogVisible" 
       :title="dialogTitle" 
       width="600px"
-      :before-close="handleDialogClose"
-      destroy-on-close
     >
       <el-form 
         ref="formRef" 
@@ -299,14 +297,13 @@
           </el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
 
     <!-- 重置密码对话框 -->
-    <el-dialog 
+    <UnifiedDialog 
       v-model="resetPasswordDialogVisible" 
       title="重置密码" 
       width="400px"
-      destroy-on-close
     >
       <el-form 
         ref="resetPasswordFormRef" 
@@ -332,7 +329,27 @@
           </el-button>
         </div>
       </template>
-    </el-dialog>
+    </UnifiedDialog>
+
+    <!-- 删除确认对话框（单个用户） -->
+    <DeleteConfirmDialog
+      v-model="deleteDialogVisible"
+      :item-name="deleteItemName"
+      message="确定要删除用户吗？此操作不可恢复！"
+      :loading="deleteLoading"
+      @confirm="confirmDeleteUser"
+      @cancel="cancelDeleteUser"
+    />
+
+    <!-- 删除确认对话框（批量删除） -->
+    <DeleteConfirmDialog
+      v-model="batchDeleteDialogVisible"
+      :item-name="`${selectedUsers.length} 个用户`"
+      message="确定要批量删除选中的用户吗？此操作不可恢复！"
+      :loading="batchDeleteLoading"
+      @confirm="confirmBatchDeleteUsers"
+      @cancel="cancelBatchDeleteUsers"
+    />
   </div>
 </template>
 
@@ -358,6 +375,8 @@ import {
   type UpdateUserDTO, 
   type ResetPasswordDTO 
 } from '@/api/user'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
+import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -637,56 +656,71 @@ const handleResetPassword = (row: UserVO) => {
 }
 
 // 删除用户
-const handleDelete = async (row: UserVO) => {
+const deleteDialogVisible = ref(false)
+const deleteLoading = ref(false)
+const deleteItemName = ref('')
+const deleteUserId = ref('')
+
+const handleDelete = (row: UserVO) => {
+  deleteItemName.value = row.username
+  deleteUserId.value = row.id
+  deleteDialogVisible.value = true
+}
+
+const confirmDeleteUser = async () => {
+  if (!deleteUserId.value) return
+  deleteLoading.value = true
   try {
-    await ElMessageBox.confirm(
-      `确定要删除用户 "${row.username}" 吗？此操作不可恢复！`,
-      '确认删除',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    await userApi.deleteUser(row.id)
+    await userApi.deleteUser(deleteUserId.value)
     ElMessage.success('删除成功')
+    deleteDialogVisible.value = false
     fetchUserList()
   } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败')
-    }
+    ElMessage.error('删除失败')
+  } finally {
+    deleteLoading.value = false
+    deleteUserId.value = ''
+    deleteItemName.value = ''
   }
 }
 
+const cancelDeleteUser = () => {
+  deleteDialogVisible.value = false
+  deleteUserId.value = ''
+  deleteItemName.value = ''
+}
+
 // 批量删除
-const handleBatchDelete = async () => {
+const batchDeleteDialogVisible = ref(false)
+const batchDeleteLoading = ref(false)
+
+const handleBatchDelete = () => {
   if (selectedUsers.value.length === 0) {
     ElMessage.warning('请选择要删除的用户')
     return
   }
-  
+  batchDeleteDialogVisible.value = true
+}
+
+const confirmBatchDeleteUsers = async () => {
+  if (selectedUsers.value.length === 0) return
+  batchDeleteLoading.value = true
   try {
-    await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedUsers.value.length} 个用户吗？此操作不可恢复！`,
-      '确认批量删除',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
     const ids = selectedUsers.value.map(user => user.id)
     await userApi.batchDeleteUsers(ids)
     ElMessage.success('批量删除成功')
     selectedUsers.value = []
+    batchDeleteDialogVisible.value = false
     fetchUserList()
   } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error('批量删除失败')
-    }
+    ElMessage.error('批量删除失败')
+  } finally {
+    batchDeleteLoading.value = false
   }
+}
+
+const cancelBatchDeleteUsers = () => {
+  batchDeleteDialogVisible.value = false
 }
 
 // 提交表单

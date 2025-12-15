@@ -1,7 +1,6 @@
 <template>
   <el-dialog
     v-model="visible"
-    :title="title"
     width="400px"
     :before-close="handleClose"
     center
@@ -110,6 +109,7 @@ const handleConfirm = () => {
 </script>
 
 <style scoped>
+:deep(.el-dialog__header) { display: none; }
 .delete-confirm-content {
   padding: 8px 0;
 }
