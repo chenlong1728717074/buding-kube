@@ -24,11 +24,12 @@ func NewConfigMapApi(router *gin.RouterGroup) *ConfigMapApi {
 
 func (api *ConfigMapApi) Router() {
 	api.router.GET("/list", api.List)
-	api.router.GET("/add", api.Add)
+	api.router.POST("/add", middleware.Blocker(), api.Add)
 	api.router.POST("/apply", middleware.Blocker(), api.Apply)
 	api.router.DELETE("", middleware.Blocker(), api.Delete)
 	api.router.PUT("", middleware.Blocker(), api.Update)
 	api.router.PUT("/data", middleware.Blocker(), api.UpdateData)
+	api.router.PUT("/setting", middleware.Blocker(), api.UpdateSetting)
 }
 
 func (a *ConfigMapApi) List(ctx *gin.Context) {
@@ -116,4 +117,19 @@ func (api *ConfigMapApi) UpdateData(ctx *gin.Context) {
 		return
 	}
 	api.SuccessMsg(ctx, "修改数据成功")
+}
+
+// UpdateSetting - 修改标签和注解
+func (api *ConfigMapApi) UpdateSetting(ctx *gin.Context) {
+	var update dto.ConfigMapSettingDTO
+	if err := ctx.ShouldBindJSON(&update); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	err := api.srv.UpdateSetting(update)
+	if err != nil {
+		api.InternalError(ctx, "修改设置失败:", err)
+		return
+	}
+	api.SuccessMsg(ctx, "修改设置成功")
 }

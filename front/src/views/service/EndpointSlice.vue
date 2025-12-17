@@ -340,13 +340,15 @@ const handleViewYaml = async (row: EndpointSliceVO) => {
 
 .page-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
+  color: #303133;
 }
 
 .search-card {
@@ -366,15 +368,19 @@ const handleViewYaml = async (row: EndpointSliceVO) => {
 .yaml-dialog-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  height: 70vh;
 }
 
 .yaml-info {
   margin-bottom: 16px;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
 }
 
 .yaml-editor-wrapper {
   flex: 1;
+  min-height: 0;
 }
 
 .dialog-footer {

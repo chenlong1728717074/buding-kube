@@ -14,10 +14,12 @@ type ServiceAccountApi struct {
 }
 
 func NewServiceAccountApi(router *gin.RouterGroup) *ServiceAccountApi {
-	return &ServiceAccountApi{
+	api := ServiceAccountApi{
 		router: router,
 		srv:    service.GetSingletonServiceAccountService(),
 	}
+	api.Router()
+	return &api
 }
 
 func (api *ServiceAccountApi) Router() {

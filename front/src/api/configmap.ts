@@ -30,8 +30,28 @@ export interface ConfigMapDataUpdateDTO {
   data: Record<string, string>
 }
 
+export interface ConfigMapSettingUpdateDTO {
+  clusterId: string
+  namespace: string
+  name: string
+  annotations?: Record<string, string>
+  labels?: Record<string, string>
+}
+
+export interface ConfigMapCreateDTO {
+  clusterId: string
+  namespace: string
+  name: string
+  alias?: string
+  describe?: string
+  data?: Record<string, string>
+  annotations?: Record<string, string>
+  labels?: Record<string, string>
+}
+
 export interface ConfigMapApplyDTO {
   clusterId: string
+  namespace?: string
   yaml: string
 }
 
@@ -51,11 +71,17 @@ export const configMapApi = {
   getList(params: ConfigMapPageQueryDTO): Promise<ApiResponse<PageResponse<ConfigMapVO>>> {
     return request.get('/configMap/list', { params })
   },
+  add(data: ConfigMapCreateDTO): Promise<ApiResponse<void>> {
+    return request.post('/configMap/add', data)
+  },
   updateInfo(data: ConfigMapInfoUpdateDTO): Promise<ApiResponse<void>> {
     return request.put('/configMap', data)
   },
   updateData(data: ConfigMapDataUpdateDTO): Promise<ApiResponse<void>> {
     return request.put('/configMap/data', data)
+  },
+  updateSetting(data: ConfigMapSettingUpdateDTO): Promise<ApiResponse<void>> {
+    return request.put('/configMap/setting', data)
   },
   applyYaml(data: ConfigMapApplyDTO): Promise<ApiResponse<void>> {
     return request.post('/configMap/apply', data)

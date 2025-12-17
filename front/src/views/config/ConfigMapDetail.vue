@@ -47,6 +47,26 @@
 
       <el-card class="info-card">
         <template #header>
+          <span>标签</span>
+        </template>
+        <el-table :data="labelRows" size="small" style="width:100%">
+          <el-table-column prop="key" label="键" width="260" />
+          <el-table-column prop="value" label="值" />
+        </el-table>
+      </el-card>
+
+      <el-card class="info-card">
+        <template #header>
+          <span>注解</span>
+        </template>
+        <el-table :data="annotationRows" size="small" style="width:100%">
+          <el-table-column prop="key" label="键" width="260" />
+          <el-table-column prop="value" label="值" />
+        </el-table>
+      </el-card>
+
+      <el-card class="info-card">
+        <template #header>
           <span>数据</span>
         </template>
         <el-table :data="dataRows" size="small" style="width:100%">
@@ -61,7 +81,7 @@
     </div>
 
     <!-- 编辑信息 -->
-    <UnifiedDialog v-model="editInfoDialogVisible" title="编辑信息" subtitle="修改别名与备注" width="500px">
+    <UnifiedDialog v-model="editInfoDialogVisible" title="编辑信息" subtitle="修改别名与备注" width="80%">
       <el-form :model="editInfoForm" label-width="100px">
         <el-form-item label="别名"><el-input v-model="editInfoForm.alias" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="editInfoForm.describe" type="textarea" :rows="3" /></el-form-item>
@@ -73,7 +93,7 @@
     </UnifiedDialog>
 
     <!-- 编辑设置（data） -->
-    <UnifiedDialog v-model="editDataDialogVisible" title="编辑设置" subtitle="仅修改 data 键值" width="700px">
+    <UnifiedDialog v-model="editDataDialogVisible" title="编辑设置" subtitle="仅修改 data 键值" width="80%">
       <div class="kv-editor">
         <div class="kv-toolbar">
           <el-button size="small" type="primary" @click="addDataRow">新增键值</el-button>
@@ -100,7 +120,7 @@
     <!-- 查看/编辑YAML（修改时不允许选择集群） -->
     <UnifiedDialog v-model="yamlDialogVisible" title="查看/编辑YAML" subtitle="应用到当前集群" width="90%">
       <div class="yaml-editor-wrapper">
-        <YamlEditor :model-value="yamlContent" height="500px" @update:modelValue="val => yamlContent = val" />
+        <YamlEditor :model-value="yamlContent" :readonly="false" height="500px" @update:modelValue="val => yamlContent = val" />
       </div>
       <template #footer>
         <el-button @click="yamlDialogVisible = false">关闭</el-button>
@@ -139,6 +159,8 @@ const name = ref('')
 const loading = ref(false)
 const cm = ref<ConfigMapVO | null>(null)
 const dataRows = ref<{ key:string; value:string }[]>([])
+const labelRows = ref<{ key:string; value:string }[]>([])
+const annotationRows = ref<{ key:string; value:string }[]>([])
 const detailRef = ref()
 
 const editInfoDialogVisible = ref(false)
@@ -188,6 +210,10 @@ const fetchDetailFromList = async () => {
       const found = items.find((it: ConfigMapVO) => it.name === name.value)
       cm.value = found || null
       dataRows.value = Object.entries(found?.data || {}).map(([k,v]) => ({ key: k, value: v }))
+      labelRows.value = Object.entries(found?.labels || {}).map(([k,v]) => ({ key: k, value: String(v ?? '') }))
+      annotationRows.value = Object.entries(found?.annotations || {})
+        .filter(([k]) => k !== 'alias' && k !== 'describe')
+        .map(([k,v]) => ({ key: k, value: String(v ?? '') }))
     }
   } catch (e) {
     ElMessage.error('获取详情失败')
@@ -235,7 +261,7 @@ const confirmApplyYaml = async () => {
   if (!yamlContent.value) { ElMessage.warning('YAML内容为空'); return }
   yamlApplyLoading.value = true
   try {
-    await configMapApi.applyYaml({ clusterId: clusterId.value, yaml: yamlContent.value })
+    await configMapApi.applyYaml({ clusterId: clusterId.value, namespace: namespace.value, yaml: yamlContent.value })
     ElMessage.success('YAML应用成功')
     yamlDialogVisible.value = false
     fetchDetailFromList()

@@ -69,7 +69,6 @@
             :disabled="selectedUsers.length === 0" 
             @click="handleBatchDelete"
             type="danger"
-            plain
           >
             <el-icon><Delete /></el-icon>
             批量删除 ({{ selectedUsers.length }})
@@ -217,7 +216,7 @@
     <UnifiedDialog 
       v-model="dialogVisible" 
       :title="dialogTitle" 
-      width="600px"
+      width="80%"
     >
       <el-form 
         ref="formRef" 
@@ -303,7 +302,7 @@
     <UnifiedDialog 
       v-model="resetPasswordDialogVisible" 
       title="重置密码" 
-      width="400px"
+      width="80%"
     >
       <el-form 
         ref="resetPasswordFormRef" 

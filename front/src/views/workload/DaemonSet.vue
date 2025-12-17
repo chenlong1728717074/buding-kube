@@ -163,7 +163,7 @@
       v-model="editDialogVisible"
       title="编辑DaemonSet"
       subtitle="修改别名与描述"
-      width="600px"
+      width="80%"
     >
       <el-form
         :model="editForm"
@@ -251,13 +251,15 @@
         </el-form-item>
 
         <el-form-item label="YAML配置">
-          <el-input
-            v-model="yamlForm.yaml"
-            type="textarea"
-            :rows="20"
-            placeholder="请输入DaemonSet的YAML配置"
-            style="font-family: 'Courier New', monospace;"
-          />
+          <div class="yaml-editor-wrapper">
+            <YamlEditor
+              v-model="yamlForm.yaml"
+              title="DaemonSet YAML"
+              :readonly="false"
+              height="500px"
+              filename="daemonset.yaml"
+            />
+          </div>
         </el-form-item>
       </el-form>
 
@@ -289,6 +291,8 @@
         <div class="yaml-editor-wrapper">
           <YamlEditor
             :modelValue="viewYamlForm.yaml"
+            :readonly="false"
+            height="500px"
             @change="handleYamlChange"
           />
         </div>

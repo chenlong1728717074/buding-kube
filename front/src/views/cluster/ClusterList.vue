@@ -131,37 +131,42 @@
       v-model="dialogVisible" 
       :title="dialogTitle" 
       subtitle="填写集群基础信息与配置"
-      width="800px"
+      width="80%"
     >
-      <el-form ref="formRef" :model="clusterForm" :rules="formRules" label-width="100px">
-        <el-form-item label="集群名称" prop="name">
-          <el-input v-model="clusterForm.name" placeholder="请输入集群名称" />
-        </el-form-item>
-        <el-form-item v-if="showField('alias')" label="集群别名" prop="alias">
-          <el-input v-model="clusterForm.alias" placeholder="请输入集群别名" />
-        </el-form-item>
-        <el-form-item v-if="showField('describe')" label="描述" prop="describe">
-          <el-input 
-            v-model="clusterForm.describe" 
-            type="textarea" 
-            :rows="3"
-            placeholder="请输入集群描述"
-          />
-        </el-form-item>
-        <el-form-item v-if="showField('config')" label="集群配置" prop="config">
-          <div class="yaml-editor-container" style="width: 100%; max-width: 100%; overflow: hidden;">
-            <codemirror
-              v-model="clusterForm.config"
-              placeholder="请输入集群配置（kubeconfig内容）"
-              :style="{ height: '300px', width: '100%', maxWidth: '100%', border: '1px solid #dcdfe6', borderRadius: '4px', overflow: 'hidden' }"
-              :autofocus="true"
-              :indent-with-tab="true"
-              :tab-size="2"
-              :extensions="extensions"
+      <div class="group-box" style="margin-bottom: 12px;">
+        <div class="group-title">基础信息</div>
+        <el-form ref="formRef" :model="clusterForm" :rules="formRules" label-width="100px">
+          <el-form-item label="集群名称" prop="name">
+            <el-input v-model="clusterForm.name" placeholder="请输入集群名称" />
+          </el-form-item>
+          <el-form-item v-if="showField('alias')" label="集群别名" prop="alias">
+            <el-input v-model="clusterForm.alias" placeholder="请输入集群别名" />
+          </el-form-item>
+          <el-form-item v-if="showField('describe')" label="描述" prop="describe">
+            <el-input 
+              v-model="clusterForm.describe" 
+              type="textarea" 
+              :rows="3"
+              placeholder="请输入集群描述"
             />
-          </div>
-        </el-form-item>
-      </el-form>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <div class="group-box">
+        <div class="group-title">集群配置</div>
+        <div class="yaml-editor-container" style="width: 100%; max-width: 100%; overflow: hidden;">
+          <codemirror
+            v-model="clusterForm.config"
+            placeholder="请输入集群配置（kubeconfig内容）"
+            :style="{ height: '300px', width: '100%', maxWidth: '100%', border: '1px solid #dcdfe6', borderRadius: '10px', overflow: 'hidden' }"
+            :autofocus="true"
+            :indent-with-tab="true"
+            :tab-size="2"
+            :extensions="extensions"
+          />
+        </div>
+      </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>

@@ -24,6 +24,8 @@ body {
   --el-text-color-primary: #1f2937;
   --el-text-color-regular: #374151;
   --el-text-color-secondary: #6b7280;
+  --brand-accent-border: #cfe5ff;
+  --brand-panel-bg: #f0f9ff;
 }
 
 /* 圆润与对比度优化 */
@@ -51,13 +53,127 @@ body {
 }
 
 .page-header {
-  border: 1px solid rgba(59,130,246,0.12);
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 20px !important;
+  padding: var(--gap-4) !important;
+  background: #ffffff !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-card) !important;
+  border: 1px solid rgba(59,130,246,0.12) !important;
+}
+
+.header-actions {
+  display: flex !important;
+  gap: 12px !important;
+  flex-wrap: wrap;
+}
+
+.search-card,
+.table-card {
+  margin-bottom: 20px !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.pagination-wrapper {
+  display: flex !important;
+  justify-content: flex-end !important;
+  margin-top: 20px !important;
+}
+
+.kv-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.yaml-editor-wrapper {
+  border: 1px solid #e4e7ed;
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 .el-input__wrapper,
 .el-select__wrapper,
 .el-textarea__inner {
   border-radius: 10px !important;
+}
+
+/* 分组盒子（Kuboard风） */
+.group-box {
+  border: 1px dashed #9ec5fe;
+  border-radius: 12px;
+  background: var(--brand-panel-bg);
+  padding: 12px;
+}
+.group-title {
+  font-size: 13px;
+  color: #1e3a8a;
+  margin-bottom: 8px;
+}
+
+/* 深色确认栏（✔/✖） */
+.dark-confirm-bar {
+  margin-top: 8px;
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e2e8f0;
+}
+.dark-confirm-bar .bar-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.dark-confirm-bar :is(.el-button) {
+  border-radius: 999px;
+}
+.dark-confirm-bar .el-button--success {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+.dark-confirm-bar .el-button--info.is-plain {
+  background: transparent;
+  border-color: #64748b;
+  color: #cbd5e1;
+}
+
+/* 浅色确认栏（用于 ConfigMap 添加键值） */
+.light-confirm-bar {
+  margin-top: 8px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.light-confirm-bar .bar-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.light-confirm-bar :is(.el-button) {
+  border-radius: 999px;
+}
+
+/* 对话框头/脚统一细化 */
+.el-dialog__header,
+.unified-dialog__header {
+  border-bottom: 1px solid var(--brand-accent-border) !important;
+}
+.el-dialog__footer,
+.unified-dialog__footer {
+  border-top: 1px solid #e5e7eb !important;
+}
+
+/* 表单标签与间距优化 */
+.el-form-item__label {
+  color: #475569 !important;
+  font-weight: 500 !important;
+}
+.el-form-item {
+  margin-bottom: 12px !important;
 }
 
 /* 响应式字体大小 */

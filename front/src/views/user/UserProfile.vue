@@ -185,7 +185,7 @@
     <UnifiedDialog 
       v-model="passwordDialogVisible" 
       title="修改密码" 
-      width="400px"
+      width="80%"
     >
       <el-form 
         ref="passwordFormRef" 

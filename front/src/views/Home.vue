@@ -192,7 +192,7 @@ onMounted(() => {
   loadDashboardData()
 })
 function openDocs() {
-  window.open('https://kubernetes.io/zh-cn/docs', '_blank');
+  window.open('https://kubernetes.io/zh-cn/docs', '_blank', 'noopener,noreferrer')
 }
 </script>
 

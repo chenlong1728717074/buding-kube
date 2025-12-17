@@ -25,3 +25,9 @@ type ConfigMapDataDTO struct {
 	BaseInfoDTO
 	Data map[string]string `json:"data"`
 }
+
+type ConfigMapSettingDTO struct {
+	BaseInfoDTO
+	Annotations map[string]string `json:"annotations"`
+	Labels      map[string]string `json:"labels"`
+}

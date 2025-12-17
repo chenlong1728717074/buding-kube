@@ -142,7 +142,7 @@
       v-model="dialogVisible" 
       :title="dialogTitle" 
       subtitle="命名空间基础信息"
-      width="600px"
+      width="80%"
     >
       <el-form 
         ref="formRef" 

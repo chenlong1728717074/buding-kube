@@ -17,15 +17,15 @@ type BaseDTO struct {
 	// 集群ID
 	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`
 	// Name 资源名称
-	Name string `json:"name"`
+	Name string `json:"name" form:"name"`
 	// Namespace 命名空间
-	Namespace string `json:"namespace"`
+	Namespace string `json:"namespace" form:"namespace"`
 }
 
 type BaseInfoDTO struct {
 	BaseDTO
-	Alias    string `json:"alias"`
-	Describe string `json:"describe"`
+	Alias    string `json:"alias" form:"alias"`
+	Describe string `json:"describe" form:"describe"`
 }
 
 type ResourcePageQueryBaseDTO struct {

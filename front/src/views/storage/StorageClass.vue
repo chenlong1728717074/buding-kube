@@ -1,0 +1,218 @@
+<template>
+  <div class="storageclass-page">
+    <div class="page-header">
+      <h1>StorageClass管理</h1>
+    </div>
+
+    <el-card class="search-card">
+      <el-form :model="searchForm" inline>
+        <el-form-item label="集群">
+          <el-select v-model="searchForm.clusterId" placeholder="请选择集群" style="width: 220px" clearable @change="handleClusterChange">
+            <el-option v-for="cluster in clusterList" :key="cluster.id" :label="cluster.name" :value="cluster.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="关键词">
+          <el-input v-model="searchForm.keyword" placeholder="名称关键字" clearable style="width: 220px" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
+          <el-button @click="handleReset">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card class="table-card">
+      <el-table v-loading="loading" :data="items" stripe style="width: 100%">
+        <el-table-column prop="name" label="名称" min-width="160" />
+        <el-table-column prop="provisioner" label="Provisioner" min-width="220" />
+        <el-table-column prop="reclaimPolicy" label="ReclaimPolicy" min-width="140" />
+        <el-table-column prop="volumeBindingMode" label="BindingMode" min-width="140" />
+        <el-table-column prop="allowVolumeExpansion" label="扩容" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.allowVolumeExpansion ? 'success' : 'info'">{{ row.allowVolumeExpansion ? '是' : '否' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" min-width="180">
+          <template #default="{ row }">{{ formatDate(row.createTime || row.creationTimestamp) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="140" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" @click="openYaml(row)">YAML</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.pageSize"
+          :total="pagination.total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+    </el-card>
+
+    <UnifiedDialog v-model="yamlDialogVisible" title="查看YAML" subtitle="StorageClass 配置" width="90%">
+      <div class="yaml-editor-wrapper">
+        <YamlEditor :model-value="yamlContent" :readonly="true" height="520px" />
+      </div>
+      <template #footer>
+        <el-button @click="yamlDialogVisible = false">关闭</el-button>
+      </template>
+    </UnifiedDialog>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Search, Refresh } from '@element-plus/icons-vue'
+import { clusterApi, type ClusterVO } from '@/api/cluster'
+import { storageClassApi, type StorageClassVO, type StorageClassPageQueryDTO } from '@/api/storageclass'
+import UnifiedDialog from '@/components/UnifiedDialog.vue'
+import YamlEditor from '@/components/YamlEditor.vue'
+
+const loading = ref(false)
+const items = ref<StorageClassVO[]>([])
+const clusterList = ref<ClusterVO[]>([])
+
+const searchForm = reactive<StorageClassPageQueryDTO>({
+  clusterId: '',
+  page: 1,
+  pageSize: 20,
+  keyword: ''
+})
+
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
+  total: 0
+})
+
+const yamlDialogVisible = ref(false)
+const yamlContent = ref('')
+
+const formatDate = (dateString?: string) => {
+  if (!dateString) return '-'
+  try {
+    const d = new Date(dateString)
+    if (isNaN(d.getTime())) return '-'
+    return d.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch {
+    return '-'
+  }
+}
+
+const fetchClusters = async () => {
+  try {
+    const resp = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
+    if ((resp as any)?.data?.items) {
+      clusterList.value = (resp as any).data.items
+      if (!searchForm.clusterId && clusterList.value.length > 0) {
+        searchForm.clusterId = clusterList.value[0].id || clusterList.value[0].name
+      }
+    }
+  } catch {
+    ElMessage.error('获取集群列表失败')
+  }
+}
+
+const fetchList = async () => {
+  if (!searchForm.clusterId) {
+    items.value = []
+    pagination.total = 0
+    return
+  }
+  loading.value = true
+  try {
+    const resp = await storageClassApi.getList({
+      clusterId: searchForm.clusterId,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      keyword: searchForm.keyword || ''
+    })
+    if (resp.code === 200) {
+      const list = (resp.data as any).items || (resp.data as any).list || []
+      const total = (resp.data as any).total || (resp.data as any).totalCount || 0
+      items.value = list
+      pagination.total = total
+    }
+  } catch {
+    ElMessage.error('获取StorageClass列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleClusterChange = async () => {
+  pagination.page = 1
+  await fetchList()
+}
+
+const handleSearch = () => {
+  pagination.page = 1
+  fetchList()
+}
+
+const handleReset = async () => {
+  searchForm.keyword = ''
+  pagination.page = 1
+  await fetchList()
+}
+
+const handleSizeChange = (size: number) => {
+  pagination.pageSize = size
+  pagination.page = 1
+  fetchList()
+}
+
+const handleCurrentChange = (page: number) => {
+  pagination.page = page
+  fetchList()
+}
+
+const openYaml = (row: StorageClassVO) => {
+  yamlContent.value = row.yaml || ''
+  yamlDialogVisible.value = true
+}
+
+onMounted(async () => {
+  await fetchClusters()
+  await fetchList()
+})
+</script>
+
+<style scoped>
+.storageclass-page { padding: 20px; }
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: var(--gap-4);
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+.page-header h1 { margin: 0; font-size: 24px; font-weight: 600; color: #2c3e50; }
+.search-card { margin-bottom: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
+.table-card { margin-bottom: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
+.pagination-wrapper { display: flex; justify-content: flex-end; margin-top: 20px; }
+</style>
+

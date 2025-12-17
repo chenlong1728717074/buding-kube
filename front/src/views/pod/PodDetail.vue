@@ -314,7 +314,7 @@
     <UnifiedDialog
       v-model="downloadDialogVisible"
       title="下载文件"
-      width="500px"
+      width="80%"
     >
       <el-alert
         title="重要提示"
@@ -357,7 +357,7 @@
     <UnifiedDialog
       v-model="uploadDialogVisible"
       title="上传文件"
-      width="500px"
+      width="80%"
     >
       <el-form :model="uploadForm" label-width="100px">
         <el-form-item label="容器名称:">

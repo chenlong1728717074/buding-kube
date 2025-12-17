@@ -132,7 +132,7 @@ export const podApi = {
   // 获取Pod日志 - 流式处理
   async getLogs(params: PodLogDTO, onData: (data: string) => void, onError?: (error: Error) => void, signal?: AbortSignal): Promise<void> {
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token')
     
     try {
       const response = await fetch(`${baseURL}/pod/logs`, {
@@ -147,6 +147,8 @@ export const podApi = {
       })
       
       if (response.status === 401) {
+        sessionStorage.removeItem('token')
+        sessionStorage.removeItem('userInfo')
         localStorage.removeItem('token')
         localStorage.removeItem('userInfo')
         ElMessage.error('登录已过期，请重新登录')

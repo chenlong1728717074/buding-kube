@@ -13,10 +13,12 @@
       </div>
     </div>
     <div class="steps" v-if="!yamlMode">
-      <div v-for="(s, i) in steps" :key="s.key" class="step" :class="{ active: i === activeIndex }" @click="setStep(i)">
+      <div v-for="(s, i) in steps" :key="s.key" class="step" :class="{ active: i === activeIndex, done: i < activeIndex }" @click="setStep(i)">
         <span class="dot" />
         <span class="label">{{ s.label }}</span>
-        <span class="status">{{ i === activeIndex ? '当前' : '未设置' }}</span>
+        <span class="status">
+          {{ i === activeIndex ? '当前' : (i < activeIndex ? '已设置' : '未设置') }}
+        </span>
       </div>
     </div>
     <div class="body">

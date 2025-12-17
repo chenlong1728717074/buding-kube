@@ -163,7 +163,7 @@
       v-model="editDialogVisible"
       title="编辑StatefulSet"
       subtitle="修改别名与描述"
-      width="600px"
+      width="80%"
     >
       <el-form
         :model="editForm"
@@ -251,13 +251,15 @@
         </el-form-item>
 
         <el-form-item label="YAML配置">
-          <el-input
-            v-model="yamlForm.yaml"
-            type="textarea"
-            :rows="20"
-            placeholder="请输入StatefulSet的YAML配置"
-            style="font-family: 'Courier New', monospace;"
-          />
+          <div class="yaml-editor-wrapper">
+            <YamlEditor
+              v-model="yamlForm.yaml"
+              title="StatefulSet YAML"
+              :readonly="false"
+              height="500px"
+              filename="statefulset.yaml"
+            />
+          </div>
         </el-form-item>
       </el-form>
 
@@ -778,6 +780,13 @@ onMounted(async () => {
   padding: 20px;
   background-color: #f5f7fa;
   min-height: 100vh;
+}
+
+.yaml-editor-wrapper {
+  width: 100%;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .page-header {

@@ -84,31 +84,44 @@ func (s *ConfigMapService) Apply(apply dto.BaseYamlApplyDTO) error {
 		return fmt.Errorf("反序列化ConfigMap失败: %v", err)
 	}
 
-	if configMap.Name != "" {
-		existingConfigMap, err := clientSet.CoreV1().ConfigMaps(apply.Namespace).Get(context.TODO(), configMap.Name, metav1.GetOptions{})
-		if err != nil {
-			logs.Error("获取现有ConfigMap失败: %v", err)
-			return fmt.Errorf("获取现有ConfigMap失败: %v", err)
-		}
-		existingConfigMap.Data = configMap.Data
-		existingConfigMap.Annotations = configMap.Annotations
-
-		_, err = clientSet.CoreV1().ConfigMaps(apply.Namespace).Update(context.TODO(), existingConfigMap, metav1.UpdateOptions{})
-		if err != nil {
-			logs.Error("更新ConfigMap失败: %v", err)
-			return fmt.Errorf("更新ConfigMap失败: %v", err)
-		}
-		logs.Info("ConfigMap 更新成功: %s", configMap.Name)
-		return nil
+	if configMap.Name == "" {
+		return errors.New("ConfigMap名称不能为空")
 	}
 
-	_, err = clientSet.CoreV1().ConfigMaps(apply.Namespace).Create(context.TODO(), &configMap, metav1.CreateOptions{})
+	namespace := apply.Namespace
+	if namespace == "" {
+		namespace = configMap.Namespace
+	}
+	if namespace == "" {
+		return errors.New("Namespace不能为空")
+	}
+
+	existingConfigMap, err := clientSet.CoreV1().ConfigMaps(namespace).Get(context.TODO(), configMap.Name, metav1.GetOptions{})
 	if err != nil {
-		logs.Error("创建ConfigMap失败: %v", err)
-		return fmt.Errorf("创建ConfigMap失败: %v", err)
+		if apierrors.IsNotFound(err) {
+			configMap.Namespace = namespace
+			_, err = clientSet.CoreV1().ConfigMaps(namespace).Create(context.TODO(), &configMap, metav1.CreateOptions{})
+			if err != nil {
+				logs.Error("创建ConfigMap失败: %v", err)
+				return fmt.Errorf("创建ConfigMap失败: %v", err)
+			}
+			logs.Info("ConfigMap 创建成功: %s", configMap.Name)
+			return nil
+		}
+		logs.Error("获取现有ConfigMap失败: %v", err)
+		return fmt.Errorf("获取现有ConfigMap失败: %v", err)
 	}
-	logs.Info("ConfigMap 创建成功: %s", configMap.Name)
 
+	existingConfigMap.Data = configMap.Data
+	existingConfigMap.Annotations = configMap.Annotations
+	existingConfigMap.Labels = configMap.Labels
+
+	_, err = clientSet.CoreV1().ConfigMaps(namespace).Update(context.TODO(), existingConfigMap, metav1.UpdateOptions{})
+	if err != nil {
+		logs.Error("更新ConfigMap失败: %v", err)
+		return fmt.Errorf("更新ConfigMap失败: %v", err)
+	}
+	logs.Info("ConfigMap 更新成功: %s", configMap.Name)
 	return nil
 }
 
@@ -150,6 +163,9 @@ func (s *ConfigMapService) Save(create dto.ConfigMapCreateDTO) error {
 	if create.Data != nil {
 		configMap.Data = create.Data
 	}
+	if create.Labels != nil {
+		configMap.Labels = create.Labels
+	}
 	_, err = clientSet.CoreV1().ConfigMaps(create.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 	if err != nil {
 		logs.Error("创建ConfigMap失败: %v", err)
@@ -175,6 +191,48 @@ func (s *ConfigMapService) UpdateInfo(update dto.BaseInfoDTO) error {
 		return err
 	}
 	logs.Info("ConfigMap %s/%s 信息更新成功", update.Namespace, update.Name)
+	return nil
+}
+
+func (s *ConfigMapService) UpdateSetting(update dto.ConfigMapSettingDTO) error {
+	clientSet, err := s.getClientSet(update.ClusterId)
+	if err != nil {
+		return err
+	}
+	configMap, err := s.getConfigMap(clientSet, update.Namespace, update.Name)
+	if err != nil {
+		return err
+	}
+
+	alias := ""
+	describe := ""
+	if configMap.Annotations != nil {
+		alias = configMap.Annotations["alias"]
+		describe = configMap.Annotations["describe"]
+	}
+
+	newAnn := make(map[string]string)
+	if alias != "" {
+		newAnn["alias"] = alias
+	}
+	if describe != "" {
+		newAnn["describe"] = describe
+	}
+	for k, v := range update.Annotations {
+		if k == "alias" || k == "describe" {
+			continue
+		}
+		newAnn[k] = v
+	}
+	configMap.Annotations = newAnn
+	configMap.Labels = update.Labels
+
+	_, err = clientSet.CoreV1().ConfigMaps(update.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+	if err != nil {
+		logs.Error("更新ConfigMap设置失败: %v", err)
+		return err
+	}
+	logs.Info("ConfigMap %s/%s 设置更新成功", update.Namespace, update.Name)
 	return nil
 }
 

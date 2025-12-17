@@ -7,14 +7,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
+	"sync"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/yaml"
-	"sort"
-	"strings"
-	"sync"
 )
 
 var (
@@ -54,6 +55,8 @@ func (s *SecretService) List(query dto.ResourcePageQueryBaseDTO) ([]vo.SecretVO,
 	for _, item := range items.Items {
 		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
 			vi := vo.Secret2VO(item)
+			vi.Data = nil
+			vi.StringData = nil
 			copy := item.DeepCopy()
 			copy.ObjectMeta.ManagedFields = nil
 			copy.ObjectMeta.ResourceVersion = ""
@@ -73,6 +76,33 @@ func (s *SecretService) List(query dto.ResourcePageQueryBaseDTO) ([]vo.SecretVO,
 		return result[i].CreateTime.After(result[j].CreateTime)
 	})
 	return result, nil
+}
+
+func (s *SecretService) Get(base dto.BaseDTO) (*vo.SecretVO, error) {
+	clientSet, err := s.getClientSet(base.ClusterId)
+	if err != nil {
+		return nil, err
+	}
+	if base.Name == "" || base.Namespace == "" {
+		return nil, errors.New("Secret名称或命名空间为空")
+	}
+	secret, err := s.getSecret(clientSet, base.Namespace, base.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	vi := vo.Secret2VO(*secret)
+	copy := secret.DeepCopy()
+	copy.ObjectMeta.ManagedFields = nil
+	copy.ObjectMeta.ResourceVersion = ""
+	copy.ObjectMeta.CreationTimestamp = metav1.Time{}
+	yamlData, err := yaml.Marshal(copy)
+	if err != nil {
+		logs.Error("序列化Secret失败: %v", err)
+	} else {
+		vi.Yaml = string(yamlData)
+	}
+	return &vi, nil
 }
 
 // Save - 创建Secret
@@ -166,6 +196,53 @@ func (s *SecretService) UpdateData(updateData dto.SecretCreateDTO) error {
 		return err
 	}
 	logs.Info("Secret %s/%s 数据更新成功", updateData.Namespace, updateData.Name)
+	return nil
+}
+
+func (s *SecretService) UpdateSetting(update dto.SecretCreateDTO) error {
+	clientSet, err := s.getClientSet(update.ClusterId)
+	if err != nil {
+		return err
+	}
+
+	secret, err := s.getSecret(clientSet, update.Namespace, update.Name)
+	if err != nil {
+		return err
+	}
+
+	if update.Type != "" {
+		secret.Type = corev1.SecretType(update.Type)
+	}
+
+	secret.Labels = update.Labels
+
+	alias := ""
+	describe := ""
+	if secret.Annotations != nil {
+		alias = secret.Annotations["alias"]
+		describe = secret.Annotations["describe"]
+	}
+	newAnn := make(map[string]string)
+	if alias != "" {
+		newAnn["alias"] = alias
+	}
+	if describe != "" {
+		newAnn["describe"] = describe
+	}
+	for k, v := range update.Annotations {
+		if k == "alias" || k == "describe" {
+			continue
+		}
+		newAnn[k] = v
+	}
+	secret.Annotations = newAnn
+
+	_, err = clientSet.CoreV1().Secrets(update.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+	if err != nil {
+		logs.Error("更新Secret设置失败: %v", err)
+		return err
+	}
+	logs.Info("Secret %s/%s 设置更新成功", update.Namespace, update.Name)
 	return nil
 }
 

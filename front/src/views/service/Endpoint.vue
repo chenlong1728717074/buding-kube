@@ -352,6 +352,7 @@ const handleViewYaml = async (row: EndpointVO) => {
 .page-header {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
 }
 
 .deprecated-title {

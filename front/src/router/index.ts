@@ -266,11 +266,29 @@ const routes: Array<RouteRecordRaw> = [
             }
           },
           {
+            path: 'secret/detail',
+            name: 'SecretDetail',
+            component: () => import('@/views/config/SecretDetail.vue'),
+            meta: {
+              title: 'Secret详情',
+              requiresAuth: true
+            }
+          },
+          {
             path: 'serviceaccount',
             name: 'ServiceAccount',
             component: () => import('@/views/config/ServiceAccount.vue'),
             meta: {
               title: 'ServiceAccount',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'serviceaccount/detail',
+            name: 'ServiceAccountDetail',
+            component: () => import('@/views/config/ServiceAccountDetail.vue'),
+            meta: {
+              title: 'ServiceAccount详情',
               requiresAuth: true
             }
           }
@@ -301,6 +319,45 @@ const routes: Array<RouteRecordRaw> = [
             component: () => import('@/views/storage/PersistentVolumeClaim.vue'),
             meta: {
               title: 'PersistentVolumeClaim',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'storageclass',
+            name: 'StorageClass',
+            component: () => import('@/views/storage/StorageClass.vue'),
+            meta: {
+              title: 'StorageClass',
+              requiresAuth: true
+            }
+          }
+        ]
+      },
+      // 资源管理
+      {
+        path: '/resource',
+        name: 'ResourceManagement',
+        redirect: '/resource/crd',
+        meta: {
+          title: '资源管理',
+          requiresAuth: true
+        },
+        children: [
+          {
+            path: 'crd',
+            name: 'CRD',
+            component: () => import('@/views/resource/CRD.vue'),
+            meta: {
+              title: 'CRD',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'tools',
+            name: 'Tools',
+            component: () => import('@/views/resource/Tools.vue'),
+            meta: {
+              title: '工具',
               requiresAuth: true
             }
           }

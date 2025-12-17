@@ -34,7 +34,7 @@ const request: AxiosInstance = axios.create({
 request.interceptors.request.use(
   (config: AxiosRequestConfig) => {
     // 添加token到请求头
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token')
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -60,6 +60,8 @@ request.interceptors.response.use(
         return data
       } else if (code === 401) {
         // 未授权，清除token并跳转到登录页
+        sessionStorage.removeItem('token')
+        sessionStorage.removeItem('userInfo')
         localStorage.removeItem('token')
         localStorage.removeItem('userInfo')
         router.push('/login')
@@ -83,6 +85,8 @@ request.interceptors.response.use(
       
       switch (status) {
         case 401:
+          sessionStorage.removeItem('token')
+          sessionStorage.removeItem('userInfo')
           localStorage.removeItem('token')
           localStorage.removeItem('userInfo')
           router.push('/login')

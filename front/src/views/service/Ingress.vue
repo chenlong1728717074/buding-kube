@@ -134,22 +134,12 @@
     >
       <div class="yaml-dialog-content">
         <div class="yaml-info">
-          <div class="info-item">
-            <span class="label">集群:</span>
-            <span class="value">{{ viewYamlForm.clusterName }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">命名空间:</span>
-            <span class="value">{{ viewYamlForm.namespace }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">资源类型:</span>
-            <span class="value">Ingress</span>
-          </div>
-          <div class="info-item" v-if="currentIngress">
-            <span class="label">资源名称:</span>
-            <span class="value">{{ currentIngress.name }}</span>
-          </div>
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
+            <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
+            <el-descriptions-item label="名称">{{ currentIngress?.name }}</el-descriptions-item>
+            <el-descriptions-item label="类型">Ingress</el-descriptions-item>
+          </el-descriptions>
         </div>
         
         <div class="yaml-editor-wrapper">
@@ -380,13 +370,15 @@ const handleViewYaml = async (row: IngressVO) => {
 
 .page-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
+  color: #303133;
 }
 
 .search-card {
@@ -406,15 +398,19 @@ const handleViewYaml = async (row: IngressVO) => {
 .yaml-dialog-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  height: 70vh;
 }
 
 .yaml-info {
   margin-bottom: 16px;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
 }
 
 .yaml-editor-wrapper {
   flex: 1;
+  min-height: 0;
 }
 
 .dialog-footer {

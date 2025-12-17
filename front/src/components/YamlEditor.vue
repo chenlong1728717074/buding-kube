@@ -1,5 +1,5 @@
 <template>
-  <div class="yaml-editor">
+  <div class="yaml-editor" :class="{ dark: props.theme === 'dark' }">
     <!-- 工具栏 -->
     <div class="editor-toolbar">
       <div class="toolbar-left">
@@ -83,7 +83,7 @@ const props = withDefaults(defineProps<Props>(), {
   title: 'YAML配置',
   readonly: true,
   height: '400px',
-  theme: 'light',
+  theme: 'dark',
   filename: 'config.yaml'
 })
 

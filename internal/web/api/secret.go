@@ -4,6 +4,7 @@ import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
 	"buding-kube/internal/web/middleware"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,9 +25,11 @@ func NewSecretApi(router *gin.RouterGroup) *SecretApi {
 
 func (api *SecretApi) Router() {
 	api.router.GET("/list", api.List)
+	api.router.GET("", api.Get)
 	api.router.POST("/add", middleware.Blocker(), api.Add)
 	api.router.PUT("", middleware.Blocker(), api.Update)
 	api.router.PUT("/data", middleware.Blocker(), api.UpdateData)
+	api.router.PUT("/setting", middleware.Blocker(), api.UpdateSetting)
 	api.router.POST("/apply", middleware.Blocker(), api.Apply)
 	api.router.DELETE("", middleware.Blocker(), api.Delete)
 }
@@ -45,6 +48,20 @@ func (a *SecretApi) List(ctx *gin.Context) {
 	}
 	response := BuildPageResponse(list, query.Page, query.PageSize)
 	a.SuccessWithData(ctx, response)
+}
+
+func (a *SecretApi) Get(ctx *gin.Context) {
+	var base dto.BaseDTO
+	if err := a.BindQuery(ctx, &base); err != nil {
+		a.ParamBindError(ctx, err)
+		return
+	}
+	data, err := a.srv.Get(base)
+	if err != nil {
+		a.InternalError(ctx, "查询失败:", err)
+		return
+	}
+	a.SuccessWithData(ctx, data)
 }
 
 // Add - 创建Secret
@@ -90,6 +107,21 @@ func (api *SecretApi) UpdateData(ctx *gin.Context) {
 		return
 	}
 	api.SuccessMsg(ctx, "修改数据成功")
+}
+
+// UpdateSetting - 修改类型、标签、注解
+func (api *SecretApi) UpdateSetting(ctx *gin.Context) {
+	var update dto.SecretCreateDTO
+	if err := ctx.ShouldBindJSON(&update); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	err := api.srv.UpdateSetting(update)
+	if err != nil {
+		api.InternalError(ctx, "修改设置失败:", err)
+		return
+	}
+	api.SuccessMsg(ctx, "修改设置成功")
 }
 
 // Apply - 通过YAML应用Secret

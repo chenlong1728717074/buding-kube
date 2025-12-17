@@ -88,15 +88,15 @@
             <el-icon><Setting /></el-icon>
             <span>配置管理</span>
           </template>
-          <el-menu-item index="/config/configmap" @click="showComingSoon">
+          <el-menu-item index="/config/configmap">
             <el-icon><Files /></el-icon>
             <span>ConfigMap</span>
           </el-menu-item>
-          <el-menu-item index="/config/secret" @click="showComingSoon">
+          <el-menu-item index="/config/secret">
             <el-icon><Key /></el-icon>
             <span>Secret</span>
           </el-menu-item>
-          <el-menu-item index="/config/serviceaccount" @click="showComingSoon">
+          <el-menu-item index="/config/serviceaccount">
             <el-icon><UserFilled /></el-icon>
             <span>ServiceAccount</span>
           </el-menu-item>
@@ -107,11 +107,11 @@
             <el-icon><Timer /></el-icon>
             <span>任务调度</span>
           </template>
-          <el-menu-item index="/job/job" @click="showComingSoon">
+          <el-menu-item index="/job/job">
             <el-icon><Clock /></el-icon>
             <span>Job</span>
           </el-menu-item>
-          <el-menu-item index="/job/cronjob" @click="showComingSoon">
+          <el-menu-item index="/job/cronjob">
             <el-icon><AlarmClock /></el-icon>
             <span>CronJob</span>
           </el-menu-item>
@@ -122,13 +122,32 @@
             <el-icon><FolderOpened /></el-icon>
             <span>存储管理</span>
           </template>
-          <el-menu-item index="/storage/pv" @click="showComingSoon">
+          <el-menu-item index="/storage/pv">
             <el-icon><Folder /></el-icon>
             <span>PersistentVolume</span>
           </el-menu-item>
-          <el-menu-item index="/storage/pvc" @click="showComingSoon">
+          <el-menu-item index="/storage/pvc">
             <el-icon><FolderAdd /></el-icon>
             <span>PersistentVolumeClaim</span>
+          </el-menu-item>
+          <el-menu-item index="/storage/storageclass">
+            <el-icon><Document /></el-icon>
+            <span>StorageClass</span>
+          </el-menu-item>
+        </el-sub-menu>
+
+        <el-sub-menu index="/resource">
+          <template #title>
+            <el-icon><Operation /></el-icon>
+            <span>资源管理</span>
+          </template>
+          <el-menu-item index="/resource/crd">
+            <el-icon><Document /></el-icon>
+            <span>CRD</span>
+          </el-menu-item>
+          <el-menu-item index="/resource/tools">
+            <el-icon><MoreFilled /></el-icon>
+            <span>工具</span>
           </el-menu-item>
         </el-sub-menu>
         
@@ -162,12 +181,53 @@
           <el-button text class="collapse-btn" @click="toggleCollapse">
             <el-icon><Fold v-if="!isCollapsed" /><Expand v-else /></el-icon>
           </el-button>
-          <span class="page-title">{{ pageTitle }}</span>
+          <div class="title-stack">
+            <span class="page-title">{{ pageTitle }}</span>
+            <el-breadcrumb class="breadcrumb" separator="/">
+              <el-breadcrumb-item v-for="(b, idx) in breadcrumbs" :key="idx" :to="b.to">
+                {{ b.title }}
+              </el-breadcrumb-item>
+            </el-breadcrumb>
+          </div>
         </div>
         <div class="header-right">
           <div class="header-extras">
-            <el-tag size="small" type="info" effect="plain" class="capsule">{{ nowText }}</el-tag>
-            <el-link :underline="false" href="https://github.com/chenlong1728717074/buding-kube" target="_blank" type="primary" class="gh-link">
+            <div class="clock">
+              <el-icon class="clock-icon"><Timer /></el-icon>
+              <span class="clock-time">{{ nowTimeText }}</span>
+              <span class="clock-split">·</span>
+              <span class="clock-date">{{ nowDateText }}</span>
+            </div>
+            <span class="header-divider" />
+            <el-dropdown trigger="click" @command="handleToolsCommand" class="tools-dropdown">
+              <el-button text circle class="icon-btn" title="工具">
+                <el-icon><MoreFilled /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="refresh">
+                    <el-icon><Refresh /></el-icon>
+                    刷新
+                  </el-dropdown-item>
+                  <el-dropdown-item command="fullscreen">
+                    <el-icon><FullScreen /></el-icon>
+                    {{ fullscreenText }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="notify">
+                    <el-icon><Bell /></el-icon>
+                    通知
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <el-link
+              :underline="false"
+              href="https://github.com/chenlong1728717074/buding-kube"
+              target="_blank"
+              rel="noopener noreferrer"
+              type="primary"
+              class="gh-link"
+            >
               GitHub
             </el-link>
           </div>
@@ -213,6 +273,7 @@ import {
   Monitor,
   User,
   Avatar,
+  Bell,
   ArrowDown,
   List,
   UserFilled,
@@ -234,7 +295,10 @@ import {
   FolderAdd,
   Grid,
   Cpu,
-  DataBoard
+  DataBoard,
+  Refresh,
+  FullScreen,
+  MoreFilled
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import TagsView from '@/components/TagsView.vue'
@@ -243,6 +307,10 @@ import { Fold, Expand } from '@element-plus/icons-vue'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const nowDateText = ref('')
+const nowTimeText = ref('')
+const isFullscreen = ref(false)
+const fullscreenText = computed(() => (isFullscreen.value ? '退出全屏' : '进入全屏'))
 
 // 当前激活的菜单
 const activeMenu = computed(() => {
@@ -256,6 +324,7 @@ const activeMenu = computed(() => {
   if (path.startsWith('/service')) return path
   if (path.startsWith('/config')) return path
   if (path.startsWith('/storage')) return path
+  if (path.startsWith('/resource')) return path
   if (path.startsWith('/user')) return path
   return '/dashboard'
 })
@@ -263,6 +332,23 @@ const activeMenu = computed(() => {
 // 页面标题
 const pageTitle = computed(() => {
   return route.meta.title || '仪表盘'
+})
+
+const breadcrumbs = computed(() => {
+  const result: Array<{ title: string; to?: string }> = []
+  let acc = ''
+  for (const r of route.matched) {
+    const title = r.meta?.title
+    if (!title) continue
+    const rawPath = r.path || ''
+    if (rawPath.startsWith('/')) {
+      acc = rawPath
+    } else if (rawPath) {
+      acc = `${acc.replace(/\/$/, '')}/${rawPath}`.replace(/\/+/g, '/')
+    }
+    result.push({ title: String(title), to: acc.startsWith('/') ? acc : undefined })
+  }
+  return result
 })
 
 // 处理下拉菜单命令
@@ -276,7 +362,7 @@ const handleCommand = (command: string) => {
         .then(async () => {
           await userStore.logout()
           const hour = new Date().getHours()
-          const greet = hour < 12 ? '期待你下次回来 ☀️' : hour < 18 ? '期待你下次回来 🌤️' : '期待你下次回来 🌛'
+          const greet = hour < 12 ? '期待你下次回来' : hour < 18 ? '期待你下次回来' : '期待你下次回来'
           ElNotification({ message: `${greet}`, type: 'success', duration: 2500 })
         })
         .catch(() => {})
@@ -297,16 +383,61 @@ try {
   isCollapsed.value = saved === '1'
 } catch {}
 
-// 显示暂未开放提示
-const showComingSoon = (event: Event) => {
-  event.preventDefault()
-  event.stopPropagation()
-  ElMessage({
-    message: '该功能暂未开放，敬请期待！',
-    type: 'info',
-    duration: 2000
-  })
+let clockTimer: number | undefined
+const updateClock = () => {
+  const d = new Date()
+  nowDateText.value = d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' })
+  nowTimeText.value = d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
+
+const refreshPage = () => {
+  window.location.reload()
+}
+
+const showNotifications = () => {
+  ElMessage.info('暂无通知')
+}
+
+const handleToolsCommand = async (cmd: string) => {
+  if (cmd === 'refresh') {
+    refreshPage()
+    return
+  }
+  if (cmd === 'fullscreen') {
+    await toggleFullscreen()
+    return
+  }
+  if (cmd === 'notify') {
+    showNotifications()
+  }
+}
+
+const toggleFullscreen = async () => {
+  try {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen()
+      return
+    }
+    await document.exitFullscreen()
+  } catch {
+    ElMessage.error('全屏切换失败')
+  }
+}
+
+const onFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement
+}
+
+onMounted(() => {
+  updateClock()
+  clockTimer = window.setInterval(updateClock, 1000)
+  onFullscreenChange()
+  document.addEventListener('fullscreenchange', onFullscreenChange)
+})
+onUnmounted(() => {
+  if (clockTimer) window.clearInterval(clockTimer)
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
+})
 </script>
 
 <style scoped>
@@ -318,6 +449,7 @@ const showComingSoon = (event: Event) => {
   background: #ffffff;
   border-right: 1px solid rgba(59,130,246,0.16);
   overflow: hidden;
+  border-radius: 18px;
 }
 
 .logo {
@@ -345,14 +477,14 @@ const showComingSoon = (event: Event) => {
 .sidebar-menu .el-menu-item {
   height: 48px;
   line-height: 48px;
-  border-radius: 12px;
+  border-radius: 16px;
   margin: 4px 10px;
 }
 
 .sidebar-menu .el-sub-menu__title {
   height: 48px;
   line-height: 48px;
-  border-radius: 12px;
+  border-radius: 16px;
   margin: 4px 10px;
 }
 
@@ -388,13 +520,36 @@ const showComingSoon = (event: Event) => {
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  height: 64px !important;
+  height: 72px !important;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .header-left .page-title {
   font-size: 20px;
   font-weight: 600;
   color: #1e3a8a;
+}
+
+.breadcrumb {
+  font-size: 12px;
+  color: #64748b;
 }
 
 .collapse-btn {
@@ -408,10 +563,11 @@ const showComingSoon = (event: Event) => {
   cursor: pointer;
   color: #1e3a8a;
   font-size: 14px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }
 .header-extras {
   display: inline-flex;
@@ -419,12 +575,76 @@ const showComingSoon = (event: Event) => {
   gap: 10px;
   margin-right: 12px;
 }
+
+.clock {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+  gap: 8px;
+}
+
+.clock-icon {
+  color: rgba(15, 23, 42, 0.65);
+}
+
+.clock-time {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock-split {
+  color: rgba(15, 23, 42, 0.35);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.clock-date {
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.65);
+  line-height: 1;
+}
+
+.icon-btn {
+  color: rgba(15, 23, 42, 0.75);
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+}
+
+.icon-btn:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
 .gh-link {
-  color: #1e3a8a;
+  color: rgba(15, 23, 42, 0.85);
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+.gh-link:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}
+
+.header-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(15, 23, 42, 0.10);
+  display: inline-block;
 }
 .header-right .user-info:hover {
-  background: rgba(59, 130, 246, 0.18);
-  color: #0f1e5a;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
 }
 
 .header-right .user-info .el-icon {
@@ -435,6 +655,21 @@ const showComingSoon = (event: Event) => {
   background: linear-gradient(180deg, #f5faff 0%, #fbfdff 100%);
   padding: 24px;
   overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .breadcrumb {
+    display: none;
+  }
+  .clock-date {
+    display: none;
+  }
+  .clock-split {
+    display: none;
+  }
+  .gh-link {
+    display: none;
+  }
 }
 
 /* 页面切换动画 */
@@ -453,16 +688,3 @@ const showComingSoon = (event: Event) => {
   transform: translateX(-30px);
 }
 </style>
-const nowText = ref('')
-let clockTimer: number | undefined
-const updateClock = () => {
-  const d = new Date()
-  nowText.value = d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
-onMounted(() => {
-  updateClock()
-  clockTimer = window.setInterval(updateClock, 1000)
-})
-onUnmounted(() => {
-  if (clockTimer) window.clearInterval(clockTimer)
-})

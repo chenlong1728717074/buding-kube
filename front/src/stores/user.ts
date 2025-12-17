@@ -45,10 +45,10 @@ export const useUserStore = defineStore('user', () => {
         // 保存token和用户信息
         token.value = userData.token || ''
         userInfo.value = userData
-        
-        // 持久化到localStorage
-        localStorage.setItem('token', token.value)
-        localStorage.setItem('userInfo', JSON.stringify(userData))
+        sessionStorage.setItem('token', token.value)
+        sessionStorage.setItem('userInfo', JSON.stringify(userData))
+        localStorage.removeItem('token')
+        localStorage.removeItem('userInfo')
         
         ElMessage.success('登录成功')
         return true
@@ -82,19 +82,25 @@ export const useUserStore = defineStore('user', () => {
   const clearUserData = (): void => {
     token.value = ''
     userInfo.value = null
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('userInfo')
     localStorage.removeItem('token')
     localStorage.removeItem('userInfo')
   }
 
-  // 初始化用户信息（从localStorage恢复）
+  // 初始化用户信息（从sessionStorage恢复，兼容迁移localStorage）
   const initUserInfo = (): void => {
     try {
-      const savedToken = localStorage.getItem('token')
-      const savedUserInfo = localStorage.getItem('userInfo')
+      const savedToken = sessionStorage.getItem('token') || localStorage.getItem('token')
+      const savedUserInfo = sessionStorage.getItem('userInfo') || localStorage.getItem('userInfo')
       
       if (savedToken && savedUserInfo) {
         token.value = savedToken
         userInfo.value = JSON.parse(savedUserInfo)
+        sessionStorage.setItem('token', savedToken)
+        sessionStorage.setItem('userInfo', savedUserInfo)
+        localStorage.removeItem('token')
+        localStorage.removeItem('userInfo')
       }
     } catch (error) {
       console.error('初始化用户信息失败:', error)
@@ -110,7 +116,7 @@ export const useUserStore = defineStore('user', () => {
       const response = await loginApi.getCurrentUser()
       if (response.code === 200 && response.data) {
         userInfo.value = response.data
-        localStorage.setItem('userInfo', JSON.stringify(response.data))
+        sessionStorage.setItem('userInfo', JSON.stringify(response.data))
       }
     } catch (error) {
       console.error('获取用户信息失败:', error)
@@ -125,7 +131,7 @@ export const useUserStore = defineStore('user', () => {
       const response = await loginApi.refreshToken()
       if (response.code === 200 && response.data?.token) {
         token.value = response.data.token
-        localStorage.setItem('token', response.data.token)
+        sessionStorage.setItem('token', response.data.token)
         return true
       }
       return false
