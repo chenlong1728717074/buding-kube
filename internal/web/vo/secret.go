@@ -1,9 +1,10 @@
 package vo
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 )
 
 type SecretVO struct {
@@ -25,10 +26,18 @@ type SecretVO struct {
 }
 
 func Secret2VO(secret corev1.Secret) SecretVO {
+	alias := ""
+	describe := ""
+	if secret.Annotations != nil {
+		alias = secret.Annotations["alias"]
+		describe = secret.Annotations["describe"]
+	}
 	return SecretVO{
 		BaseVO: BaseVO{
 			Name:      secret.Name,
 			Namespace: secret.Namespace,
+			Alias:     alias,
+			Describe:  describe,
 		},
 		Type:              secret.Type,
 		Data:              secret.Data,

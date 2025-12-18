@@ -402,118 +402,28 @@
       </template>
     </UnifiedDialog>
 
-    <!-- 日志查看对话框 -->
-    <UnifiedDialog
+    <PodLogViewer
       v-model="logDialogVisible"
+      v-model:containerName="logContainerName"
       :title="`查看日志 - ${podInfo?.name || ''}`"
-      width="90%"
-    >
-      <div class="log-header">
-        <div class="log-controls">
-          <el-form inline>
-            <el-form-item label="容器:">
-              <el-select 
-                v-model="selectedContainer" 
-                placeholder="请选择容器"
-                style="width: 180px"
-                @change="handleContainerChange"
-              >
-                <el-option
-                  v-for="container in podInfo?.containers || []"
-                  :key="container.name"
-                  :label="container.name"
-                  :value="container.name"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="开始时间:">
-              <el-date-picker
-                v-model="sinceTime"
-                type="datetime"
-                placeholder="选择开始时间"
-                style="width: 200px"
-                format="YYYY年MM月DD日 HH:mm:ss"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                clearable
-                @change="handleTimeChange"
-                :teleported="false"
-              />
-            </el-form-item>
-            <el-form-item label="行数:">
-              <el-input-number 
-                v-model="tailLines" 
-                :min="100" 
-                :max="10000" 
-                :step="100"
-                style="width: 140px"
-              />
-            </el-form-item>
-            <el-form-item label="实时日志:">
-              <el-button 
-                :type="followLogs ? 'danger' : 'success'"
-                @click="handleRealTimeToggle"
-                :loading="logLoading"
-              >
-                <el-icon>
-                  <VideoPlay v-if="!followLogs" />
-                  <VideoPause v-else />
-                </el-icon>
-                {{ followLogs ? '停止实时' : '开始实时' }}
-              </el-button>
-            </el-form-item>
-            <el-form-item label="字体颜色:">
-              <el-color-picker v-model="logTextColor" />
-            </el-form-item>
-            <el-form-item label="背景颜色:">
-              <el-color-picker v-model="logBackgroundColor" />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="handleRefreshLogs" :loading="logLoading">
-                <el-icon><Refresh /></el-icon>
-                刷新
-              </el-button>
-              <el-button @click="handleResetLogs">
-                <el-icon><RefreshLeft /></el-icon>
-                重置
-              </el-button>
-              <el-button @click="handleDownloadLogs">
-                <el-icon><Download /></el-icon>
-                下载
-              </el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-      </div>
-      
-      <div v-loading="logLoading" class="log-container" :style="{ backgroundColor: logBackgroundColor }">
-        <div v-if="followLogs" class="real-time-indicator">
-          <el-icon class="blinking"><VideoPause /></el-icon>
-          实时日志连接中
-        </div>
-        <pre class="log-content" :style="{ color: logTextColor, backgroundColor: logBackgroundColor }">{{ logContent }}</pre>
-      </div>
-      
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="handleCloseLogDialog">关闭</el-button>
-        </div>
-      </template>
-    </UnifiedDialog>
+      :cluster-id="clusterId"
+      :namespace="podInfo?.namespace || ''"
+      :pod-name="podInfo?.name || ''"
+      :containers="podInfo?.containers || []"
+      :container-selectable="true"
+      :allow-all-containers="true"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   ArrowLeft,
   Delete,
   Document,
-  VideoPlay,
-  VideoPause,
-  Refresh,
-  RefreshLeft,
   Download,
   Upload
 } from '@element-plus/icons-vue'
@@ -521,12 +431,12 @@ import {
   podApi, 
   type PodInfoVO, 
   type PodDTO,
-  type PodLogDTO,
   type PodFileDTO
 } from '@/api/pod'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
+import PodLogViewer from '@/components/PodLogViewer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -544,7 +454,7 @@ const yamlLoading = ref(false)
 
 // 日志对话框相关
 const logDialogVisible = ref(false)
-const logContent = ref('')
+const logContainerName = ref('')
 
 // 文件下载相关
 const downloadDialogVisible = ref(false)
@@ -563,17 +473,6 @@ const uploadForm = ref({
 })
 const selectedFile = ref<File | null>(null)
 const uploadRef = ref()
-const logLoading = ref(false)
-const selectedContainer = ref('')
-const followLogs = ref(false)
-const sinceTime = ref('')
-const tailLines = ref(1000)
-const currentAbortController = ref<AbortController | null>(null)
-
-// 日志显示配置
-const logTextColor = ref('#ffffff')
-const logBackgroundColor = ref('#000000')
-
 // 计算属性：是否有环境变量
 const hasEnvironmentVariables = computed(() => {
   if (!podInfo.value?.containers) return false
@@ -668,23 +567,11 @@ const handleViewYaml = () => {
 }
 
 // 查看日志
-const handleViewLogs = async () => {
+const handleViewLogs = () => {
   if (!podInfo.value) return
-  
-  // 设置默认容器
-  if (podInfo.value.containers && podInfo.value.containers.length > 0) {
-    selectedContainer.value = podInfo.value.containers[0].name
-  }
-  
+  const first = podInfo.value.containers?.[0]?.name
+  logContainerName.value = first || ''
   logDialogVisible.value = true
-  await fetchPodLogs(false) // 从列表进入，不传递container参数
-  // 获取日志后自动滚动到底部
-  nextTick(() => {
-    const logContainer = document.querySelector('.log-content')
-    if (logContainer) {
-      logContainer.scrollTop = logContainer.scrollHeight
-    }
-  })
 }
 
 // 返回
@@ -727,183 +614,6 @@ const confirmDeletePod = async () => {
 // 取消删除
 const cancelDeletePod = () => {
   deleteDialogVisible.value = false
-}
-
-// 获取Pod日志
-const fetchPodLogs = async (fromContainerList = false) => {
-  if (!podInfo.value) {
-    ElMessage.warning('Pod信息不存在')
-    return
-  }
-  
-  // 如果是从容器列表进入，需要选择容器；如果是从列表进入，可以不选择容器
-  if (fromContainerList && !selectedContainer.value) {
-    ElMessage.warning('请先选择容器')
-    return
-  }
-  
-  // 只在非实时模式下显示loading
-  if (!followLogs.value) {
-    logLoading.value = true
-  }
-  
-  try {
-    // 停止之前的日志流
-    if (currentAbortController.value) {
-      currentAbortController.value.abort()
-      currentAbortController.value = null
-    }
-    
-    // 清空之前的日志内容
-    logContent.value = ''
-    
-    const params: PodLogDTO = {
-      clusterId: clusterId.value,
-      namespace: podInfo.value.namespace,
-      name: podInfo.value.name,
-      // 只有从容器列表进入时才传递容器名称
-      containerName: fromContainerList ? selectedContainer.value : undefined,
-      follow: followLogs.value,
-      sinceTime: sinceTime.value || undefined,
-      tailLines: tailLines.value
-    }
-    
-    // 创建新的控制器
-    currentAbortController.value = new AbortController()
-    
-    await podApi.getLogs(
-      params,
-      // onData 回调 - 处理流式数据
-      (data: string) => {
-        console.log('收到日志数据:', data)
-        
-        // 过滤掉控制信息，但保留实际日志内容
-        const trimmedData = data.trim()
-        if (trimmedData && 
-            !trimmedData.startsWith('[START]') && 
-            !trimmedData.startsWith('[END]') &&
-            !trimmedData.startsWith('[ERROR]') &&
-            !trimmedData.startsWith('[STOP]') &&
-            trimmedData !== 'ping' &&
-            trimmedData !== 'Connected successfully') {
-          
-          // 实时追加日志内容
-          logContent.value += data
-          
-          // 自动滚动到底部
-          nextTick(() => {
-            const logContainer = document.querySelector('.log-content')
-            if (logContainer) {
-              logContainer.scrollTop = logContainer.scrollHeight
-            }
-          })
-        }
-      },
-      // onError 回调
-      (error: Error) => {
-        console.error('日志流错误:', error)
-        if (error.name !== 'AbortError') {
-          ElMessage.error('日志流连接中断')
-          followLogs.value = false
-        }
-      },
-      // 传递AbortSignal
-      currentAbortController.value?.signal
-    )
-    
-  } catch (error: any) {
-    console.error('获取日志失败:', error)
-    if (!error.name || error.name !== 'AbortError') {
-      logContent.value = '获取日志失败: ' + (error.message || '网络错误')
-      ElMessage.error('获取日志失败')
-      followLogs.value = false
-    }
-  } finally {
-    // 只在非实时模式下关闭loading
-    if (!followLogs.value) {
-      logLoading.value = false
-    }
-  }
-}
-
-// 刷新日志
-const handleRefreshLogs = () => {
-  fetchPodLogs(selectedContainer.value ? true : false) // 根据是否有选中容器判断
-}
-
-// 实时日志切换
-const handleRealTimeToggle = () => {
-  if (followLogs.value) {
-    stopRealTimeLogs()
-  } else {
-    startRealTimeLogs()
-  }
-}
-
-// 开始实时日志
-const startRealTimeLogs = () => {
-  followLogs.value = true
-  fetchPodLogs(selectedContainer.value ? true : false) // 根据是否有选中容器判断
-}
-
-// 停止实时日志
-const stopRealTimeLogs = () => {
-  followLogs.value = false
-  
-  if (currentAbortController.value) {
-    currentAbortController.value.abort()
-    currentAbortController.value = null
-  }
-  
-  logLoading.value = false
-  ElMessage.success('已停止实时日志')
-}
-
-// 容器切换
-const handleContainerChange = () => {
-  fetchPodLogs(true) // 容器切换时传递container参数
-}
-
-// 时间选择变化处理
-const handleTimeChange = () => {
-  fetchPodLogs(selectedContainer.value ? true : false) // 根据是否有选中容器判断
-}
-
-// 重置日志配置
-const handleResetLogs = () => {
-  sinceTime.value = ''
-  tailLines.value = 1000
-  logTextColor.value = '#ffffff'
-  logBackgroundColor.value = '#000000'
-  fetchPodLogs(selectedContainer.value ? true : false) // 根据是否有选中容器判断
-}
-
-// 下载日志
-const handleDownloadLogs = () => {
-  if (!logContent.value || !podInfo.value) {
-    ElMessage.warning('暂无日志可下载')
-    return
-  }
-  
-  const blob = new Blob([logContent.value], { type: 'text/plain' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${podInfo.value.name}-${selectedContainer.value}.log`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-}
-
-// 关闭日志弹窗时清理
-const handleCloseLogDialog = () => {
-  logDialogVisible.value = false
-  stopRealTimeLogs()
-  selectedContainer.value = ''
-  logContent.value = ''
-  sinceTime.value = ''
-  tailLines.value = 1000
 }
 
 // 获取状态类型
@@ -990,12 +700,8 @@ const formatDate = (dateString?: string) => {
 
 // 容器日志查看
 const handleContainerLogs = (container: any) => {
-  selectedContainer.value = container.name
+  logContainerName.value = container.name
   logDialogVisible.value = true
-  // 延迟获取日志，确保对话框已打开
-  nextTick(() => {
-    fetchPodLogs(true) // 从容器列表进入，传递container参数
-  })
 }
 
 // 容器文件下载
@@ -1312,6 +1018,22 @@ onMounted(() => {
   line-height: 1.5;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+.log-search-count {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.log-search-hit {
+  background-color: rgba(255, 213, 0, 0.35);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.log-search-hit[data-log-active='1'] {
+  background-color: rgba(255, 115, 0, 0.45);
 }
 
 .real-time-indicator {

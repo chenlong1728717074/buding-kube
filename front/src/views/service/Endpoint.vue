@@ -347,12 +347,21 @@ const handleViewYaml = async (row: EndpointVO) => {
 
 .header-card {
   margin-bottom: 20px;
+  text-align: left;
+}
+
+.header-card :deep(.el-card__body) {
+  display: flex;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .page-header {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  width: 100%;
+  text-align: left;
 }
 
 .deprecated-title {
@@ -361,6 +370,8 @@ const handleViewYaml = async (row: EndpointVO) => {
   font-weight: 600;
   text-decoration: line-through;
   color: #909399;
+  width: 100%;
+  text-align: left;
 }
 
 .deprecated-text {

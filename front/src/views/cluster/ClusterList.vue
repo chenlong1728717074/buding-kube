@@ -11,37 +11,41 @@
     </div>
 
     <el-card class="search-card">
-      <el-form :model="searchForm" inline>
-        <el-form-item label="集群名称">
-          <el-input 
-            v-model="searchForm.name" 
-            placeholder="请输入集群名称" 
-            clearable
-            @keyup.enter="handleSearch"
-          />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select 
-            v-model="searchForm.status" 
-            placeholder="请选择状态" 
-            clearable
-            style="width: 150px;"
-          >
-            <el-option label="运行中" value="Active" />
-            <el-option label="异常" value="Error" />
-            <el-option label="离线" value="Offline" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            搜索
-          </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            重置
-          </el-button>
-        </el-form-item>
+      <el-form :model="searchForm" class="search-form" inline>
+        <div class="search-form__left">
+          <el-form-item label="集群名称">
+            <el-input
+              v-model="searchForm.name"
+              placeholder="请输入集群名称"
+              clearable
+              @keyup.enter="handleSearch"
+            />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select
+              v-model="searchForm.status"
+              placeholder="请选择状态"
+              clearable
+              style="width: 150px;"
+            >
+              <el-option label="运行中" value="Active" />
+              <el-option label="异常" value="Error" />
+              <el-option label="离线" value="Offline" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div class="search-form__right">
+          <el-form-item>
+            <el-button type="primary" @click="handleSearch">
+              <el-icon><Search /></el-icon>
+              搜索
+            </el-button>
+            <el-button @click="handleReset">
+              <el-icon><Refresh /></el-icon>
+              重置
+            </el-button>
+          </el-form-item>
+        </div>
       </el-form>
     </el-card>
 
@@ -50,6 +54,7 @@
         v-loading="loading" 
         :data="clusterList" 
         stripe
+        style="width: 100%"
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" align="center" />
@@ -571,25 +576,39 @@ onMounted(() => {
   margin-top: 20px;
 }
 
-.el-form--inline .el-form-item {
-  margin-right: 20px;
+.search-form {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.centered-form {
-  .el-form-item__label {
-    text-align: center;
-    justify-content: center;
+.search-form__left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+  min-width: 520px;
+}
+
+.search-form__right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.search-form__right :deep(.el-form-item) {
+  margin-right: 0;
+}
+
+@media (max-width: 768px) {
+  .search-form__left {
+    min-width: 0;
   }
-  
-  .el-input,
-  .el-select,
-  .el-textarea {
-    text-align: center;
-  }
-  
-  .el-input__inner,
-  .el-textarea__inner {
-    text-align: center;
+  .search-form__right {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 </style>

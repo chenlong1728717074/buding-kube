@@ -1,6 +1,5 @@
 import request from '@/utils/request'
-import router from '@/router'
-import { ElMessage } from 'element-plus'
+import { redirectToLogin } from '@/utils/request'
 import type { ApiResponse, PageResponse } from '@/utils/request'
 
 // Pod基础信息
@@ -145,14 +144,26 @@ export const podApi = {
         body: JSON.stringify(params),
         signal: signal // 添加AbortSignal支持
       })
+
+      const contentType = response.headers.get('content-type') || ''
+
+      if (response.ok && contentType.includes('application/json')) {
+        const payload = await response.json().catch(() => null)
+        const numericCode = Number(payload?.code)
+        const msg = payload?.msg
+
+        if (numericCode === 401) {
+          await redirectToLogin(msg)
+          throw new Error(msg || '未授权')
+        }
+
+        if (Number.isFinite(numericCode) && numericCode !== 200) {
+          throw new Error(msg || '请求失败')
+        }
+      }
       
       if (response.status === 401) {
-        sessionStorage.removeItem('token')
-        sessionStorage.removeItem('userInfo')
-        localStorage.removeItem('token')
-        localStorage.removeItem('userInfo')
-        ElMessage.error('登录已过期，请重新登录')
-        router.push('/login')
+        await redirectToLogin()
         throw new Error('未授权')
       }
       

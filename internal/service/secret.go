@@ -45,7 +45,12 @@ func (s *SecretService) List(query dto.ResourcePageQueryBaseDTO) ([]vo.SecretVO,
 		return nil, errors.New("获取集群失败")
 	}
 
-	items, err := clientSet.CoreV1().Secrets(query.Namespace).List(context.TODO(), metav1.ListOptions{})
+	namespace := query.Namespace
+	if namespace == "" {
+		namespace = metav1.NamespaceAll
+	}
+
+	items, err := clientSet.CoreV1().Secrets(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		logs.Error("获取Secret失败: %v", err)
 		return nil, fmt.Errorf("获取Secret失败: %v", err)
@@ -57,17 +62,13 @@ func (s *SecretService) List(query dto.ResourcePageQueryBaseDTO) ([]vo.SecretVO,
 			vi := vo.Secret2VO(item)
 			vi.Data = nil
 			vi.StringData = nil
-			copy := item.DeepCopy()
-			copy.ObjectMeta.ManagedFields = nil
-			copy.ObjectMeta.ResourceVersion = ""
-			copy.ObjectMeta.CreationTimestamp = metav1.Time{}
-			// 清空敏感数据，避免在列表中返回
-			copy.Data = nil
-			yamlData, err := yaml.Marshal(copy)
-			if err != nil {
-				logs.Error("序列化Secret失败: %v", err)
-			}
-			vi.Yaml = string(yamlData)
+			vi.Metadata = metav1.ObjectMeta{}
+			vi.Annotations = nil
+			vi.Labels = nil
+			vi.ResourceVersion = ""
+			vi.Uid = ""
+			vi.Version = ""
+			vi.Yaml = ""
 			result = append(result, vi)
 		}
 	}

@@ -30,6 +30,27 @@ const request: AxiosInstance = axios.create({
   }
 })
 
+let redirectingToLogin = false
+
+export const clearAuthStorage = () => {
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('userInfo')
+  localStorage.removeItem('token')
+  localStorage.removeItem('userInfo')
+}
+
+export const redirectToLogin = async (message?: string) => {
+  if (redirectingToLogin) return
+  redirectingToLogin = true
+  clearAuthStorage()
+  try {
+    await router.push('/login')
+  } finally {
+    redirectingToLogin = false
+  }
+  ElMessage.error(message || '登录已过期，请重新登录')
+}
+
 // 请求拦截器
 request.interceptors.request.use(
   (config: AxiosRequestConfig) => {
@@ -53,19 +74,14 @@ request.interceptors.response.use(
     
     // 如果是标准的后端响应格式 {code, msg, data}
     if (data && typeof data === 'object' && 'code' in data) {
-      const { code, msg } = data
+      const { code, msg } = data as any
+      const numericCode = typeof code === 'number' ? code : Number(code)
       
-      if (code === 200) {
+      if (numericCode === 200) {
         // 成功响应，返回完整的响应数据
         return data
-      } else if (code === 401) {
-        // 未授权，清除token并跳转到登录页
-        sessionStorage.removeItem('token')
-        sessionStorage.removeItem('userInfo')
-        localStorage.removeItem('token')
-        localStorage.removeItem('userInfo')
-        router.push('/login')
-        ElMessage.error(msg || '登录已过期，请重新登录')
+      } else if (numericCode === 401) {
+        redirectToLogin(msg)
         return Promise.reject(new Error(msg || '未授权'))
       } else {
         // 其他错误
@@ -85,12 +101,7 @@ request.interceptors.response.use(
       
       switch (status) {
         case 401:
-          sessionStorage.removeItem('token')
-          sessionStorage.removeItem('userInfo')
-          localStorage.removeItem('token')
-          localStorage.removeItem('userInfo')
-          router.push('/login')
-          ElMessage.error('登录已过期，请重新登录')
+          redirectToLogin(data?.msg)
           break
         case 403:
           ElMessage.error('没有权限访问该资源')
@@ -102,6 +113,10 @@ request.interceptors.response.use(
           ElMessage.error('服务器内部错误')
           break
         default:
+          if (Number(data?.code) === 401) {
+            redirectToLogin(data?.msg)
+            break
+          }
           ElMessage.error(data?.msg || `请求失败 (${status})`)
       }
     } else if (error.request) {
