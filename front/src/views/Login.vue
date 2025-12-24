@@ -1,62 +1,70 @@
 <template>
   <div class="login-container">
-    <div class="login-background">
-      <div class="bg-animation"></div>
-    </div>
+    <div class="login-background"></div>
+    
     <div class="login-content">
-      <div class="login-center">
-        <div class="brand-header">
-          <div class="brand-icon">
-            <el-icon size="48"><Monitor /></el-icon>
-          </div>
-          <h1 class="brand-title">Buding k8s多集群管理平台</h1>
-          <p class="brand-desc">统一管理多个Kubernetes集群，简化运维操作</p>
-        </div>
-        <el-card class="login-card" shadow="always">
-          <div class="login-header">
-            <h2 class="login-title">欢迎登录</h2>
-            <p class="login-subtitle">请输入您的账号信息</p>
-          </div>
-          <el-form :model="loginForm" :rules="rules" ref="formRef" class="login-form" @keyup.enter="onSubmit">
-            <el-form-item prop="username">
-              <el-input
-                v-model="loginForm.username"
-                placeholder="请输入用户名"
-                prefix-icon="User"
-                size="large"
-                autocomplete="username"
-              />
-            </el-form-item>
-            <el-form-item prop="password">
-              <el-input
-                v-model="loginForm.password"
-                type="password"
-                placeholder="请输入密码"
-                prefix-icon="Lock"
-                size="large"
-                show-password
-                autocomplete="current-password"
-              />
-            </el-form-item>
-            <el-form-item>
-              <el-button
-                type="primary"
-                :loading="loading"
-                @click="onSubmit"
-                size="large"
-                class="login-btn"
-              >
-                <span v-if="!loading">立即登录</span>
-                <span v-else>登录中...</span>
-              </el-button>
-            </el-form-item>
-          </el-form>
-          <div class="demo-info">
-            <p class="demo-account">演示账户: admin / 123456</p>
-            <p class="demo-notice">注意：演示环境部分功能未开放，项目正在开发中</p>
-          </div>
-        </el-card>
+      <!-- 顶部品牌 -->
+      <div class="brand-header">
+        <h1 class="brand-title">Buding k8s多集群管理平台</h1>
+        <p class="brand-desc">统一管理多个 Kubernetes 集群，简化运维操作</p>
       </div>
+
+      <!-- 登录卡片 -->
+      <div class="login-card">
+        <div class="card-title">登录</div>
+        
+        <el-form 
+          :model="loginForm" 
+          :rules="rules" 
+          ref="formRef" 
+          class="login-form"
+          @keyup.enter="onSubmit"
+        >
+          <el-form-item prop="username">
+            <el-input
+              v-model="loginForm.username"
+              placeholder="用户名"
+              :prefix-icon="User"
+              size="large"
+              autocomplete="username"
+            />
+          </el-form-item>
+          
+          <el-form-item prop="password">
+            <el-input
+              v-model="loginForm.password"
+              type="password"
+              placeholder="密码"
+              :prefix-icon="Lock"
+              size="large"
+              show-password
+              autocomplete="current-password"
+            />
+          </el-form-item>
+          
+          <el-form-item class="submit-item">
+            <el-button
+              type="primary"
+              :loading="loading"
+              @click="onSubmit"
+              size="large"
+              class="login-btn"
+            >
+              {{ loading ? '登录中...' : '登 录' }}
+            </el-button>
+          </el-form-item>
+        </el-form>
+        
+        <!-- 演示信息 -->
+        <div class="demo-section">
+          <div class="demo-label">演示账号</div>
+          <div class="demo-value">admin / 123456</div>
+          <div class="demo-notice">演示环境部分功能未开放</div>
+        </div>
+      </div>
+      
+      <!-- 底部 -->
+      <div class="footer">© 2024 Buding · 统一管理多个 Kubernetes 集群</div>
     </div>
   </div>
 </template>
@@ -65,7 +73,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElNotification } from 'element-plus'
-import { Monitor, Check } from '@element-plus/icons-vue'
+import { Monitor, User, Lock } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -91,7 +99,7 @@ const onSubmit = async () => {
         const greet = hour < 12 ? '早上好' : hour < 18 ? '下午好' : '晚上好'
         const emoji = hour < 12 ? '☀️' : hour < 18 ? '🌤️' : '🌛'
         ElNotification({
-          message: `${greet} ${emoji}${loginForm.value.username} 欢迎登录 Buding k8s多集群管理平台！`,
+          message: `${greet} ${emoji} ${loginForm.value.username}，欢迎使用 K8s 管理平台`,
           type: 'success',
           duration: 3000
         })
@@ -111,7 +119,9 @@ const onSubmit = async () => {
 .login-container {
   min-height: 100vh;
   position: relative;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .login-background {
@@ -120,197 +130,163 @@ const onSubmit = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #eaf4ff 0%, #f5faff 100%);
-  z-index: 1;
-}
-
-.bg-animation {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
-  animation: float 20s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  background: linear-gradient(180deg, #f5faff 0%, #fbfdff 100%);
+  z-index: 0;
 }
 
 .login-content {
   position: relative;
-  z-index: 2;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-}
-
-.login-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 480px;
+  z-index: 1;
   width: 100%;
+  max-width: 380px;
+  padding: 20px;
 }
 
+/* 品牌区域 */
 .brand-header {
-  text-align: center;
-  color: #1e3a8a;
-  margin-bottom: 40px;
-}
-
-.brand-icon {
-  margin-bottom: 20px;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-.brand-title {
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  color: #1e3a8a;
-}
-
-.brand-desc {
-  font-size: 16px;
-  margin: 0;
-  color: rgba(30, 58, 138, 0.9);
-  line-height: 1.6;
-}
-
-.login-card {
-  width: 100%;
-  max-width: 400px;
-  padding: 40px;
-  border-radius: 16px;
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  animation: slideInRight 0.8s ease-out;
-}
-
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.login-header {
   text-align: center;
   margin-bottom: 32px;
 }
 
-.login-title {
-  font-size: 28px;
+.brand-title {
+  font-size: 24px;
   font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 8px;
+  color: #1e3a8a;
+  margin: 0 0 8px 0;
 }
 
-.login-subtitle {
-  color: #7f8c8d;
+.brand-desc {
   font-size: 14px;
+  color: #64748b;
   margin: 0;
 }
 
-.login-form {
-  margin-top: 24px;
+/* 登录卡片 */
+.login-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 32px 28px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.12);
 }
 
-.login-form .el-form-item {
+.card-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
   margin-bottom: 24px;
-}
-
-.login-btn {
-  width: 100%;
-  height: 48px;
-  font-size: 16px;
-  font-weight: 500;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-  border: none;
-  transition: all 0.3s ease;
-}
-
-.login-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-}
-
-.login-btn:active {
-  transform: translateY(0);
-}
-
-.demo-info {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
   text-align: center;
 }
 
-.demo-account {
-  font-size: 13px;
-  color: #409eff;
-  margin: 0 0 8px 0;
+/* 表单 */
+.login-form :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+
+.login-form :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  padding: 2px 14px;
+  box-shadow: 0 0 0 1px #e5e7eb;
+}
+
+.login-form :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #d1d5db;
+}
+
+.login-form :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.login-form :deep(.el-input__inner) {
+  height: 42px;
+  font-size: 14px;
+}
+
+.login-form :deep(.el-input__prefix) {
+  color: #9ca3af;
+}
+
+/* 修复浏览器自动填充样式 */
+.login-form :deep(.el-input__inner:-webkit-autofill),
+.login-form :deep(.el-input__inner:-webkit-autofill:hover),
+.login-form :deep(.el-input__inner:-webkit-autofill:focus) {
+  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  -webkit-text-fill-color: #1f2937 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.submit-item {
+  margin-bottom: 0 !important;
+  margin-top: 8px;
+}
+
+/* 登录按钮 */
+.login-btn {
+  width: 100%;
+  height: 44px;
+  font-size: 15px;
   font-weight: 500;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  border: none;
+}
+
+.login-btn:hover,
+.login-btn:focus {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+}
+
+/* 演示信息 */
+.demo-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f3f4f6;
+  text-align: center;
+}
+
+.demo-label {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.demo-value {
+  font-size: 14px;
+  color: #3b82f6;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  margin-bottom: 8px;
 }
 
 .demo-notice {
   font-size: 12px;
-  color: #909399;
-  margin: 0;
-  line-height: 1.4;
+  color: #9ca3af;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
+/* 底部 */
+.footer {
+  margin-top: 32px;
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* 响应式 */
+@media (max-width: 480px) {
   .login-content {
-    padding: 20px 15px;
+    padding: 16px;
   }
 
-  .login-center {
-    max-width: 100%;
-  }
-
-  .brand-header {
-    margin-bottom: 30px;
+  .login-card {
+    padding: 24px 20px;
+    border-radius: 16px;
   }
 
   .brand-title {
-    font-size: 28px;
+    font-size: 20px;
   }
 
   .brand-desc {
-    font-size: 14px;
-  }
-
-  .login-card {
-    padding: 24px;
-    margin: 0 10px;
-  }
-}
-
-@media (max-width: 480px) {
-  .brand-title {
-    font-size: 24px;
-  }
-
-  .login-card {
-    padding: 20px;
+    font-size: 13px;
   }
 }
 </style>
