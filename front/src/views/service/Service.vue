@@ -8,15 +8,6 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="集群">
-          <InfiniteSelect
-            v-model="searchForm.clusterId"
-            :fetch-data="clusterFetcher"
-            v-bind="clusterSelectConfig"
-            style="width: 200px"
-            @change="handleClusterChange"
-          />
-        </el-form-item>
         <el-form-item label="命名空间">
           <InfiniteSelect
             v-model="searchForm.namespace"
@@ -169,21 +160,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
 import { serviceApi, type ServiceVO, type ServiceQueryDTO, type ServiceBaseDTO } from '@/api/service'
 import { clusterApi } from '@/api/cluster'
 import { namespaceApi } from '@/api/namespace'
+import { useClusterStore } from '@/stores/cluster'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
-import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 
 
 // 路由
 const router = useRouter()
+
+// 集群上下文
+const clusterStore = useClusterStore()
+const clusterId = computed(() => clusterStore.currentClusterId)
+const clusterName = computed(() => clusterStore.currentClusterName)
 
 // 响应式数据
 const loading = ref(false)
@@ -200,12 +197,10 @@ const viewYamlForm = reactive({
 })
 
 // 渐进式加载的数据获取函数
-const clusterFetcher = useClusterFetcher()
-const namespaceFetcher = computed(() => useNamespaceFetcher(searchForm.clusterId))
+const namespaceFetcher = computed(() => useNamespaceFetcher(clusterId.value))
 
 // 搜索表单
 const searchForm = reactive<ServiceQueryDTO>({
-  clusterId: '',
   namespace: '',
   name: '',
   page: 1,
@@ -221,7 +216,7 @@ const pagination = reactive({
 
 // 获取Service列表
 const fetchServiceList = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
     // 没有集群时清空列表
     serviceList.value = []
     pagination.total = 0
@@ -232,6 +227,7 @@ const fetchServiceList = async () => {
   try {
     const params = {
       ...searchForm,
+      clusterId: clusterId.value,
       page: pagination.page,
       pageSize: pagination.pageSize
     }
@@ -255,21 +251,10 @@ const fetchServiceList = async () => {
   }
 }
 
-// 集群变化处理
-const handleClusterChange = (clusterId: string) => {
-  searchForm.clusterId = clusterId
-  // 清空命名空间选择
-  searchForm.namespace = ''
-  // 重置分页
-  pagination.page = 1
-  // 重新获取数据
-  fetchServiceList()
-}
-
 // 命名空间变化处理
 const handleNamespaceChange = (namespace: string) => {
   searchForm.namespace = namespace
-  if (searchForm.clusterId) {
+  if (clusterId.value) {
     // 重置分页
     pagination.page = 1
     // 重新获取数据（包括清空namespace的情况）
@@ -285,12 +270,10 @@ const handleSearch = () => {
 
 // 重置处理
 const handleReset = () => {
-  searchForm.clusterId = ''
   searchForm.namespace = ''
   searchForm.name = ''
   pagination.page = 1
-  serviceList.value = []
-  pagination.total = 0
+  fetchServiceList()
 }
 
 // 分页大小变化
@@ -325,17 +308,11 @@ const handleViewYaml = async (row: ServiceVO) => {
     return
   }
   
-  try {
-    const clusterList = await clusterApi.getClusters({ page: 1, pageSize: 100 })
-    viewYamlForm.clusterName = clusterList.data.items?.find(c => c.id === searchForm.clusterId)?.name || ''
-    viewYamlForm.namespace = row.namespace
-    viewYamlForm.yaml = row.yaml
-    currentService.value = row
-    viewYamlDialogVisible.value = true
-  } catch (error: any) {
-    console.error('获取集群信息失败:', error)
-    ElMessage.error('获取集群信息失败')
-  }
+  viewYamlForm.clusterName = clusterName.value
+  viewYamlForm.namespace = row.namespace
+  viewYamlForm.yaml = row.yaml
+  currentService.value = row
+  viewYamlDialogVisible.value = true
 }
 
 // 处理YAML内容变化
@@ -353,7 +330,7 @@ const handleNamespaceDetail = (row: ServiceVO) => {
   router.push({
     path: '/namespace/detail',
     query: {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: row.namespace
     }
   })
@@ -382,22 +359,27 @@ const getStatusType = (status: string) => {
   }
 }
 
-// 组件挂载时获取数据
-onMounted(async () => {
-  // 自动选择第一个集群并查询数据
-  try {
-    // 获取第一个集群
-    const clusterResponse = await clusterApi.getClusters({ page: 1, pageSize: 1 })
-    if (clusterResponse.code === 200 && clusterResponse.data.items && clusterResponse.data.items.length > 0) {
-      const firstCluster = clusterResponse.data.items[0]
-      searchForm.clusterId = firstCluster.id
-      
-      // 自动加载Service列表
-      fetchServiceList()
-    }
-  } catch (error) {
-    console.error('自动选择集群失败:', error)
-    // 如果自动选择失败，用户仍可以手动选择
+// 监听集群变化
+watch(clusterId, (newClusterId) => {
+  if (newClusterId) {
+    // 清空命名空间选择
+    searchForm.namespace = ''
+    // 重置分页
+    pagination.page = 1
+    // 重新获取数据
+    fetchServiceList()
+  } else {
+    // 没有集群时清空列表
+    serviceList.value = []
+    pagination.total = 0
+  }
+}, { immediate: true })
+
+// 组件挂载时初始化
+onMounted(() => {
+  // 如果已有集群ID，加载数据
+  if (clusterId.value) {
+    fetchServiceList()
   }
 })
 </script>

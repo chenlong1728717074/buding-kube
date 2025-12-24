@@ -1,408 +1,280 @@
 <template>
-  <div class="dashboard-page">
-    <div class="page-header dashboard-header">
-      <div class="dashboard-header__left">
-        <h1>欢迎回来，{{ userStore.userInfo?.username }}！</h1>
-        <div class="dashboard-subtitle">这里是您的 Kubernetes 集群管理仪表盘</div>
+  <div class="home-page">
+    <!-- 欢迎区域 -->
+    <div class="welcome-section">
+      <h1>欢迎，{{ userStore.userInfo?.username }}</h1>
+      <p class="welcome-desc">Buding K8s 多集群管理平台</p>
+    </div>
+
+    <!-- 模块卡片 -->
+    <div class="module-grid">
+      <!-- 集群管理 -->
+      <div class="module-card" @click="goToClusterManagement">
+        <div class="module-icon cluster">
+          <el-icon :size="40"><Monitor /></el-icon>
+        </div>
+        <div class="module-info">
+          <h2>集群管理</h2>
+          <p>管理和监控您的 Kubernetes 集群</p>
+          <div class="module-stats">
+            <span class="stat-item">
+              <span class="stat-value">{{ clusterCount }}</span>
+              <span class="stat-label">个集群</span>
+            </span>
+          </div>
+        </div>
       </div>
-      <div class="header-actions">
-        <el-button @click="openDocs">
-          <el-icon><Document /></el-icon>
-          查看文档
-        </el-button>
+
+      <!-- 用户管理 (仅管理员可见) -->
+      <div v-if="userStore.isAdmin" class="module-card" @click="goToUserManagement">
+        <div class="module-icon user">
+          <el-icon :size="40"><User /></el-icon>
+        </div>
+        <div class="module-info">
+          <h2>用户管理</h2>
+          <p>管理系统用户和权限</p>
+          <div class="module-stats">
+            <span class="stat-item">
+              <span class="stat-value">{{ userCount }}</span>
+              <span class="stat-label">个用户</span>
+            </span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <el-card class="table-card section-card">
-      <template #header>
-        <div class="section-title">统计概览</div>
-      </template>
-      <div class="stats-grid">
-        <el-card class="stat-card" shadow="hover">
-          <div class="stat-content">
-            <div class="stat-icon cluster">
-              <el-icon size="24">
-                <Monitor />
-              </el-icon>
-            </div>
-            <div class="stat-info">
-              <h3>{{ clusterCount }}</h3>
-              <p>集群总数</p>
-            </div>
-          </div>
-        </el-card>
-
-        <el-card class="stat-card" shadow="hover">
-          <div class="stat-content">
-            <div class="stat-icon node">
-              <el-icon size="24">
-                <Monitor />
-              </el-icon>
-            </div>
-            <div class="stat-info">
-              <h3>{{ nodeCount }}</h3>
-              <p>节点总数</p>
-            </div>
-          </div>
-        </el-card>
-
-        <el-card class="stat-card" shadow="hover">
-          <div class="stat-content">
-            <div class="stat-icon pod">
-              <el-icon size="24">
-                <Box />
-              </el-icon>
-            </div>
-            <div class="stat-info">
-              <h3>{{ podCount }}</h3>
-              <p>Pod 总数</p>
-            </div>
-          </div>
-        </el-card>
-
-        <el-card class="stat-card" v-if="userStore.isAdmin" shadow="hover">
-          <div class="stat-content">
-            <div class="stat-icon user">
-              <el-icon size="24">
-                <User />
-              </el-icon>
-            </div>
-            <div class="stat-info">
-              <h3>{{ userCount }}</h3>
-              <p>用户总数</p>
-            </div>
-          </div>
-        </el-card>
+    <!-- 快速访问 -->
+    <div class="quick-access-section">
+      <h3>快速访问</h3>
+      <div class="quick-links">
+        <el-link :underline="false" @click="openDocs">
+          <el-icon><Document /></el-icon>
+          查看文档
+        </el-link>
+        <el-link :underline="false" href="https://github.com/chenlong1728717074/buding-kube" target="_blank">
+          <el-icon><Link /></el-icon>
+          GitHub
+        </el-link>
       </div>
-    </el-card>
-
-    <el-card class="table-card section-card">
-      <template #header>
-        <div class="section-title">快速操作</div>
-      </template>
-      <div class="action-grid">
-        <el-card class="action-card" shadow="hover" @click="$router.push('/cluster')">
-          <div class="action-content">
-            <el-icon size="32" class="action-icon">
-              <Monitor />
-            </el-icon>
-            <h3>管理集群</h3>
-            <p>查看和管理 Kubernetes 集群</p>
-          </div>
-        </el-card>
-
-        <el-card class="action-card" v-if="userStore.isAdmin" shadow="hover" @click="$router.push('/user')">
-          <div class="action-content">
-            <el-icon size="32" class="action-icon">
-              <User />
-            </el-icon>
-            <h3>用户管理</h3>
-            <p>管理系统用户和权限</p>
-          </div>
-        </el-card>
-
-        <el-card class="action-card" shadow="hover" @click="openDocs">
-          <div class="action-content">
-            <el-icon size="32" class="action-icon">
-              <Document />
-            </el-icon>
-            <h3>查看文档</h3>
-            <p>阅读使用指南和 API 文档</p>
-          </div>
-        </el-card>
-      </div>
-    </el-card>
-
-    <el-card class="table-card section-card">
-      <template #header>
-        <div class="section-title">系统状态</div>
-      </template>
-      <el-row :gutter="20">
-        <el-col :span="12">
-          <el-card shadow="never" class="sub-card">
-            <template #header>
-              <span>集群健康状态</span>
-            </template>
-            <div class="status-item">
-              <span class="status-label">健康集群</span>
-              <el-tag type="success">{{ healthyClusterCount }}</el-tag>
-            </div>
-            <div class="status-item">
-              <span class="status-label">异常集群</span>
-              <el-tag type="danger">{{ unhealthyClusterCount }}</el-tag>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="12">
-          <el-card shadow="never" class="sub-card">
-            <template #header>
-              <span>最近活动</span>
-            </template>
-            <div class="activity-list">
-              <div class="activity-item" v-for="activity in recentActivities" :key="activity.id">
-                <span class="activity-time">{{ activity.time }}</span>
-                <span class="activity-desc">{{ activity.description }}</span>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </el-card>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref} from 'vue'
-import {useUserStore} from '@/stores/user'
-import {Box, Document, Monitor, User} from '@element-plus/icons-vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { Monitor, User, Document, Link } from '@element-plus/icons-vue'
+import { clusterApi } from '@/api/cluster'
 
+const router = useRouter()
 const userStore = useUserStore()
 
-// 统计数据
 const clusterCount = ref(0)
-const nodeCount = ref(0)
-const podCount = ref(0)
 const userCount = ref(0)
-const healthyClusterCount = ref(0)
-const unhealthyClusterCount = ref(0)
 
-// 最近活动
-const recentActivities = ref([
-  {
-    id: 1,
-    time: '10:30',
-    description: '集群 prod-cluster 状态正常'
-  },
-  {
-    id: 2,
-    time: '09:15',
-    description: '用户 admin 登录系统'
-  },
-  {
-    id: 3,
-    time: '08:45',
-    description: '新增节点 worker-node-3'
-  }
-])
-
-// 加载仪表盘数据
-const loadDashboardData = async () => {
+const loadStats = async () => {
   try {
-    // TODO: 调用API获取真实数据
-    // 这里使用模拟数据
-    clusterCount.value = 3
-    nodeCount.value = 12
-    podCount.value = 45
-    userCount.value = 8
-    healthyClusterCount.value = 2
-    unhealthyClusterCount.value = 1
+    const response = await clusterApi.getClusters({ page: 1, pageSize: 100 })
+    clusterCount.value = response.data.total
+    userCount.value = 8 // TODO: 从用户 API 获取
   } catch (error) {
-    console.error('加载仪表盘数据失败:', error)
+    console.error('Failed to load stats:', error)
   }
+}
+
+const goToClusterManagement = () => {
+  router.push('/cluster')
+}
+
+const goToUserManagement = () => {
+  router.push('/user/management')
+}
+
+const openDocs = () => {
+  window.open('https://kubernetes.io/zh-cn/docs', '_blank', 'noopener,noreferrer')
 }
 
 onMounted(() => {
-  loadDashboardData()
+  loadStats()
 })
-function openDocs() {
-  window.open('https://kubernetes.io/zh-cn/docs', '_blank', 'noopener,noreferrer')
-}
 </script>
 
 <style scoped>
-.dashboard-page {
-  padding: 20px;
+.home-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 20px;
 }
 
-.dashboard-header {
-  align-items: flex-start;
+/* 欢迎区域 */
+.welcome-section {
+  text-align: center;
+  margin-bottom: 60px;
 }
 
-.dashboard-header__left {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.welcome-section h1 {
+  font-size: 36px;
+  font-weight: 600;
+  color: #1e3a8a;
+  margin: 0 0 12px 0;
 }
 
-.dashboard-header h1 {
-  font-size: 28px;
-  color: var(--el-text-color-primary);
+.welcome-desc {
+  font-size: 16px;
+  color: #64748b;
   margin: 0;
 }
 
-.dashboard-subtitle {
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.section-card :deep(.el-card__header) {
-  border-bottom: 1px solid rgba(59, 130, 246, 0.12);
-}
-
-.stats-grid {
+/* 模块卡片网格 */
+.module-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 32px;
+  margin-bottom: 60px;
 }
 
-.stat-card {
-  cursor: default;
-}
-
-.stat-content {
+.module-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 40px 32px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  cursor: pointer;
+  transition: all 0.3s ease;
   display: flex;
-  align-items: center;
-  padding: 10px 0;
+  gap: 24px;
 }
 
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
+.module-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.15);
+}
+
+.module-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 16px;
-  color: white;
+  color: #fff;
+  flex-shrink: 0;
 }
 
-.stat-icon.cluster {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.module-icon.cluster {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
 
-.stat-icon.node {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+.module-icon.user {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
-.stat-icon.pod {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.stat-icon.user {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-}
-
-.stat-info h3 {
-  font-size: 32px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  margin: 0 0 4px 0;
-}
-
-.stat-info p {
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
-  margin: 0;
-}
-
-.action-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.action-card {
-  cursor: pointer;
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
-}
-
-.action-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-hover);
-}
-
-.action-content {
-  text-align: center;
-  padding: 20px;
-}
-
-.action-icon {
-  color: var(--el-color-primary);
-  margin-bottom: 16px;
-}
-
-.action-content h3 {
-  font-size: 18px;
-  color: var(--el-text-color-primary);
-  margin: 0 0 8px 0;
-}
-
-.action-content p {
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
-  margin: 0;
-}
-
-.sub-card {
-  background: rgba(59, 130, 246, 0.04);
-  border-radius: var(--radius-md);
-}
-
-.status-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.status-item:last-child {
-  margin-bottom: 0;
-}
-
-.status-label {
-  font-size: 14px;
-  color: var(--el-text-color-regular);
-}
-
-.activity-list {
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.activity-item {
-  display: flex;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.activity-item:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.activity-time {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  margin-right: 12px;
-  min-width: 40px;
-}
-
-.activity-desc {
-  font-size: 14px;
-  color: var(--el-text-color-regular);
+.module-info {
   flex: 1;
 }
 
-/* 响应式设计 */
+.module-info h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.module-info p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 20px 0;
+}
+
+.module-stats {
+  display: flex;
+  gap: 24px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+/* 快速访问 */
+.quick-access-section {
+  text-align: center;
+}
+
+.quick-access-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 20px 0;
+}
+
+.quick-links {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+}
+
+.quick-links .el-link {
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.06);
+  transition: all 0.2s ease;
+}
+
+.quick-links .el-link:hover {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+/* 响应式 */
 @media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
+  .home-page {
+    padding: 40px 16px;
   }
 
-  .action-grid {
-    grid-template-columns: 1fr;
+  .welcome-section {
+    margin-bottom: 40px;
   }
 
   .welcome-section h1 {
-    font-size: 24px;
+    font-size: 28px;
+  }
+
+  .module-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+
+  .module-card {
+    flex-direction: column;
+    padding: 28px 24px;
+  }
+
+  .module-icon {
+    width: 64px;
+    height: 64px;
+  }
+
+  .quick-links {
+    flex-direction: column;
+    gap: 12px;
   }
 }
 </style>

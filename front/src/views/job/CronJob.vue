@@ -6,15 +6,6 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="集群">
-          <InfiniteSelect
-            v-model="searchForm.clusterId"
-            :fetch-data="clusterFetcher"
-            v-bind="clusterSelectConfig"
-            style="width: 200px"
-            @change="handleClusterChange"
-          />
-        </el-form-item>
         <el-form-item label="命名空间">
           <InfiniteSelect
             v-model="searchForm.namespace"
@@ -168,27 +159,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
 import { cronJobApi, type CronJobVO, type CronJobQueryDTO } from '@/api/cronjob'
 import { clusterApi } from '@/api/cluster'
+import { useClusterStore } from '@/stores/cluster'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
-import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 
 // 路由
 const router = useRouter()
+
+// 集群上下文
+const clusterStore = useClusterStore()
+const clusterId = computed(() => clusterStore.currentClusterId)
+const clusterName = computed(() => clusterStore.currentClusterName)
 
 // 响应式数据
 const loading = ref(false)
 const cronJobList = ref<CronJobVO[]>([])
 
 // 渐进式加载的数据获取函数
-const clusterFetcher = useClusterFetcher()
-const namespaceFetcher = computed(() => useNamespaceFetcher(searchForm.clusterId))
+const namespaceFetcher = computed(() => useNamespaceFetcher(clusterId.value))
 
 // 对话框状态
 const viewYamlDialogVisible = ref(false)
@@ -203,7 +199,6 @@ const viewYamlForm = reactive({
 
 // 搜索表单
 const searchForm = reactive<CronJobQueryDTO>({
-  clusterId: '',
   namespace: '',
   name: '',
   page: 1,
@@ -219,8 +214,7 @@ const pagination = reactive({
 
 // 获取CronJob列表
 const fetchCronJobList = async () => {
-  if (!searchForm.clusterId) {
-    // 没有集群时清空列表
+  if (!clusterId.value) {
     cronJobList.value = []
     pagination.total = 0
     return
@@ -230,6 +224,7 @@ const fetchCronJobList = async () => {
   try {
     const params = {
       ...searchForm,
+      clusterId: clusterId.value,
       page: pagination.page,
       pageSize: pagination.pageSize
     }
@@ -275,17 +270,12 @@ const handleCurrentChange = (page: number) => {
 
 
 
-// 查看详情
-const handleViewDetail = (row: CronJobVO) => {
-  ElMessage.info('查看详情功能开发中')
-}
-
 // 跳转到命名空间详情
 const handleNamespaceDetail = (row: CronJobVO) => {
   router.push({
     path: '/namespace/detail',
     query: {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: row.namespace
     }
   })
@@ -297,22 +287,10 @@ const formatTime = (time: string) => {
   return new Date(time).toLocaleString('zh-CN')
 }
 
-// 处理集群变化
-const handleClusterChange = (clusterId: string) => {
-  searchForm.clusterId = clusterId
-  searchForm.namespace = '' // 重置命名空间选择
-  if (clusterId) {
-    fetchCronJobList()
-  } else {
-    cronJobList.value = []
-    pagination.total = 0
-  }
-}
-
 // 处理命名空间变化
 const handleNamespaceChange = (namespace: string) => {
   searchForm.namespace = namespace
-  if (searchForm.clusterId) {
+  if (clusterId.value) {
     fetchCronJobList()
   }
 }
@@ -337,13 +315,11 @@ const handleMoreAction = (command: string, row: CronJobVO) => {
 // 查看YAML
 const handleViewYaml = (row: CronJobVO) => {
   currentCronJob.value = row
-  viewYamlForm.clusterName = searchForm.clusterId
+  viewYamlForm.clusterName = clusterName.value
   viewYamlForm.namespace = row.namespace
   viewYamlForm.yaml = row.yaml || ''
   viewYamlDialogVisible.value = true
 }
-
-
 
 // 删除CronJob
 const handleDelete = (row: CronJobVO) => {
@@ -362,22 +338,22 @@ const handleDelete = (row: CronJobVO) => {
   })
 }
 
+// 监听集群变化
+watch(clusterId, (newClusterId) => {
+  if (newClusterId) {
+    searchForm.namespace = ''
+    pagination.page = 1
+    fetchCronJobList()
+  } else {
+    cronJobList.value = []
+    pagination.total = 0
+  }
+}, { immediate: true })
+
 // 页面挂载时的处理
-onMounted(async () => {
-  // 自动选择第一个集群并查询数据
-  try {
-    // 获取第一个集群
-    const clusterResponse = await clusterApi.getClusters({ page: 1, pageSize: 1 })
-    if (clusterResponse.code === 200 && clusterResponse.data.items && clusterResponse.data.items.length > 0) {
-      const firstCluster = clusterResponse.data.items[0]
-      searchForm.clusterId = firstCluster.id
-      
-      // 自动加载CronJob列表
-      fetchCronJobList()
-    }
-  } catch (error) {
-    console.error('自动选择集群失败:', error)
-    // 如果自动选择失败，用户仍可以手动选择
+onMounted(() => {
+  if (clusterId.value) {
+    fetchCronJobList()
   }
 })
 </script>

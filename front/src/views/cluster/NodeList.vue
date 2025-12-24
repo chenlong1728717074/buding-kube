@@ -6,21 +6,6 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="集群">
-          <el-select 
-            v-model="searchForm.clusterId" 
-            placeholder="请选择集群"
-            style="width: 200px"
-            @change="handleClusterChange"
-          >
-            <el-option
-              v-for="cluster in clusterList"
-              :key="cluster.id || cluster.name"
-              :label="cluster.name"
-              :value="cluster.id || cluster.name"
-            />
-          </el-select>
-        </el-form-item>
         <el-form-item label="节点名称">
           <el-input 
             v-model="searchForm.keyword" 
@@ -119,24 +104,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import { clusterApi, type ClusterVO } from '@/api/cluster'
+import { clusterApi } from '@/api/cluster'
+import { useClusterStore } from '@/stores/cluster'
 
 const route = useRoute()
 const router = useRouter()
+const clusterStore = useClusterStore()
+
+// 使用顶部选中的集群ID
+const clusterId = computed(() => clusterStore.currentClusterId)
 
 // 搜索表单
 const searchForm = reactive({
-  clusterId: '',
   keyword: '',
   status: ''
 })
-
-// 集群列表
-const clusterList = ref<ClusterVO[]>([])
 
 // 节点列表
 const nodeList = ref<any[]>([])
@@ -149,38 +135,16 @@ const pagination = reactive({
   total: 0
 })
 
-// 获取集群列表
-const fetchClusterList = async () => {
-  try {
-    const response = await clusterApi.getClusters({
-      page: 1,
-      pageSize: 10000 // 获取所有集群
-    })
-    
-    if (response.code === 200 && response.data) {
-      clusterList.value = response.data.items || []
-      
-      // 如果没有选中集群且有集群数据，选择第一个
-      if (!searchForm.clusterId && clusterList.value.length > 0) {
-        searchForm.clusterId = clusterList.value[0].id || clusterList.value[0].name
-      }
-    }
-  } catch (error) {
-    console.error('获取集群列表失败:', error)
-    ElMessage.error('获取集群列表失败')
-  }
-}
-
 // 获取节点列表
 const fetchNodeList = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
     ElMessage.warning('请先选择集群')
     return
   }
   
   loading.value = true
   try {
-    const response = await clusterApi.getNodes(searchForm.clusterId, {
+    const response = await clusterApi.getNodes(clusterId.value, {
       ...searchForm,
       page: pagination.page,
       pageSize: pagination.size
@@ -204,12 +168,6 @@ const fetchNodeList = async () => {
   }
 }
 
-// 集群变更
-const handleClusterChange = () => {
-  pagination.page = 1
-  fetchNodeList()
-}
-
 // 搜索
 const handleSearch = () => {
   pagination.page = 1
@@ -224,9 +182,8 @@ const handleRefresh = () => {
 // 查看详情
 const handleViewDetail = (row: any) => {
   router.push({
-    path: '/node/detail',
+    path: `/cluster/${clusterId.value}/node/detail`,
     query: {
-      clusterId: searchForm.clusterId,
       hostname: row.hostname || row.name
     }
   })
@@ -236,7 +193,7 @@ const handleViewDetail = (row: any) => {
 const handleScheduleChange = async (row: any) => {
   try {
     const action = row.unSchedule ? '停止调度' : '启用调度'
-    await clusterApi.toggleNodeSchedule(searchForm.clusterId, row.hostname, row.unSchedule)
+    await clusterApi.toggleNodeSchedule(clusterId.value, row.hostname, row.unSchedule)
     ElMessage.success(`${action}操作成功`)
   } catch (error) {
     console.error('调度状态切换失败:', error)
@@ -257,17 +214,8 @@ const getStatusType = (status: string) => {
 }
 
 // 初始化
-onMounted(async () => {
-  // 检查是否从集群列表跳转过来
-  const clusterId = route.query.clusterId as string
-  if (clusterId) {
-    searchForm.clusterId = clusterId
-  }
-  
-  await fetchClusterList()
-  
-  // 如果有集群ID，直接获取节点列表
-  if (searchForm.clusterId) {
+onMounted(() => {
+  if (clusterId.value) {
     fetchNodeList()
   }
 })

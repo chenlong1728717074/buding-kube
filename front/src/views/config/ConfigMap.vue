@@ -16,11 +16,6 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="集群">
-          <el-select v-model="searchForm.clusterId" placeholder="请选择集群" style="width: 200px" clearable @change="handleClusterChange">
-            <el-option v-for="cluster in clusterList" :key="cluster.id" :label="cluster.name" :value="cluster.id" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="命名空间">
           <el-select v-model="searchForm.namespace" placeholder="请选择命名空间" style="width: 200px" clearable @change="handleNamespaceChange">
             <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
@@ -95,11 +90,6 @@
     <!-- YAML添加 -->
     <UnifiedDialog v-model="yamlAddDialogVisible" title="YAML添加" subtitle="通过 YAML 快速创建 ConfigMap" width="80%">
       <el-form :model="yamlAddForm" label-width="100px">
-        <el-form-item label="集群">
-          <el-select v-model="yamlAddForm.clusterId" placeholder="请选择集群" style="width: 240px">
-            <el-option v-for="c in clusterList" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="命名空间">
           <el-select v-model="yamlAddForm.namespace" placeholder="请选择命名空间" style="width: 240px">
             <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
@@ -120,11 +110,6 @@
       <div class="cm-editor">
         <div class="cm-topbar">
           <el-form :model="createForm" inline class="cm-topbar-form">
-            <el-form-item label="集群" required>
-              <el-select v-model="createForm.clusterId" placeholder="请选择集群" style="width: 220px">
-                <el-option v-for="c in clusterList" :key="c.id" :label="c.name" :value="c.id" />
-              </el-select>
-            </el-form-item>
             <el-form-item label="命名空间" required>
               <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 220px">
                 <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
@@ -390,13 +375,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-vue'
 import { configMapApi, type ConfigMapVO, type ConfigMapPageQueryDTO } from '@/api/configmap'
-import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import { useClusterStore } from '@/stores/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -405,19 +390,21 @@ import { ref as vRef } from 'vue'
 
 type KvRow = { key: string; value: string }
 
+// 集群上下文
+const clusterStore = useClusterStore()
+const clusterId = computed(() => clusterStore.currentClusterId)
+
 const loading = ref(false)
 const configMaps = ref<ConfigMapVO[]>([])
 const selectedRows = ref<ConfigMapVO[]>([])
 
 const searchForm = reactive<ConfigMapPageQueryDTO>({
-  clusterId: '',
   namespace: '',
   page: 1,
   pageSize: 20,
   keyword: ''
 })
 
-const clusterList = ref<ClusterVO[]>([])
 const namespaceList = ref<NamespaceVO[]>([])
 
 const pagination = reactive({
@@ -453,25 +440,10 @@ let yamlContent = ref('')
 
 const handleSelectionChange = (rows: ConfigMapVO[]) => { selectedRows.value = rows }
 
-const fetchClusters = async () => {
-  try {
-    const resp = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
-    if ((resp as any)?.data?.items) {
-      clusterList.value = (resp as any).data.items
-      if (!searchForm.clusterId && clusterList.value.length > 0) {
-        searchForm.clusterId = clusterList.value[0].id || clusterList.value[0].name
-        await fetchNamespaces()
-      }
-    }
-  } catch (e) {
-    ElMessage.error('获取集群列表失败')
-  }
-}
-
 const fetchNamespaces = async () => {
-  if (!searchForm.clusterId) { namespaceList.value = []; return }
+  if (!clusterId.value) { namespaceList.value = []; return }
   try {
-    const resp = await namespaceApi.getList({ clusterId: searchForm.clusterId, page: 1, pageSize: 10000 })
+    const resp = await namespaceApi.getList({ clusterId: clusterId.value, page: 1, pageSize: 10000 })
     if (resp.code === 200) {
       namespaceList.value = resp.data.items || []
     }
@@ -481,10 +453,10 @@ const fetchNamespaces = async () => {
 }
 
 const fetchList = async () => {
-  if (!searchForm.clusterId) { configMaps.value = []; pagination.total = 0; return }
+  if (!clusterId.value) { configMaps.value = []; pagination.total = 0; return }
   try {
     loading.value = true
-    const resp = await configMapApi.getList({ clusterId: searchForm.clusterId, namespace: searchForm.namespace || '', page: pagination.page, pageSize: pagination.pageSize, keyword: searchForm.keyword || '' })
+    const resp = await configMapApi.getList({ clusterId: clusterId.value, namespace: searchForm.namespace || '', page: pagination.page, pageSize: pagination.pageSize, keyword: searchForm.keyword || '' })
     if (resp.code === 200) {
       configMaps.value = resp.data.items || []
       pagination.total = resp.data.total || 0
@@ -494,14 +466,6 @@ const fetchList = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const handleClusterChange = async () => {
-  searchForm.namespace = ''
-  pagination.page = 1
-  await fetchNamespaces()
-  configMaps.value = []
-  pagination.total = 0
 }
 
 const handleNamespaceChange = () => {
@@ -524,8 +488,7 @@ const handleCurrentChange = (page: number) => { pagination.page = page; fetchLis
 
 const router = useRouter()
 const goDetail = (row: ConfigMapVO) => {
-  const clusterId = searchForm.clusterId
-  router.push({ path: '/config/configmap/detail', query: { clusterId, namespace: row.namespace, name: row.name } })
+  router.push({ path: '/config/configmap/detail', query: { clusterId: clusterId.value, namespace: row.namespace, name: row.name } })
 }
 
 const handleRowAction = (cmd: string, row: ConfigMapVO) => {
@@ -558,7 +521,7 @@ const confirmEditInfo = async () => {
   if (!currentRow.value) return
   editInfoLoading.value = true
   try {
-    const payload = { clusterId: searchForm.clusterId, namespace: currentRow.value.namespace, name: currentRow.value.name, alias: editInfoForm.alias, describe: editInfoForm.describe }
+    const payload = { clusterId: clusterId.value, namespace: currentRow.value.namespace, name: currentRow.value.name, alias: editInfoForm.alias, describe: editInfoForm.describe }
     await configMapApi.updateInfo(payload)
     ElMessage.success('更新成功')
     editInfoDialogVisible.value = false
@@ -571,11 +534,11 @@ const confirmEditInfo = async () => {
 }
 
 const confirmApplyYaml = async () => {
-  if (!yamlContent.value || !searchForm.clusterId) { ElMessage.warning('YAML内容为空'); return }
+  if (!yamlContent.value || !clusterId.value) { ElMessage.warning('YAML内容为空'); return }
   if (!currentRow.value?.namespace) { ElMessage.warning('命名空间为空'); return }
   yamlApplyLoading.value = true
   try {
-    await configMapApi.applyYaml({ clusterId: searchForm.clusterId, namespace: currentRow.value.namespace, yaml: yamlContent.value })
+    await configMapApi.applyYaml({ clusterId: clusterId.value, namespace: currentRow.value.namespace, yaml: yamlContent.value })
     ElMessage.success('YAML应用成功')
     yamlDialogVisible.value = false
     fetchList()
@@ -589,7 +552,7 @@ const confirmApplyYaml = async () => {
 // YAML添加
 const yamlAddDialogVisible = ref(false)
 const yamlAddLoading = ref(false)
-const yamlAddForm = reactive({ clusterId: '' as string, namespace: '' as string })
+const yamlAddForm = reactive({ namespace: '' as string })
 let yamlAddContent = ref([
   'apiVersion: v1',
   'kind: ConfigMap',
@@ -601,15 +564,14 @@ let yamlAddContent = ref([
   '    key=value'
 ].join('\n'))
 const openYamlAdd = () => {
-  yamlAddForm.clusterId = searchForm.clusterId || ''
   yamlAddForm.namespace = searchForm.namespace || ''
   yamlAddDialogVisible.value = true
 }
 const confirmYamlAdd = async () => {
-  if (!yamlAddForm.clusterId || !yamlAddContent.value) { ElMessage.warning('请选择集群并填写YAML'); return }
+  if (!clusterId.value || !yamlAddContent.value) { ElMessage.warning('请选择集群并填写YAML'); return }
   yamlAddLoading.value = true
   try {
-    await configMapApi.applyYaml({ clusterId: yamlAddForm.clusterId, namespace: yamlAddForm.namespace || '', yaml: yamlAddContent.value })
+    await configMapApi.applyYaml({ clusterId: clusterId.value, namespace: yamlAddForm.namespace || '', yaml: yamlAddContent.value })
     ElMessage.success('YAML添加成功')
     yamlAddDialogVisible.value = false
     fetchList()
@@ -627,13 +589,12 @@ const createSection = ref<'data' | 'meta'>('data')
 const createYamlMode = ref(false)
 const kvCreateRef = vRef<any>()
 const createImportInputRef = vRef<HTMLInputElement | null>(null)
-const createForm = reactive({ clusterId: '' as string, namespace: '' as string, name: '' as string, alias: '' as string, describe: '' as string })
+const createForm = reactive({ namespace: '' as string, name: '' as string, alias: '' as string, describe: '' as string })
 const createDataRows = ref<KvRow[]>([])
 const createLabelRows = ref<KvRow[]>([])
 const createAnnotationRows = ref<KvRow[]>([])
 const createYaml = ref('')
 const openCreate = () => {
-  createForm.clusterId = searchForm.clusterId || ''
   createForm.namespace = searchForm.namespace || ''
   createForm.name = ''
   createForm.alias = ''
@@ -785,7 +746,7 @@ const handleCreateImportChange = async (e: Event) => {
 }
 
 const confirmCreate = async () => {
-  if (!createForm.clusterId || !createForm.namespace || !createForm.name) { ElMessage.warning('请填写必填项'); return }
+  if (!clusterId.value || !createForm.namespace || !createForm.name) { ElMessage.warning('请填写必填项'); return }
   const labels = collectCreateLabels()
   const data = collectRowsData(createDataRows.value)
   const annotations = rowsToRecord(createAnnotationRows.value, { excludeKeys: ['alias', 'describe'] })
@@ -793,7 +754,7 @@ const confirmCreate = async () => {
   createLoading.value = true
   try {
     await configMapApi.add({
-      clusterId: createForm.clusterId,
+      clusterId: clusterId.value,
       namespace: createForm.namespace,
       name: createForm.name,
       alias: createForm.alias,
@@ -882,21 +843,21 @@ const confirmEdit = async () => {
     const labels = collectEditLabels()
     const annotations = rowsToRecord(editAnnotationRows.value, { excludeKeys: ['alias', 'describe'] })
     await configMapApi.updateInfo({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name,
       alias: editForm.alias,
       describe: editForm.describe
     })
     await configMapApi.updateSetting({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name,
       labels,
       annotations
     })
     await configMapApi.updateData({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name,
       data
@@ -917,7 +878,7 @@ const confirmDelete = async () => {
   if (!currentRow.value) return
   deleteLoading.value = true
   try {
-    await configMapApi.delete({ clusterId: searchForm.clusterId, namespace: currentRow.value.namespace, name: currentRow.value.name })
+    await configMapApi.delete({ clusterId: clusterId.value, namespace: currentRow.value.namespace, name: currentRow.value.name })
     ElMessage.success('删除成功')
     deleteDialogVisible.value = false
     fetchList()
@@ -937,9 +898,24 @@ const formatDate = (dateString?: string) => {
   } catch { return '-' }
 }
 
+// 监听集群变化
+watch(clusterId, async (newClusterId) => {
+  if (newClusterId) {
+    searchForm.namespace = ''
+    pagination.page = 1
+    await fetchNamespaces()
+    await fetchList()
+  } else {
+    configMaps.value = []
+    pagination.total = 0
+  }
+})
+
 onMounted(async () => {
-  await fetchClusters()
-  await fetchList()
+  if (clusterId.value) {
+    await fetchNamespaces()
+    await fetchList()
+  }
 })
 
 const addMetaRow = (rows: KvRow[]) => {

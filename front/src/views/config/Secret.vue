@@ -16,11 +16,6 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="集群">
-          <el-select v-model="searchForm.clusterId" placeholder="请选择集群" style="width: 200px" clearable @change="handleClusterChange">
-            <el-option v-for="cluster in clusterList" :key="cluster.id" :label="cluster.name" :value="cluster.id" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="命名空间">
           <el-select v-model="searchForm.namespace" placeholder="请选择命名空间" style="width: 200px" clearable @change="handleNamespaceChange">
             <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
@@ -438,13 +433,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-vue'
 import { secretApi, type SecretVO, type SecretPageQueryDTO } from '@/api/secret'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import { useClusterStore } from '@/stores/cluster'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -454,12 +450,15 @@ type KvRow = { key: string; value: string }
 
 const router = useRouter()
 
+// 集群上下文
+const clusterStore = useClusterStore()
+const clusterId = computed(() => clusterStore.currentClusterId)
+
 const loading = ref(false)
 const secrets = ref<SecretVO[]>([])
 const selectedRows = ref<SecretVO[]>([])
 
 const searchForm = reactive<SecretPageQueryDTO>({
-  clusterId: '',
   namespace: '',
   page: 1,
   pageSize: 20,
@@ -476,8 +475,7 @@ const pagination = reactive({
 })
 
 const goDetail = (row: SecretVO) => {
-  const clusterId = searchForm.clusterId
-  router.push({ path: '/config/secret/detail', query: { clusterId, namespace: row.namespace, name: row.name } })
+  router.push({ path: '/config/secret/detail', query: { clusterId: clusterId.value, namespace: row.namespace, name: row.name } })
 }
 
 const currentRow = ref<SecretVO | null>(null)
@@ -501,28 +499,13 @@ const handleSelectionChange = (rows: SecretVO[]) => {
   selectedRows.value = rows
 }
 
-const fetchClusters = async () => {
-  try {
-    const resp = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
-    if ((resp as any)?.data?.items) {
-      clusterList.value = (resp as any).data.items
-      if (!searchForm.clusterId && clusterList.value.length > 0) {
-        searchForm.clusterId = clusterList.value[0].id || clusterList.value[0].name
-        await fetchNamespaces()
-      }
-    }
-  } catch {
-    ElMessage.error('获取集群列表失败')
-  }
-}
-
 const fetchNamespaces = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
     namespaceList.value = []
     return
   }
   try {
-    const resp = await namespaceApi.getList({ clusterId: searchForm.clusterId, page: 1, pageSize: 10000 })
+    const resp = await namespaceApi.getList({ clusterId: clusterId.value, page: 1, pageSize: 10000 })
     if (resp.code === 200) {
       namespaceList.value = resp.data.items || []
     }
@@ -532,7 +515,7 @@ const fetchNamespaces = async () => {
 }
 
 const fetchList = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
     secrets.value = []
     pagination.total = 0
     return
@@ -540,7 +523,7 @@ const fetchList = async () => {
   try {
     loading.value = true
     const resp = await secretApi.getList({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: searchForm.namespace || '',
       page: pagination.page,
       pageSize: pagination.pageSize,
@@ -617,8 +600,8 @@ const rowsFromSecret = (row?: SecretVO | null) => {
 }
 
 const fetchSecretDetail = async (row: SecretVO) => {
-  if (!searchForm.clusterId) return row
-  const resp = await secretApi.getInfo({ clusterId: searchForm.clusterId, namespace: row.namespace, name: row.name })
+  if (!clusterId.value) return row
+  const resp = await secretApi.getInfo({ clusterId: clusterId.value, namespace: row.namespace, name: row.name })
   return resp.data
 }
 
@@ -679,7 +662,7 @@ const confirmEditInfo = async () => {
   editInfoLoading.value = true
   try {
     const payload = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name,
       alias: editInfoForm.alias,
@@ -710,7 +693,7 @@ const confirmEditData = async () => {
       stringData[key] = value
     }
     const payload = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name,
       stringData
@@ -727,7 +710,7 @@ const confirmEditData = async () => {
 }
 
 const confirmApplyYaml = async () => {
-  if (!yamlContent.value || !searchForm.clusterId) {
+  if (!yamlContent.value || !clusterId.value) {
     ElMessage.warning('YAML内容为空')
     return
   }
@@ -738,7 +721,7 @@ const confirmApplyYaml = async () => {
   yamlApplyLoading.value = true
   try {
     await secretApi.applyYaml({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       yaml: yamlContent.value
     })
@@ -770,7 +753,7 @@ let yamlAddContent = ref(
 )
 
 const openYamlAdd = () => {
-  yamlAddForm.clusterId = searchForm.clusterId || ''
+  yamlAddForm.clusterId = clusterId.value || ''
   yamlAddForm.namespace = searchForm.namespace || ''
   yamlAddDialogVisible.value = true
 }
@@ -973,7 +956,7 @@ const getCreateStringData = () => {
 }
 
 const openCreate = () => {
-  createForm.clusterId = searchForm.clusterId || ''
+  createForm.clusterId = clusterId.value || ''
   createForm.namespace = searchForm.namespace || ''
   createForm.name = ''
   createForm.type = 'Opaque'
@@ -1199,14 +1182,14 @@ const confirmEditSetting = async () => {
     const stringData = rowsToStringData(editDataRows.value)
     buildEditYaml()
     await secretApi.updateInfo({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name,
       alias: editForm.alias,
       describe: editForm.describe
     })
     await secretApi.updateSetting({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name,
       type: editForm.type,
@@ -1214,7 +1197,7 @@ const confirmEditSetting = async () => {
       annotations
     })
     await secretApi.updateData({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name,
       stringData
@@ -1237,7 +1220,7 @@ const confirmDelete = async () => {
   deleteLoading.value = true
   try {
     await secretApi.delete({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name
     })
@@ -1269,9 +1252,19 @@ const formatDate = (dateString?: string) => {
   }
 }
 
+watch(clusterId, async (newClusterId) => {
+  if (newClusterId) {
+    searchForm.namespace = ''
+    await fetchNamespaces()
+    await fetchList()
+  }
+})
+
 onMounted(async () => {
-  await fetchClusters()
-  await fetchList()
+  if (clusterId.value) {
+    await fetchNamespaces()
+    await fetchList()
+  }
 })
 </script>
 

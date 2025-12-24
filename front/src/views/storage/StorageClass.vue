@@ -6,11 +6,6 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="集群">
-          <el-select v-model="searchForm.clusterId" placeholder="请选择集群" style="width: 220px" clearable @change="handleClusterChange">
-            <el-option v-for="cluster in clusterList" :key="cluster.id" :label="cluster.name" :value="cluster.id" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="关键词">
           <el-input v-model="searchForm.keyword" placeholder="名称关键字" clearable style="width: 220px" />
         </el-form-item>
@@ -73,20 +68,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { storageClassApi, type StorageClassVO, type StorageClassPageQueryDTO } from '@/api/storageclass'
+import { useClusterStore } from '@/stores/cluster'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
+
+// 集群上下文
+const clusterStore = useClusterStore()
+const clusterId = computed(() => clusterStore.currentClusterId)
 
 const loading = ref(false)
 const items = ref<StorageClassVO[]>([])
 const clusterList = ref<ClusterVO[]>([])
 
 const searchForm = reactive<StorageClassPageQueryDTO>({
-  clusterId: '',
   page: 1,
   pageSize: 20,
   keyword: ''
@@ -119,22 +118,8 @@ const formatDate = (dateString?: string) => {
   }
 }
 
-const fetchClusters = async () => {
-  try {
-    const resp = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
-    if ((resp as any)?.data?.items) {
-      clusterList.value = (resp as any).data.items
-      if (!searchForm.clusterId && clusterList.value.length > 0) {
-        searchForm.clusterId = clusterList.value[0].id || clusterList.value[0].name
-      }
-    }
-  } catch {
-    ElMessage.error('获取集群列表失败')
-  }
-}
-
 const fetchList = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
     items.value = []
     pagination.total = 0
     return
@@ -142,7 +127,7 @@ const fetchList = async () => {
   loading.value = true
   try {
     const resp = await storageClassApi.getList({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       page: pagination.page,
       pageSize: pagination.pageSize,
       keyword: searchForm.keyword || ''
@@ -158,11 +143,6 @@ const fetchList = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const handleClusterChange = async () => {
-  pagination.page = 1
-  await fetchList()
 }
 
 const handleSearch = () => {
@@ -192,9 +172,21 @@ const openYaml = (row: StorageClassVO) => {
   yamlDialogVisible.value = true
 }
 
+// 监听集群变化
+watch(clusterId, (newClusterId) => {
+  if (newClusterId) {
+    pagination.page = 1
+    fetchList()
+  } else {
+    items.value = []
+    pagination.total = 0
+  }
+}, { immediate: true })
+
 onMounted(async () => {
-  await fetchClusters()
-  await fetchList()
+  if (clusterId.value) {
+    await fetchList()
+  }
 })
 </script>
 

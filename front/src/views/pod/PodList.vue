@@ -6,22 +6,6 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="集群">
-          <el-select 
-            v-model="searchForm.clusterId" 
-            placeholder="请选择集群"
-            style="width: 200px"
-            clearable
-            @change="handleClusterChange"
-          >
-            <el-option
-              v-for="cluster in clusterList"
-              :key="cluster.id"
-              :label="cluster.name"
-              :value="cluster.id"
-            />
-          </el-select>
-        </el-form-item>
         <el-form-item label="命名空间">
           <el-select 
             v-model="searchForm.namespace" 
@@ -195,7 +179,7 @@
     <PodLogViewer
       v-model="logDialogVisible"
       :title="`查看日志 - ${selectedPod?.name || ''}`"
-      :cluster-id="searchForm.clusterId"
+      :cluster-id="clusterId"
       :namespace="selectedPod?.namespace || ''"
       :pod-name="selectedPod?.name || ''"
       :container-selectable="false"
@@ -214,7 +198,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onActivated } from 'vue'
+import { ref, reactive, onMounted, onActivated, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
@@ -233,16 +217,20 @@ import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import PodLogViewer from '@/components/PodLogViewer.vue'
-import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import { useClusterStore } from '@/stores/cluster'
 
 const route = useRoute()
 const router = useRouter()
+const clusterStore = useClusterStore()
 const loading = ref(false)
+
+// 使用顶部选中的集群ID
+const clusterId = computed(() => clusterStore.currentClusterId)
+const currentClusterName = computed(() => clusterStore.currentClusterName)
 
 // 搜索表单
 const searchForm = reactive({
-  clusterId: '',
   namespace: '',
   status: ''
 })
@@ -251,14 +239,8 @@ const searchForm = reactive({
 const podList = ref<PodVO[]>([])
 const selectedPods = ref<PodVO[]>([])
 
-// 集群列表
-const clusterList = ref<ClusterVO[]>([])
-const currentClusterName = ref('')
-
 // 命名空间列表
 const namespaceList = ref<NamespaceVO[]>([])
-
-
 
 // 分页
 const pagination = reactive({
@@ -267,37 +249,16 @@ const pagination = reactive({
   total: 0
 })
 
-// 获取集群列表
-const fetchClusterList = async () => {
-  try {
-    const response = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
-    console.log('集群列表API响应:', response)
-    
-    if (response.code === 200 && response.data && response.data.items) {
-      clusterList.value = response.data.items
-      
-      // 如果没有选中集群且有集群数据，自动选择第一个
-      if (!searchForm.clusterId && clusterList.value.length > 0) {
-        searchForm.clusterId = clusterList.value[0].id
-        fetchNamespaceList()
-      }
-    }
-  } catch (error: any) {
-    console.error('获取集群列表失败:', error)
-    ElMessage.error('获取集群列表失败')
-  }
-}
-
 // 获取命名空间列表
 const fetchNamespaceList = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
     namespaceList.value = []
     return
   }
   
   try {
     const params = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       keyword: '',
       page: 1,
       pageSize: 10000
@@ -317,16 +278,15 @@ const fetchNamespaceList = async () => {
 
 // 获取Pod列表
 const fetchPodList = async () => {
-  if (!searchForm.clusterId) {
-    podList.value = []
-    pagination.total = 0
+  if (!clusterId.value) {
+    ElMessage.warning('请先选择集群')
     return
   }
   
   try {
     loading.value = true
     const params: PodQueryDTO = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       ...(searchForm.namespace && { namespace: searchForm.namespace }),
       status: searchForm.status,
       page: pagination.page,
@@ -349,15 +309,6 @@ const fetchPodList = async () => {
   }
 }
 
-// 集群选择变化
-const handleClusterChange = () => {
-  searchForm.namespace = ''
-  pagination.page = 1
-  fetchNamespaceList()
-  podList.value = []
-  pagination.total = 0
-}
-
 // 命名空间选择变化
 const handleNamespaceChange = () => {
   pagination.page = 1
@@ -378,21 +329,14 @@ const handleSearch = () => {
 
 // 重置
 const handleReset = async () => {
-  searchForm.clusterId = ''
   searchForm.namespace = ''
   searchForm.status = ''
   pagination.page = 1
   podList.value = []
-  namespaceList.value = []
   pagination.total = 0
   
-  // 重新获取集群列表并自动选择第一个
-  await fetchClusterList()
-  if (clusterList.value.length > 0) {
-    searchForm.clusterId = clusterList.value[0].id
-    // 获取命名空间列表并自动选择第一个
-    await fetchNamespaceList()
-  }
+  // 重新获取命名空间列表
+  await fetchNamespaceList()
 }
 
 // 分页变化
@@ -414,14 +358,9 @@ const handleSelectionChange = (selection: PodVO[]) => {
 
 // 查看详情
 const handleViewDetail = (row: PodVO) => {
-  // 获取当前选中的集群名称
-  const currentCluster = clusterList.value.find(cluster => cluster.id === searchForm.clusterId)
-  
   router.push({
-    path: '/pod/detail',
+    path: `/cluster/${clusterId.value}/pod/detail`,
     query: {
-      clusterId: searchForm.clusterId,
-      clusterName: currentCluster?.name || '',
       namespace: row.namespace,
       name: row.name
     }
@@ -431,9 +370,8 @@ const handleViewDetail = (row: PodVO) => {
 // 跳转到命名空间详情
 const handleNamespaceDetail = (row: PodVO) => {
   router.push({
-    path: '/namespace/detail',
+    path: `/cluster/${clusterId.value}/namespace/detail`,
     query: {
-      clusterId: searchForm.clusterId,
       namespace: row.namespace
     }
   })
@@ -474,12 +412,8 @@ const handleViewYaml = async (row: PodVO) => {
     yamlContent.value = ''
     selectedPod.value = row
     
-    // 获取当前集群名称
-    const cluster = clusterList.value.find(c => c.id === searchForm.clusterId)
-    currentClusterName.value = cluster?.name || ''
-    
     const params: PodDTO = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: row.namespace,
       name: row.name
     }
@@ -536,7 +470,7 @@ const confirmDeletePod = async () => {
   deleteLoading.value = true
   try {
     const params: PodDTO = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentDeletePod.value.namespace,
       name: currentDeletePod.value.name
     }
@@ -612,34 +546,23 @@ const formatDate = (dateString?: string) => {
 // 页面加载时获取数据
 onMounted(() => {
   // 检查是否从其他页面跳转过来带有参数
-  const clusterId = route.query.clusterId as string
   const namespace = route.query.namespace as string
   
-  if (clusterId) {
-    searchForm.clusterId = clusterId
-  }
   if (namespace) {
     searchForm.namespace = namespace
   }
   
-  fetchClusterList().then(() => {
-    if (searchForm.clusterId) {
-      fetchNamespaceList().then(() => {
-        // 如果有命名空间参数，则加载Pod列表；否则用第一个集群查询所有命名空间的Pod
-        if (searchForm.namespace) {
-          fetchPodList()
-        } else if (searchForm.clusterId) {
-          fetchPodList()
-        }
-      })
-    }
-  })
+  if (clusterId.value) {
+    fetchNamespaceList().then(() => {
+      fetchPodList()
+    })
+  }
 })
 
 // keep-alive恢复时根据刷新参数与现有筛选条件刷新列表
 onActivated(() => {
   const refresh = route.query.refresh as string
-  if (refresh === '1' && searchForm.clusterId) {
+  if (refresh === '1' && clusterId.value) {
     fetchNamespaceList().then(() => fetchPodList())
   }
 })

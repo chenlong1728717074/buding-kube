@@ -16,11 +16,6 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="集群">
-          <el-select v-model="searchForm.clusterId" placeholder="请选择集群" style="width: 200px" clearable @change="handleClusterChange">
-            <el-option v-for="cluster in clusterList" :key="cluster.id" :label="cluster.name" :value="cluster.id" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="命名空间">
           <el-select v-model="searchForm.namespace" placeholder="请选择命名空间" style="width: 200px" clearable @change="handleNamespaceChange">
             <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
@@ -208,13 +203,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-vue'
 import { serviceAccountApi, type ServiceAccountVO, type ServiceAccountPageQueryDTO } from '@/api/serviceaccount'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import { useClusterStore } from '@/stores/cluster'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import StepWizardDialog from '@/components/StepWizardDialog.vue'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
@@ -222,12 +218,15 @@ import YamlEditor from '@/components/YamlEditor.vue'
 
 const router = useRouter()
 
+// 集群上下文
+const clusterStore = useClusterStore()
+const clusterId = computed(() => clusterStore.currentClusterId)
+
 const loading = ref(false)
 const serviceAccounts = ref<ServiceAccountVO[]>([])
 const selectedRows = ref<ServiceAccountVO[]>([])
 
 const searchForm = reactive<ServiceAccountPageQueryDTO>({
-  clusterId: '',
   namespace: '',
   page: 1,
   pageSize: 20,
@@ -244,8 +243,7 @@ const pagination = reactive({
 })
 
 const goDetail = (row: ServiceAccountVO) => {
-  const clusterId = searchForm.clusterId
-  router.push({ path: '/config/serviceaccount/detail', query: { clusterId, namespace: row.namespace, name: row.name } })
+  router.push({ path: '/config/serviceaccount/detail', query: { clusterId: clusterId.value, namespace: row.namespace, name: row.name } })
 }
 
 const currentRow = ref<ServiceAccountVO | null>(null)
@@ -267,28 +265,13 @@ const handleSelectionChange = (rows: ServiceAccountVO[]) => {
   selectedRows.value = rows
 }
 
-const fetchClusters = async () => {
-  try {
-    const resp = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
-    if ((resp as any)?.data?.items) {
-      clusterList.value = (resp as any).data.items
-      if (!searchForm.clusterId && clusterList.value.length > 0) {
-        searchForm.clusterId = clusterList.value[0].id || clusterList.value[0].name
-        await fetchNamespaces()
-      }
-    }
-  } catch {
-    ElMessage.error('获取集群列表失败')
-  }
-}
-
 const fetchNamespaces = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
     namespaceList.value = []
     return
   }
   try {
-    const resp = await namespaceApi.getList({ clusterId: searchForm.clusterId, page: 1, pageSize: 10000 })
+    const resp = await namespaceApi.getList({ clusterId: clusterId.value, page: 1, pageSize: 10000 })
     if (resp.code === 200) {
       namespaceList.value = resp.data.items || []
     }
@@ -298,7 +281,7 @@ const fetchNamespaces = async () => {
 }
 
 const fetchList = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
     serviceAccounts.value = []
     pagination.total = 0
     return
@@ -306,7 +289,7 @@ const fetchList = async () => {
   try {
     loading.value = true
     const resp = await serviceAccountApi.getList({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: searchForm.namespace || '',
       page: pagination.page,
       pageSize: pagination.pageSize,
@@ -323,14 +306,6 @@ const fetchList = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const handleClusterChange = async () => {
-  searchForm.namespace = ''
-  pagination.page = 1
-  await fetchNamespaces()
-  serviceAccounts.value = []
-  pagination.total = 0
 }
 
 const handleNamespaceChange = () => {
@@ -405,7 +380,7 @@ const confirmEditInfo = async () => {
       annotations = JSON.parse(editInfoForm.annotationsJson)
     }
     await serviceAccountApi.update({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name,
       automountServiceAccountToken: currentRow.value.automountServiceAccountToken,
@@ -425,7 +400,7 @@ const confirmEditInfo = async () => {
 }
 
 const confirmApplyYaml = async () => {
-  if (!yamlContent.value || !searchForm.clusterId) {
+  if (!yamlContent.value || !clusterId.value) {
     ElMessage.warning('YAML内容为空')
     return
   }
@@ -436,7 +411,7 @@ const confirmApplyYaml = async () => {
   yamlApplyLoading.value = true
   try {
     await serviceAccountApi.applyYaml({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       yaml: yamlContent.value
     })
@@ -464,7 +439,7 @@ let yamlAddContent = ref(
 )
 
 const openYamlAdd = () => {
-  yamlAddForm.clusterId = searchForm.clusterId || ''
+  yamlAddForm.clusterId = clusterId.value || ''
   yamlAddForm.namespace = searchForm.namespace || ''
   yamlAddDialogVisible.value = true
 }
@@ -509,7 +484,7 @@ let createActive = ref(0)
 let createYaml = ref('')
 
 const openCreate = () => {
-  createForm.clusterId = searchForm.clusterId || ''
+  createForm.clusterId = clusterId.value || ''
   createForm.namespace = searchForm.namespace || ''
   createForm.name = ''
   createForm.automountServiceAccountToken = true
@@ -575,7 +550,7 @@ const confirmDelete = async () => {
   deleteLoading.value = true
   try {
     await serviceAccountApi.delete({
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
       name: currentRow.value.name
     })
@@ -607,9 +582,24 @@ const formatDate = (dateString?: string) => {
   }
 }
 
+// 监听集群变化
+watch(clusterId, async (newClusterId) => {
+  if (newClusterId) {
+    searchForm.namespace = ''
+    pagination.page = 1
+    await fetchNamespaces()
+    await fetchList()
+  } else {
+    serviceAccounts.value = []
+    pagination.total = 0
+  }
+}, { immediate: true })
+
 onMounted(async () => {
-  await fetchClusters()
-  await fetchList()
+  if (clusterId.value) {
+    await fetchNamespaces()
+    await fetchList()
+  }
 })
 </script>
 

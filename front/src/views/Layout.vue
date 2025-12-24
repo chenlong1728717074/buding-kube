@@ -1,8 +1,8 @@
 <template>
   <el-container class="layout-container">
     <!-- 侧边栏 -->
-<el-aside :width="isCollapsed ? '72px' : '250px'" class="sidebar">
-      <div class="logo">
+    <el-aside :width="isCollapsed ? '72px' : '250px'" class="sidebar">
+      <div class="logo" @click="goHome" style="cursor: pointer;">
         <h2>{{ isCollapsed ? 'K' : 'K8s管理平台' }}</h2>
       </div>
       <el-menu
@@ -13,163 +13,139 @@
         :collapse-transition="false"
         unique-opened
       >
-        <el-menu-item index="/dashboard">
+        <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/overview`">
           <el-icon><House /></el-icon>
-          <span>仪表盘</span>
+          <span>集群概览</span>
         </el-menu-item>
         
-        <el-sub-menu index="/cluster">
+        <el-sub-menu index="resource">
           <template #title>
-            <el-icon><Monitor /></el-icon>
-            <span>集群管理</span>
+            <el-icon><FolderOpened /></el-icon>
+            <span>资源管理</span>
           </template>
-          <el-menu-item index="/cluster/list">
-            <el-icon><List /></el-icon>
-            <span>集群列表</span>
-          </el-menu-item>
-          <el-menu-item index="/cluster/nodes">
-            <el-icon><Monitor /></el-icon>
-            <span>节点列表</span>
-          </el-menu-item>
-          <el-menu-item index="/namespace">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/namespace`">
             <el-icon><List /></el-icon>
             <span>命名空间</span>
           </el-menu-item>
-          <el-menu-item index="/pod">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/nodes`">
+            <el-icon><Monitor /></el-icon>
+            <span>节点管理</span>
+          </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/pod`">
             <el-icon><Box /></el-icon>
             <span>Pod管理</span>
           </el-menu-item>
         </el-sub-menu>
         
-        <el-sub-menu index="/workload">
+        <el-sub-menu index="workload">
           <template #title>
             <el-icon><Operation /></el-icon>
             <span>工作负载</span>
           </template>
-          <el-menu-item index="/workload/deployment">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/workload/deployment`">
             <el-icon><Grid /></el-icon>
             <span>Deployment</span>
           </el-menu-item>
-          <el-menu-item index="/workload/daemonset">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/workload/daemonset`">
             <el-icon><Cpu /></el-icon>
             <span>DaemonSet</span>
           </el-menu-item>
-          <el-menu-item index="/workload/statefulset">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/workload/statefulset`">
             <el-icon><DataBoard /></el-icon>
             <span>StatefulSet</span>
           </el-menu-item>
         </el-sub-menu>
         
-        <el-sub-menu index="/service">
+        <el-sub-menu index="service">
           <template #title>
             <el-icon><Connection /></el-icon>
             <span>服务发现</span>
           </template>
-          <el-menu-item index="/service/service">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/service/service`">
             <el-icon><Link /></el-icon>
             <span>Service</span>
           </el-menu-item>
-          <el-menu-item index="/service/ingress">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/service/ingress`">
             <el-icon><Share /></el-icon>
             <span>Ingress</span>
           </el-menu-item>
-          <el-menu-item index="/service/endpoint">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/service/endpoint`">
             <el-icon><Position /></el-icon>
             <span>Endpoint</span>
           </el-menu-item>
-          <el-menu-item index="/service/endpointslice">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/service/endpointslice`">
             <el-icon><Position /></el-icon>
             <span>EndpointSlice</span>
           </el-menu-item>
         </el-sub-menu>
         
-        <el-sub-menu index="/config">
+        <el-sub-menu index="config">
           <template #title>
             <el-icon><Setting /></el-icon>
             <span>配置管理</span>
           </template>
-          <el-menu-item index="/config/configmap">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/config/configmap`">
             <el-icon><Files /></el-icon>
             <span>ConfigMap</span>
           </el-menu-item>
-          <el-menu-item index="/config/secret">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/config/secret`">
             <el-icon><Key /></el-icon>
             <span>Secret</span>
           </el-menu-item>
-          <el-menu-item index="/config/serviceaccount">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/config/serviceaccount`">
             <el-icon><UserFilled /></el-icon>
             <span>ServiceAccount</span>
           </el-menu-item>
         </el-sub-menu>
         
-        <el-sub-menu index="/job">
+        <el-sub-menu index="job">
           <template #title>
             <el-icon><Timer /></el-icon>
             <span>任务调度</span>
           </template>
-          <el-menu-item index="/job/job">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/job/job`">
             <el-icon><Clock /></el-icon>
             <span>Job</span>
           </el-menu-item>
-          <el-menu-item index="/job/cronjob">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/job/cronjob`">
             <el-icon><AlarmClock /></el-icon>
             <span>CronJob</span>
           </el-menu-item>
         </el-sub-menu>
         
-        <el-sub-menu index="/storage">
+        <el-sub-menu index="storage">
           <template #title>
-            <el-icon><FolderOpened /></el-icon>
+            <el-icon><Folder /></el-icon>
             <span>存储管理</span>
           </template>
-          <el-menu-item index="/storage/pv">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/storage/pv`">
             <el-icon><Folder /></el-icon>
             <span>PersistentVolume</span>
           </el-menu-item>
-          <el-menu-item index="/storage/pvc">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/storage/pvc`">
             <el-icon><FolderAdd /></el-icon>
             <span>PersistentVolumeClaim</span>
           </el-menu-item>
-          <el-menu-item index="/storage/storageclass">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/storage/storageclass`">
             <el-icon><Document /></el-icon>
             <span>StorageClass</span>
           </el-menu-item>
         </el-sub-menu>
 
-        <el-sub-menu index="/resource">
+        <el-sub-menu index="advanced">
           <template #title>
-            <el-icon><Operation /></el-icon>
-            <span>资源管理</span>
+            <el-icon><MoreFilled /></el-icon>
+            <span>高级功能</span>
           </template>
-          <el-menu-item index="/resource/crd">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/resource/crd`">
             <el-icon><Document /></el-icon>
             <span>CRD</span>
           </el-menu-item>
-          <el-menu-item index="/resource/tools">
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/resource/tools`">
             <el-icon><MoreFilled /></el-icon>
             <span>工具</span>
           </el-menu-item>
         </el-sub-menu>
-        
-        <el-sub-menu v-if="userStore.isAdmin" index="/user">
-          <template #title>
-            <el-icon><User /></el-icon>
-            <span>用户管理</span>
-          </template>
-          <el-menu-item index="/user/list">
-            <el-icon><UserFilled /></el-icon>
-            <span>用户列表</span>
-          </el-menu-item>
-          <el-menu-item index="/user/profile">
-            <el-icon><Avatar /></el-icon>
-            <span>个人信息</span>
-          </el-menu-item>
-        </el-sub-menu>
-        
-        <el-menu-item v-else index="/user/profile">
-          <el-icon><Avatar /></el-icon>
-          <span>个人信息</span>
-        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -182,13 +158,32 @@
             <el-icon><Fold v-if="!isCollapsed" /><Expand v-else /></el-icon>
           </el-button>
           <div class="title-stack">
-            <span class="page-title">{{ pageTitle }}</span>
-            <el-breadcrumb class="breadcrumb" separator="/">
-              <el-breadcrumb-item v-for="(b, idx) in breadcrumbs" :key="idx" :to="b.to">
-                {{ b.title }}
-              </el-breadcrumb-item>
-            </el-breadcrumb>
+            <!-- 集群切换下拉选择器 -->
+            <el-dropdown trigger="click" @command="switchCluster" class="cluster-dropdown">
+              <div class="cluster-selector">
+                <el-icon><Monitor /></el-icon>
+                <span>{{ clusterStore.currentClusterName }}</span>
+                <el-icon class="arrow"><ArrowDown /></el-icon>
+              </div>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item 
+                    v-for="cluster in clusterList" 
+                    :key="cluster.id"
+                    :command="cluster"
+                    :disabled="cluster.id === clusterStore.currentClusterId"
+                  >
+                    <span class="cluster-name">{{ cluster.name }}</span>
+                    <el-tag v-if="cluster.id === clusterStore.currentClusterId" size="small" type="success" style="margin-left: 8px;">当前</el-tag>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
+          <el-button text class="manage-cluster-btn" @click="goToClusterManage">
+            <el-icon><Setting /></el-icon>
+            <span>集群管理</span>
+          </el-button>
         </div>
         <div class="header-right">
           <div class="header-extras">
@@ -240,6 +235,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">个人信息</el-dropdown-item>
+                <el-dropdown-item command="userManagement" v-if="isAdmin">用户管理</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -268,6 +264,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useClusterStore } from '@/stores/cluster'
 import {
   House,
   Monitor,
@@ -275,6 +272,7 @@ import {
   Avatar,
   Bell,
   ArrowDown,
+  ArrowRight,
   List,
   UserFilled,
   Box,
@@ -302,36 +300,74 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import TagsView from '@/components/TagsView.vue'
+import { clusterApi } from '@/api/cluster'
 
 import { Fold, Expand } from '@element-plus/icons-vue'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const clusterStore = useClusterStore()
 const nowDateText = ref('')
 const nowTimeText = ref('')
 const isFullscreen = ref(false)
 const fullscreenText = computed(() => (isFullscreen.value ? '退出全屏' : '进入全屏'))
+const clusterList = ref<any[]>([])
+
+// 加载集群列表
+const loadClusterList = async () => {
+  try {
+    const response = await clusterApi.getClusters({ page: 1, pageSize: 100 })
+    // 后端返回的是 items 而不是 list
+    const { items, list } = response.data
+    const clusterData = items || list || []
+    clusterList.value = clusterData.map((cluster: any) => ({
+      id: cluster.id || cluster.name,
+      name: cluster.alias || cluster.name,
+      status: cluster.status
+    }))
+  } catch (error) {
+    console.error('Failed to load cluster list:', error)
+  }
+}
+
+// 切换集群
+const switchCluster = (command: any) => {
+  const cluster = command
+  clusterStore.setCurrentCluster({
+    id: cluster.id,
+    name: cluster.name,
+    apiServer: '',
+    status: cluster.status
+  })
+  
+  // 刷新当前页面或跳转到集群概览
+  const currentPath = route.path
+  if (currentPath.includes('/cluster/')) {
+    const newPath = currentPath.replace(/\/cluster\/[^/]+/, `/cluster/${cluster.id}`)
+    router.push(newPath)
+  } else {
+    router.push(`/cluster/${cluster.id}/overview`)
+  }
+}
+
+// 返回主页
+const goHome = () => {
+  router.push('/home')
+}
+
+// 前往集群管理页面
+const goToClusterManage = () => {
+  router.push('/cluster')
+}
 
 // 当前激活的菜单
 const activeMenu = computed(() => {
-  const path = route.path
-  if (path.startsWith('/dashboard')) return '/dashboard'
-  if (path.startsWith('/cluster')) return path
-  if (path.startsWith('/namespace')) return '/namespace'
-  if (path.startsWith('/pod')) return '/pod'
-  if (path.startsWith('/workload')) return path
-  if (path.startsWith('/job')) return path
-  if (path.startsWith('/service')) return path
-  if (path.startsWith('/config')) return path
-  if (path.startsWith('/storage')) return path
-  if (path.startsWith('/resource')) return path
-  if (path.startsWith('/user')) return path
-  return '/dashboard'
+  return route.path
 })
 
 // 页面标题
 const pageTitle = computed(() => {
-  return route.meta.title || '仪表盘'
+  return route.meta.title || '集群概览'
 })
 
 const breadcrumbs = computed(() => {
@@ -351,11 +387,17 @@ const breadcrumbs = computed(() => {
   return result
 })
 
+// 检查是否是管理员 - 使用store中的isAdmin
+const isAdmin = computed(() => userStore.isAdmin)
+
 // 处理下拉菜单命令
 const handleCommand = (command: string) => {
   switch (command) {
     case 'profile':
       router.push('/user/profile')
+      break
+    case 'userManagement':
+      router.push('/user/management')
       break
     case 'logout':
       ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' })
@@ -433,6 +475,7 @@ onMounted(() => {
   clockTimer = window.setInterval(updateClock, 1000)
   onFullscreenChange()
   document.addEventListener('fullscreenchange', onFullscreenChange)
+  loadClusterList()
 })
 onUnmounted(() => {
   if (clockTimer) window.clearInterval(clockTimer)
@@ -538,7 +581,61 @@ onUnmounted(() => {
 .title-stack {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+}
+
+.cluster-dropdown {
+  cursor: pointer;
+}
+
+.cluster-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3b82f6;
+  transition: all 0.2s ease;
+}
+
+.cluster-selector:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.cluster-selector .arrow {
+  font-size: 12px;
+}
+
+.cluster-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 180px;
+}
+
+.cluster-name {
+  flex: 1;
+}
+
+.manage-cluster-btn {
+  margin-left: 12px;
+  color: #64748b;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.manage-cluster-btn:hover {
+  background: rgba(100, 116, 139, 0.08);
+  color: #475569;
 }
 
 .header-left .page-title {

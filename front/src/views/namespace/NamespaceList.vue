@@ -16,22 +16,6 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="集群">
-          <el-select 
-            v-model="searchForm.clusterId" 
-            placeholder="请选择集群"
-            style="width: 200px"
-            clearable
-            @change="handleClusterChange"
-          >
-            <el-option
-              v-for="cluster in clusterList"
-              :key="cluster.id"
-              :label="cluster.name"
-              :value="cluster.id"
-            />
-          </el-select>
-        </el-form-item>
         <el-form-item label="命名空间">
           <el-input 
             v-model="searchForm.keyword" 
@@ -151,22 +135,6 @@
         label-width="100px"
         class="namespace-form"
       >
-        <el-form-item label="集群" prop="clusterId">
-          <el-select 
-            v-model="namespaceForm.clusterId" 
-            placeholder="请选择集群" 
-            style="width: 100%;"
-            :disabled="isEdit"
-          >
-            <el-option 
-              v-for="cluster in clusterList" 
-              :key="cluster.id" 
-              :label="cluster.name" 
-              :value="cluster.id" 
-            />
-          </el-select>
-        </el-form-item>
-        
         <el-form-item label="命名空间" prop="namespace">
           <el-input 
             v-model="namespaceForm.namespace" 
@@ -211,21 +179,6 @@
         :model="yamlForm" 
         label-width="100px"
       >
-        <el-form-item label="集群">
-          <el-select 
-            v-model="yamlForm.clusterId" 
-            placeholder="请选择集群" 
-            style="width: 300px"
-          >
-            <el-option 
-              v-for="cluster in clusterList" 
-              :key="cluster.id" 
-              :label="cluster.name" 
-              :value="cluster.id" 
-            />
-          </el-select>
-        </el-form-item>
-        
         <el-form-item label="YAML配置" class="yaml-form-item">
            <YamlEditor
              v-model="yamlForm.yaml"
@@ -295,7 +248,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
@@ -315,6 +268,7 @@ import {
   type NamespaceBaseDTO
 } from '@/api/namespace'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
+import { useClusterStore } from '@/stores/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -326,9 +280,12 @@ const submitLoading = ref(false)
 const applyLoading = ref(false)
 const yamlSubmitLoading = ref(false)
 
+// 集群上下文
+const clusterStore = useClusterStore()
+const clusterId = computed(() => clusterStore.currentClusterId)
+
 // 搜索表单
 const searchForm = reactive({
-  clusterId: '',
   keyword: ''
 })
 
@@ -336,7 +293,7 @@ const searchForm = reactive({
 const namespaceList = ref<NamespaceVO[]>([])
 const selectedNamespaces = ref<NamespaceVO[]>([])
 
-// 集群列表
+// 集群列表（用于对话框）
 const clusterList = ref<ClusterVO[]>([])
 
 // 分页
@@ -355,7 +312,6 @@ const formRef = ref()
 
 // 命名空间表单
 const namespaceForm = reactive({
-  clusterId: '',
   namespace: '',
   alias: '',
   describe: ''
@@ -363,7 +319,6 @@ const namespaceForm = reactive({
 
 // YAML表单
 const yamlForm = reactive({
-  clusterId: '',
   yaml: ''
 })
 
@@ -378,9 +333,6 @@ const viewYamlForm = reactive({
 
 // 表单验证规则
 const formRules = {
-  clusterId: [
-    { required: true, message: '请选择集群', trigger: 'change' }
-  ],
   namespace: [
     { required: true, message: '请输入命名空间名称', trigger: 'blur' },
     { pattern: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, message: '命名空间名称格式不正确', trigger: 'blur' }
@@ -389,7 +341,8 @@ const formRules = {
 
 // 获取命名空间列表
 const fetchNamespaceList = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
+    ElMessage.warning('请先选择集群')
     namespaceList.value = []
     pagination.total = 0
     return
@@ -398,7 +351,7 @@ const fetchNamespaceList = async () => {
   try {
     loading.value = true
     const params: NamespacePageQueryDTO = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       keyword: searchForm.keyword,
       page: pagination.page,
       pageSize: pagination.pageSize
@@ -420,7 +373,7 @@ const fetchNamespaceList = async () => {
   }
 }
 
-// 获取集群列表
+// 获取集群列表（用于对话框）
 const fetchClusterList = async () => {
   try {
     const response = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
@@ -429,25 +382,11 @@ const fetchClusterList = async () => {
     if (response.code === 200 && response.data) {
       clusterList.value = response.data.items || []
       console.log('解析后的集群列表:', clusterList.value)
-      
-      // 如果没有选中集群且有集群数据，选择第一个
-      if (!searchForm.clusterId && clusterList.value.length > 0) {
-        searchForm.clusterId = clusterList.value[0].id || clusterList.value[0].name
-        console.log('自动选择集群:', searchForm.clusterId)
-        // 自动查询第一个集群的命名空间列表
-        fetchNamespaceList()
-      }
     }
   } catch (error: any) {
     console.error('获取集群列表失败:', error)
     ElMessage.error('获取集群列表失败')
   }
-}
-
-// 集群选择变化
-const handleClusterChange = () => {
-  pagination.page = 1
-  fetchNamespaceList()
 }
 
 // 搜索
@@ -458,7 +397,6 @@ const handleSearch = () => {
 
 // 重置
 const handleReset = () => {
-  searchForm.clusterId = ''
   searchForm.keyword = ''
   pagination.page = 1
   fetchNamespaceList()
@@ -486,7 +424,6 @@ const handleAddNamespace = () => {
   isEdit.value = false
   dialogTitle.value = '添加命名空间'
   Object.assign(namespaceForm, {
-    clusterId: searchForm.clusterId || '',
     namespace: '',
     alias: '',
     describe: ''
@@ -497,7 +434,6 @@ const handleAddNamespace = () => {
 // YAML方式添加命名空间
 const handleAddNamespaceByYaml = () => {
   Object.assign(yamlForm, {
-    clusterId: searchForm.clusterId || '',
     yaml: `apiVersion: v1
 kind: Namespace
 metadata:
@@ -510,11 +446,6 @@ metadata:
 
 // 应用YAML
 const handleApplyYaml = async () => {
-  if (!yamlForm.clusterId) {
-    ElMessage.warning('请选择集群')
-    return
-  }
-  
   if (!yamlForm.yaml.trim()) {
     ElMessage.warning('YAML内容不能为空')
     return
@@ -524,7 +455,7 @@ const handleApplyYaml = async () => {
     yamlSubmitLoading.value = true
     
     const data: NamespaceApplyDTO = {
-      clusterId: yamlForm.clusterId,
+      clusterId: clusterId.value,
       yaml: yamlForm.yaml
     }
     
@@ -544,7 +475,6 @@ const handleEdit = (row: NamespaceVO) => {
   isEdit.value = true
   dialogTitle.value = '编辑命名空间'
   Object.assign(namespaceForm, {
-    clusterId: searchForm.clusterId,
     namespace: row.name,
     alias: row.alias || '',
     describe: row.describe || ''
@@ -555,9 +485,8 @@ const handleEdit = (row: NamespaceVO) => {
 // 查看详情
 const handleViewDetail = (row: NamespaceVO) => {
   router.push({
-    path: '/namespace/detail',
+    path: `/cluster/${clusterId.value}/namespace/detail`,
     query: {
-      clusterId: searchForm.clusterId,
       namespace: row.name
     }
   })
@@ -569,12 +498,11 @@ const handleViewYaml = async (row: NamespaceVO) => {
     currentNamespace.value = row
     
     // 获取当前集群名称
-    const cluster = clusterList.value.find(c => c.id === searchForm.clusterId)
-    viewYamlForm.clusterName = cluster?.name || ''
+    viewYamlForm.clusterName = clusterStore.currentClusterName
     viewYamlForm.namespace = row.name
     
     const params: NamespaceBaseDTO = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: row.name
     }
     const response = await namespaceApi.getInfo(params)
@@ -603,9 +531,8 @@ const handleMoreAction = (command: string, row: NamespaceVO) => {
 // 查看Pod
 const handleViewPods = (row: NamespaceVO) => {
   router.push({
-    path: '/pod',
+    path: `/cluster/${clusterId.value}/pod`,
     query: {
-      clusterId: searchForm.clusterId,
       namespace: row.name
     }
   })
@@ -629,7 +556,7 @@ const confirmDeleteNamespace = async () => {
   deleteLoading.value = true
   try {
     const params: NamespaceBaseDTO = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentDeleteNamespace.value.name
     }
     await namespaceApi.delete(params)
@@ -658,7 +585,7 @@ const handleSubmit = async () => {
     submitLoading.value = true
     
     const data: NamespaceCreateDTO = {
-      clusterId: namespaceForm.clusterId,
+      clusterId: clusterId.value,
       namespace: namespaceForm.namespace,
       alias: namespaceForm.alias,
       describe: namespaceForm.describe
@@ -692,7 +619,7 @@ const handleApplyEditYaml = async () => {
     applyLoading.value = true
     
     const data: NamespaceApplyDTO = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       yaml: viewYamlForm.yaml
     }
     
@@ -763,13 +690,13 @@ const formatDate = (dateString?: string) => {
 
 // 页面加载时获取数据
 onMounted(() => {
-  // 检查是否从其他页面跳转过来带有集群ID
-  const clusterId = route.query.clusterId as string
-  if (clusterId) {
-    searchForm.clusterId = clusterId
-  }
-  
+  // 获取集群列表用于对话框（保留用于查看YAML时显示集群名称）
   fetchClusterList()
+  
+  // 如果有集群上下文，加载命名空间列表
+  if (clusterId.value) {
+    fetchNamespaceList()
+  }
 })
 </script>
 

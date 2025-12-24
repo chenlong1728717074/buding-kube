@@ -16,21 +16,6 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="集群">
-          <el-select
-              v-model="searchForm.clusterId"
-              placeholder="请选择集群"
-              style="width: 200px"
-              @change="handleClusterChange"
-            >
-              <el-option
-                v-for="cluster in clusterList"
-                :key="cluster.id || cluster.name"
-                :label="cluster.name"
-                :value="cluster.id"
-              />
-            </el-select>
-        </el-form-item>
         <el-form-item label="命名空间">
           <el-select
             v-model="searchForm.namespace"
@@ -309,23 +294,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-vue'
 import { daemonSetApi, type DaemonSetVO, type DaemonSetQueryDTO } from '@/api/daemonset'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import { useClusterStore } from '@/stores/cluster'
 import YamlEditor from '@/components/YamlEditor.vue'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
 
 // 路由
 const router = useRouter()
 
+// 集群上下文
+const clusterStore = useClusterStore()
+const clusterId = computed(() => clusterStore.currentClusterId)
+
 // 响应式数据
 const loading = ref(false)
 const daemonSetList = ref<DaemonSetVO[]>([])
-const clusterList = ref<ClusterVO[]>([])
 const namespaceList = ref<NamespaceVO[]>([])
 
 // 对话框状态
@@ -373,37 +362,16 @@ const pagination = reactive({
   total: 0
 })
 
-// 获取集群列表
-const fetchClusterList = async () => {
-  try {
-    const response = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
-    console.log('集群列表API响应:', response)
-
-    if (response.code === 200 && response.data && response.data.items) {
-      clusterList.value = response.data.items
-
-      // 如果没有选中集群且有集群数据，自动选择第一个
-      if (!searchForm.clusterId && clusterList.value.length > 0) {
-        searchForm.clusterId = clusterList.value[0].id
-        fetchNamespaceList()
-      }
-    }
-  } catch (error: any) {
-    console.error('获取集群列表失败:', error)
-    ElMessage.error('获取集群列表失败')
-  }
-}
-
 // 获取命名空间列表
 const fetchNamespaceList = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
     namespaceList.value = []
     return
   }
 
   try {
     const params = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       keyword: '',
       page: 1,
       pageSize: 10000
@@ -423,7 +391,7 @@ const fetchNamespaceList = async () => {
 
 // 获取DaemonSet列表
 const fetchDaemonSetList = async () => {
-  if (!searchForm.clusterId) {
+  if (!clusterId.value) {
     ElMessage.warning('请先选择集群')
     return
   }
@@ -431,7 +399,7 @@ const fetchDaemonSetList = async () => {
   loading.value = true
   try {
     const params = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       ...(searchForm.namespace && { namespace: searchForm.namespace }),
       page: pagination.page,
       pageSize: pagination.pageSize
@@ -452,15 +420,6 @@ const fetchDaemonSetList = async () => {
     ElMessage.error('获取DaemonSet列表失败')
   } finally {
     loading.value = false
-  }
-}
-
-// 集群变化处理
-const handleClusterChange = async () => {
-  searchForm.namespace = ''
-  namespaceList.value = []
-  if (searchForm.clusterId) {
-    await fetchNamespaceList()
   }
 }
 
@@ -527,9 +486,8 @@ const handleViewDetail = (row: DaemonSetVO) => {
 // 跳转到命名空间详情
 const handleNamespaceDetail = (row: DaemonSetVO) => {
   router.push({
-    path: '/namespace/detail',
+    path: `/cluster/${clusterId.value}/namespace/detail`,
     query: {
-      clusterId: searchForm.clusterId,
       namespace: row.namespace
     }
   })
@@ -550,13 +508,15 @@ const handleDetail = (row: DaemonSetVO) => {
 const handleEdit = async (row: DaemonSetVO) => {
   currentDaemonSet.value = row
   editDialogVisible.value = true
-  // 确保有集群列表数据
-  if (clusterList.value.length === 0) {
-    await fetchClusterList()
+  
+  // 获取集群名称
+  try {
+    const response = await clusterApi.getCluster(clusterId.value)
+    editForm.clusterName = response.data?.name || ''
+  } catch (error) {
+    editForm.clusterName = clusterId.value
   }
-
-  // 查找当前集群名称
-  editForm.clusterName = clusterList.value.find(c => c.id === searchForm.clusterId)?.name || ''
+  
   editForm.namespace = row.namespace
   editForm.name = row.name
   editForm.alias = row.alias || ''
@@ -569,7 +529,7 @@ const handleSaveEdit = async () => {
 
   try {
     const params = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentDaemonSet.value.namespace,
       name: currentDaemonSet.value.name,
       alias: editForm.alias,
@@ -597,7 +557,7 @@ const handleAddDaemonSet = () => {
 
 // YAML添加DaemonSet
 const handleAddDaemonSetByYaml = () => {
-  yamlForm.clusterId = searchForm.clusterId
+  yamlForm.clusterId = clusterId.value
   yamlForm.yaml = ''
   yamlDialogVisible.value = true
 }
@@ -658,20 +618,16 @@ const handleViewYaml = async (row: DaemonSetVO) => {
   }
 
   try {
-    // 确保有集群列表数据
-    if (clusterList.value.length === 0) {
-      await fetchClusterList()
-    }
-
-    viewYamlForm.clusterName = clusterList.value.find(c => c.id === searchForm.clusterId)?.name || ''
-    viewYamlForm.namespace = row.namespace
-    viewYamlForm.yaml = row.yaml
-    currentDaemonSet.value = row
-    viewYamlDialogVisible.value = true
-  } catch (error: any) {
-    console.error('获取集群信息失败:', error)
-    ElMessage.error('获取集群信息失败')
+    const response = await clusterApi.getCluster(clusterId.value)
+    viewYamlForm.clusterName = response.data?.name || ''
+  } catch (error) {
+    viewYamlForm.clusterName = clusterId.value
   }
+  
+  viewYamlForm.namespace = row.namespace
+  viewYamlForm.yaml = row.yaml
+  currentDaemonSet.value = row
+  viewYamlDialogVisible.value = true
 }
 
 // 处理YAML内容变化
@@ -686,7 +642,7 @@ const handleApplyEditYaml = async () => {
   try {
     applyLoading.value = true
     const params = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: currentDaemonSet.value.namespace,
       yaml: viewYamlForm.yaml
     }
@@ -721,7 +677,7 @@ const handleDelete = async (row: DaemonSetVO) => {
     )
 
     const params = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: row.namespace,
       name: row.name
     }
@@ -755,7 +711,7 @@ const handleRestart = async (row: DaemonSetVO) => {
     )
 
     const params = {
-      clusterId: searchForm.clusterId,
+      clusterId: clusterId.value,
       namespace: row.namespace,
       name: row.name
     }
@@ -776,15 +732,10 @@ const handleRestart = async (row: DaemonSetVO) => {
 }
 
 // 页面加载时获取数据
-onMounted(async () => {
-  try {
-    await fetchClusterList()
-    if (searchForm.clusterId) {
-      await fetchNamespaceList()
-      fetchDaemonSetList()
-    }
-  } catch (error) {
-    console.error('自动加载集群失败:', error)
+onMounted(() => {
+  if (clusterId.value) {
+    fetchNamespaceList()
+    fetchDaemonSetList()
   }
 })
 </script>
