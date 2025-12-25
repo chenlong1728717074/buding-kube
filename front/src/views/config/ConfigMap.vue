@@ -105,118 +105,142 @@
       </template>
     </UnifiedDialog>
 
-    <!-- 添加ConfigMap（参考 Kuboard 布局） -->
-    <UnifiedDialog v-model="createDialogVisible" title="创建 ConfigMap" subtitle="填写元数据并配置数据键值" width="92%">
-      <div class="cm-editor">
-        <div class="cm-topbar">
-          <el-form :model="createForm" inline class="cm-topbar-form">
-            <el-form-item label="命名空间" required>
-              <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 220px">
-                <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="名称" required>
-              <el-input v-model="createForm.name" placeholder="请输入名称" style="width: 260px" />
-            </el-form-item>
-          </el-form>
-          <div class="cm-topbar-right">
-            <el-button text @click="toggleCreateYamlMode">{{ createYamlMode ? '返回表单' : '预览 YAML' }}</el-button>
+    <!-- 添加ConfigMap（参考设计） -->
+    <el-dialog v-model="createDialogVisible" title="创建保密字典" width="1600px" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">创建保密字典</h3>
+          <div class="dialog-actions">
+            <el-switch v-model="createYamlMode" active-text="编辑 YAML" />
+          </div>
+        </div>
+      </template>
+
+      <div class="config-editor">
+        <!-- 步骤标签 - YAML模式下隐藏 -->
+        <div v-if="!createYamlMode" class="step-tabs">
+          <div :class="['step-tab', { active: createSection === 'basic', completed: createForm.name }]" @click="createSection = 'basic'">
+            <div class="step-icon">
+              <el-icon v-if="createForm.name"><Check /></el-icon>
+              <span v-else>1</span>
+            </div>
+            <div class="step-info">
+              <div class="step-title">基本信息</div>
+              <div class="step-desc">已设置</div>
+            </div>
+          </div>
+          <div :class="['step-tab', { active: createSection === 'data' }]" @click="createSection = 'data'">
+            <div class="step-icon">
+              <span>2</span>
+            </div>
+            <div class="step-info">
+              <div class="step-title">数据设置</div>
+              <div class="step-desc">当前</div>
+            </div>
           </div>
         </div>
 
-        <div class="cm-workbench">
-          <div v-if="createYamlMode" class="cm-yaml">
-            <YamlEditor :model-value="createYaml" :readonly="true" height="520px" />
+        <!-- 内容区域 -->
+        <div class="config-content">
+          <div v-if="createYamlMode" class="yaml-view">
+            <YamlEditor :model-value="createYaml" :readonly="true" height="550px" />
           </div>
-          <div v-else class="cm-panel">
-            <div class="cm-section-switch">
-              <el-radio-group v-model="createSection" size="small">
-                <el-radio-button label="data">数据</el-radio-button>
-                <el-radio-button label="meta">元数据</el-radio-button>
-              </el-radio-group>
+          <div v-else-if="createSection === 'basic'" class="basic-form">
+            <el-form :model="createForm" label-width="80px" label-position="right">
+              <el-form-item label="命名空间" required>
+                <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 100%">
+                  <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="名称" required>
+                <el-input v-model="createForm.name" placeholder="请输入名称" />
+              </el-form-item>
+              <el-form-item label="别名">
+                <el-input v-model="createForm.alias" placeholder="可选" />
+              </el-form-item>
+              <el-form-item label="描述">
+                <el-input v-model="createForm.describe" type="textarea" :rows="4" placeholder="可选" />
+              </el-form-item>
+            </el-form>
+
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">标签</div>
+                <el-button size="small" @click="addMetaRow(createLabelRows)">添加标签</el-button>
+              </div>
+              <el-table :data="createLabelRows" size="default" style="width: 100%">
+                <el-table-column label="键" width="300">
+                  <template #default="{ row }">
+                    <el-input v-model="row.key" placeholder="key" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="值">
+                  <template #default="{ row }">
+                    <el-input v-model="row.value" placeholder="value" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="100" align="center">
+                  <template #default="{ $index }">
+                    <el-button link type="danger" @click="removeMetaRow(createLabelRows, $index)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
             </div>
-            <div v-if="createSection === 'data'" class="cm-data">
-              <div class="kv-toolbar">
-                <div class="kv-toolbar-left">
-                  <el-button size="small" type="primary" @click="kvCreateRef?.addBlank()">添加条目</el-button>
+
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">注解</div>
+                <el-button size="small" @click="addMetaRow(createAnnotationRows)">添加注解</el-button>
+              </div>
+              <el-table :data="createAnnotationRows" size="default" style="width: 100%">
+                <el-table-column label="键" width="300">
+                  <template #default="{ row }">
+                    <el-input v-model="row.key" placeholder="key" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="值">
+                  <template #default="{ row }">
+                    <el-input v-model="row.value" placeholder="value" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="100" align="center">
+                  <template #default="{ $index }">
+                    <el-button link type="danger" @click="removeMetaRow(createAnnotationRows, $index)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
+          <div v-else class="data-form">
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">数据 *</div>
+                <div class="section-actions">
+                  <el-button size="small" @click="kvCreateRef?.addBlank()">添加数据</el-button>
                   <el-button size="small" @click="openCreateImport">从文件导入</el-button>
-                  <input ref="createImportInputRef" class="cm-file-input" style="display: none" type="file" accept=".properties,.ini,.conf,.txt" @change="handleCreateImportChange" />
-                  <el-button size="small" @click="resetCreateDataRows">清空</el-button>
+                  <input ref="createImportInputRef" style="display: none" type="file" accept=".properties,.ini,.conf,.txt" @change="handleCreateImportChange" />
                 </div>
               </div>
-              <KVEditorPane ref="kvCreateRef" v-model="createDataRows" height="520px" />
-            </div>
-            <div v-else class="cm-meta">
-              <el-form :model="createForm" label-width="100px">
-                <el-form-item label="别名">
-                  <el-input v-model="createForm.alias" placeholder="可选" />
-                </el-form-item>
-                <el-form-item label="描述">
-                  <el-input v-model="createForm.describe" type="textarea" :rows="3" placeholder="可选" />
-                </el-form-item>
-              </el-form>
-              <div class="cm-meta-kv">
-                <div class="cm-meta-kv__block">
-                  <div class="cm-meta-kv__header">
-                    <div class="cm-meta-kv__title">标签</div>
-                    <el-button size="small" @click="addMetaRow(createLabelRows)">添加</el-button>
-                  </div>
-                  <el-table :data="createLabelRows" size="small" border style="width: 100%">
-                    <el-table-column label="key" width="260">
-                      <template #default="{ row }">
-                        <el-input v-model="row.key" placeholder="key" />
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="value">
-                      <template #default="{ row }">
-                        <el-input v-model="row.value" placeholder="value" />
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="操作" width="90" align="center">
-                      <template #default="{ $index }">
-                        <el-button link type="danger" @click="removeMetaRow(createLabelRows, $index)">删除</el-button>
-                      </template>
-                    </el-table-column>
-                  </el-table>
-                </div>
-
-                <div class="cm-meta-kv__block">
-                  <div class="cm-meta-kv__header">
-                    <div class="cm-meta-kv__title">注解</div>
-                    <el-button size="small" @click="addMetaRow(createAnnotationRows)">添加</el-button>
-                  </div>
-                  <el-table :data="createAnnotationRows" size="small" border style="width: 100%">
-                    <el-table-column label="key" width="260">
-                      <template #default="{ row }">
-                        <el-input v-model="row.key" placeholder="key" />
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="value">
-                      <template #default="{ row }">
-                        <el-input v-model="row.value" placeholder="value" />
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="操作" width="90" align="center">
-                      <template #default="{ $index }">
-                        <el-button link type="danger" @click="removeMetaRow(createAnnotationRows, $index)">删除</el-button>
-                      </template>
-                    </el-table-column>
-                  </el-table>
-                </div>
+              <div class="data-editor">
+                <KVEditorPane ref="kvCreateRef" v-model="createDataRows" height="500px" />
               </div>
             </div>
           </div>
         </div>
       </div>
+
       <template #footer>
-        <div class="cm-footer">
-          <div class="cm-footer-right">
-            <el-button @click="createDialogVisible = false">取消</el-button>
-            <el-button type="primary" :loading="createLoading" @click="confirmCreate">创建</el-button>
-          </div>
+        <div class="dialog-footer">
+          <el-button @click="createDialogVisible = false">取消</el-button>
+          <template v-if="!createYamlMode">
+            <el-button v-if="createSection === 'data'" @click="createSection = 'basic'">上一步</el-button>
+            <el-button v-if="createSection === 'basic'" type="primary" @click="createSection = 'data'">下一步</el-button>
+            <el-button v-if="createSection === 'data'" type="primary" :loading="createLoading" @click="confirmCreate">创建</el-button>
+          </template>
+          <el-button v-else type="primary" :loading="createLoading" @click="confirmCreate">创建</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 修改别名/备注 -->
     <UnifiedDialog v-model="editInfoDialogVisible" title="编辑信息" subtitle="修改别名与备注" width="80%">
@@ -242,112 +266,59 @@
       </template>
     </UnifiedDialog>
 
-    <!-- 编辑ConfigMap（参考 Kuboard 布局） -->
-    <UnifiedDialog v-model="editDialogVisible" title="编辑 ConfigMap" subtitle="修改元数据与 data 键值" width="92%">
-      <div class="cm-editor">
-        <div class="cm-topbar cm-topbar--edit">
-          <div class="cm-topbar-left">
-            <div class="cm-ident">{{ currentRow?.namespace || '-' }} / {{ currentRow?.name || '-' }}</div>
-            <div class="cm-meta-line">创建时间：{{ formatDate(currentRow?.creationTimestamp) }}</div>
+    <!-- 编辑ConfigMap - 只编辑数据 -->
+    <el-dialog v-model="editDialogVisible" title="编辑数据设置" width="1600px" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">编辑数据设置</h3>
+        </div>
+      </template>
+
+      <div class="config-editor">
+        <!-- 资源信息 -->
+        <div class="resource-info-bar">
+          <div class="resource-info-item">
+            <span class="resource-info-label">命名空间:</span>
+            <span class="resource-info-value">{{ currentRow?.namespace || '-' }}</span>
           </div>
-          <div class="cm-topbar-right">
-            <el-button text @click="toggleEditYamlMode">{{ editYamlMode ? '返回表单' : '预览 YAML' }}</el-button>
+          <div class="resource-info-item">
+            <span class="resource-info-label">名称:</span>
+            <span class="resource-info-value">{{ currentRow?.name || '-' }}</span>
+          </div>
+          <div class="resource-info-item">
+            <span class="resource-info-label">创建时间:</span>
+            <span class="resource-info-value">{{ formatDate(currentRow?.creationTimestamp) }}</span>
           </div>
         </div>
 
-        <div class="cm-workbench">
-          <div v-if="editYamlMode" class="cm-yaml">
-            <YamlEditor :model-value="editYaml" :readonly="true" height="520px" />
-          </div>
-          <div v-else class="cm-panel">
-            <div class="cm-section-switch">
-              <el-radio-group v-model="editSection" size="small">
-                <el-radio-button label="data">数据</el-radio-button>
-                <el-radio-button label="meta">元数据</el-radio-button>
-              </el-radio-group>
-            </div>
-            <div v-if="editSection === 'data'" class="cm-data">
-              <div class="kv-toolbar">
-                <div class="kv-toolbar-left">
-                  <el-button size="small" type="primary" @click="kvEditRef?.addBlank()">添加条目</el-button>
+        <!-- 内容区域 -->
+        <div class="config-content">
+          <div class="data-form">
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">数据 *</div>
+                <div class="section-actions">
+                  <el-button size="small" @click="kvEditRef?.addBlank()">添加数据</el-button>
                   <el-button size="small" @click="openEditImport">从文件导入</el-button>
-                  <input ref="editImportInputRef" class="cm-file-input" style="display: none" type="file" accept=".properties,.ini,.conf,.txt" @change="handleEditImportChange" />
+                  <input ref="editImportInputRef" style="display: none" type="file" accept=".properties,.ini,.conf,.txt" @change="handleEditImportChange" />
                   <el-button size="small" @click="resetEditDataRows">重置</el-button>
                 </div>
               </div>
-              <KVEditorPane ref="kvEditRef" v-model="editDataRows" height="520px" />
-            </div>
-            <div v-else class="cm-meta">
-              <el-form :model="editForm" label-width="100px">
-                <el-form-item label="别名">
-                  <el-input v-model="editForm.alias" placeholder="可选" />
-                </el-form-item>
-                <el-form-item label="描述">
-                  <el-input v-model="editForm.describe" type="textarea" :rows="3" placeholder="可选" />
-                </el-form-item>
-              </el-form>
-              <div class="cm-meta-kv">
-                <div class="cm-meta-kv__block">
-                  <div class="cm-meta-kv__header">
-                    <div class="cm-meta-kv__title">标签</div>
-                    <el-button size="small" @click="addMetaRow(editLabelRows)">添加</el-button>
-                  </div>
-                  <el-table :data="editLabelRows" size="small" border style="width: 100%">
-                    <el-table-column label="key" width="260">
-                      <template #default="{ row }">
-                        <el-input v-model="row.key" placeholder="key" />
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="value">
-                      <template #default="{ row }">
-                        <el-input v-model="row.value" placeholder="value" />
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="操作" width="90" align="center">
-                      <template #default="{ $index }">
-                        <el-button link type="danger" @click="removeMetaRow(editLabelRows, $index)">删除</el-button>
-                      </template>
-                    </el-table-column>
-                  </el-table>
-                </div>
-
-                <div class="cm-meta-kv__block">
-                  <div class="cm-meta-kv__header">
-                    <div class="cm-meta-kv__title">注解</div>
-                    <el-button size="small" @click="addMetaRow(editAnnotationRows)">添加</el-button>
-                  </div>
-                  <el-table :data="editAnnotationRows" size="small" border style="width: 100%">
-                    <el-table-column label="key" width="260">
-                      <template #default="{ row }">
-                        <el-input v-model="row.key" placeholder="key" />
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="value">
-                      <template #default="{ row }">
-                        <el-input v-model="row.value" placeholder="value" />
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="操作" width="90" align="center">
-                      <template #default="{ $index }">
-                        <el-button link type="danger" @click="removeMetaRow(editAnnotationRows, $index)">删除</el-button>
-                      </template>
-                    </el-table-column>
-                  </el-table>
-                </div>
+              <div class="data-editor">
+                <KVEditorPane ref="kvEditRef" v-model="editDataRows" height="500px" />
               </div>
             </div>
           </div>
         </div>
       </div>
+
       <template #footer>
-        <div class="cm-footer">
-          <div class="cm-footer-right">
-            <el-button @click="editDialogVisible = false">取消</el-button>
-            <el-button type="primary" :loading="editLoading" @click="confirmEdit">保存</el-button>
-          </div>
+        <div class="dialog-footer">
+          <el-button @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="editLoading" @click="confirmEdit">保存</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 查看/编辑YAML -->
     <UnifiedDialog v-model="yamlDialogVisible" title="查看/编辑YAML" subtitle="仅应用到当前集群" width="90%">
@@ -378,7 +349,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-vue'
+import { Search, Refresh, ArrowDown, Plus, Document, View, Key, Upload, Delete, Edit, PriceTag, Memo, InfoFilled, Check, Box, RefreshLeft } from '@element-plus/icons-vue'
 import { configMapApi, type ConfigMapVO, type ConfigMapPageQueryDTO } from '@/api/configmap'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
@@ -387,6 +358,7 @@ import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import KVEditorPane from '@/components/KVEditorPane.vue'
 import { ref as vRef } from 'vue'
+import '@/assets/styles/config-editor.css'
 
 type KvRow = { key: string; value: string }
 
@@ -422,7 +394,7 @@ const editInfoForm = reactive({ alias: '', describe: '' })
 
 const editDialogVisible = ref(false)
 const editLoading = ref(false)
-const editSection = ref<'data' | 'meta'>('data')
+const editSection = ref<'basic' | 'data'>('basic')
 const editYamlMode = ref(false)
 const editYaml = ref('')
 const editForm = reactive({ alias: '', describe: '' })
@@ -585,7 +557,7 @@ const confirmYamlAdd = async () => {
 // 添加ConfigMap（表单生成YAML应用）
 const createDialogVisible = ref(false)
 const createLoading = ref(false)
-const createSection = ref<'data' | 'meta'>('data')
+const createSection = ref<'basic' | 'data'>('basic')
 const createYamlMode = ref(false)
 const kvCreateRef = vRef<any>()
 const createImportInputRef = vRef<HTMLInputElement | null>(null)
@@ -604,7 +576,7 @@ const openCreate = () => {
   createAnnotationRows.value = []
   createYaml.value = ''
   createYamlMode.value = false
-  createSection.value = 'data'
+  createSection.value = 'basic'
   createDialogVisible.value = true
 }
 const resetCreateDataRows = () => { createDataRows.value = [] }
@@ -676,15 +648,13 @@ const collectRowsData = (rows: KvRow[]) => {
 }
 
 const toggleCreateYamlMode = () => {
-  if (!createYamlMode.value) {
+  if (createYamlMode.value) {
+    // 切换到 YAML 模式，生成 YAML
     const labels = collectCreateLabels()
     const ann = collectCreateAnnotations()
     const data = collectRowsData(createDataRows.value)
     createYaml.value = buildYamlFromRows(createForm.name, createForm.namespace, labels, ann, data)
-    createYamlMode.value = true
-    return
   }
-  createYamlMode.value = false
 }
 
 const openCreateImport = () => {
@@ -774,16 +744,8 @@ const confirmCreate = async () => {
 }
 
 const openEdit = (row: ConfigMapVO) => {
-  editForm.alias = row.alias || ''
-  editForm.describe = row.describe || ''
+  currentRow.value = row
   editDataRows.value = Object.entries(row.data || {}).map(([k, v]) => ({ key: k, value: String(v ?? '') }))
-  editLabelRows.value = Object.entries(row.labels || {}).map(([k, v]) => ({ key: k, value: String(v ?? '') }))
-  editAnnotationRows.value = Object.entries(row.annotations || {})
-    .filter(([k]) => k !== 'alias' && k !== 'describe')
-    .map(([k, v]) => ({ key: k, value: String(v ?? '') }))
-  editSection.value = 'data'
-  editYamlMode.value = false
-  editYaml.value = ''
   editDialogVisible.value = true
 }
 
@@ -911,6 +873,42 @@ watch(clusterId, async (newClusterId) => {
   }
 })
 
+// 监听创建 YAML 模式切换
+watch(createYamlMode, (newVal) => {
+  if (newVal) {
+    const labels = collectCreateLabels()
+    const ann = collectCreateAnnotations()
+    const data = collectRowsData(createDataRows.value)
+    createYaml.value = buildYamlFromRows(createForm.name, createForm.namespace, labels, ann, data)
+  }
+})
+
+// 监听编辑 YAML 模式切换
+watch(editYamlMode, (newVal) => {
+  if (newVal && currentRow.value) {
+    const labels = rowsToRecord(editLabelRows.value)
+    const ann: Record<string, string> = {}
+    if (editForm.alias) ann.alias = editForm.alias
+    if (editForm.describe) ann.describe = editForm.describe
+    Object.assign(ann, rowsToRecord(editAnnotationRows.value, { excludeKeys: ['alias', 'describe'] }))
+    const data = collectRowsData(editDataRows.value)
+    editYaml.value = buildYamlFromRows(currentRow.value.name, currentRow.value.namespace, labels, ann, data)
+  }
+})
+
+// 监听编辑 YAML 模式切换
+watch(editYamlMode, (newVal) => {
+  if (newVal && currentRow.value) {
+    const labels = rowsToRecord(editLabelRows.value)
+    const ann: Record<string, string> = {}
+    if (editForm.alias) ann.alias = editForm.alias
+    if (editForm.describe) ann.describe = editForm.describe
+    Object.assign(ann, rowsToRecord(editAnnotationRows.value, { excludeKeys: ['alias', 'describe'] }))
+    const data = collectRowsData(editDataRows.value)
+    editYaml.value = buildYamlFromRows(currentRow.value.name, currentRow.value.namespace, labels, ann, data)
+  }
+})
+
 onMounted(async () => {
   if (clusterId.value) {
     await fetchNamespaces()
@@ -930,15 +928,39 @@ const removeMetaRow = (rows: KvRow[], idx: number) => {
 .configmap-page {
   padding: 20px;
 }
-.kv-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-.kv-toolbar-left, .kv-toolbar-right { display: flex; align-items: center; gap: 8px; }
-.cm-file-input { display: none; }
-.cm-topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.cm-topbar-right { padding-top: 2px; }
-.cm-footer { display: flex; justify-content: flex-end; align-items: center; }
-.cm-section-switch { margin-bottom: 10px; }
-.cm-meta-kv { display: grid; gap: 12px; margin-top: 12px; }
-.cm-meta-kv__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.cm-meta-kv__title { font-weight: 600; color: #334155; }
-.cm-topbar--edit { display: flex; justify-content: space-between; gap: 12px; }
+.helper { 
+  font-size: 12px; 
+  color: #94a3b8; 
+  margin-top: 4px; 
+}
+.kv-toolbar { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: 8px; 
+  margin-bottom: 8px; 
+}
+.kv-toolbar-left, 
+.kv-toolbar-right { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+}
+.cm-file-input { 
+  display: none; 
+}
+
+/* 配置对话框样式 */
+.config-dialog :deep(.el-dialog__header) {
+  padding: 0;
+  margin: 0;
+}
+
+.config-dialog :deep(.el-dialog__body) {
+  padding: 0;
+}
+
+.config-dialog :deep(.el-dialog__footer) {
+  padding: 0;
+}
 </style>

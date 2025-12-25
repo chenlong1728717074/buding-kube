@@ -90,11 +90,6 @@
 
     <UnifiedDialog v-model="yamlAddDialogVisible" title="YAML添加" subtitle="通过 YAML 快速创建 ServiceAccount" width="80%">
       <el-form :model="yamlAddForm" label-width="100px">
-        <el-form-item label="集群">
-          <el-select v-model="yamlAddForm.clusterId" placeholder="请选择集群" style="width: 240px">
-            <el-option v-for="c in clusterList" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="命名空间">
           <el-select v-model="yamlAddForm.namespace" placeholder="请选择命名空间" style="width: 240px">
             <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
@@ -110,53 +105,138 @@
       </template>
     </UnifiedDialog>
 
-    <StepWizardDialog
-      v-model="createDialogVisible"
-      title="创建ServiceAccount"
-      width="80%"
-      :steps="createSteps"
-      :active="createActive"
-      :yaml="createYaml"
-      :loading="createLoading"
-      confirm-text="创建"
-      @update:active="val => createActive = val"
-      @update:yaml="val => createYaml = val"
-      @confirm="confirmCreate"
-    >
-      <div v-if="createActive === 0">
-        <el-form :model="createForm" label-width="120px" class="two-col">
-          <el-form-item label="名称" required>
-            <el-input v-model="createForm.name" />
-          </el-form-item>
-          <el-form-item label="集群" required>
-            <el-select v-model="createForm.clusterId" placeholder="请选择集群" style="width: 240px">
-              <el-option v-for="c in clusterList" :key="c.id" :label="c.name" :value="c.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="命名空间" required>
-            <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 240px">
-              <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="自动挂载Token">
-            <el-switch v-model="createForm.automountServiceAccountToken" />
-          </el-form-item>
-        </el-form>
-      </div>
-      <div v-else>
-        <div class="group-box">
-          <div class="group-title">关联设置</div>
-          <el-form :model="createForm" label-width="120px">
-            <el-form-item label="镜像拉取Secrets">
-              <el-select v-model="createForm.imagePullSecrets" multiple filterable allow-create default-first-option style="width: 100%" placeholder="输入或选择Secret名称" />
-            </el-form-item>
-            <el-form-item label="挂载Secrets">
-              <el-select v-model="createForm.secrets" multiple filterable allow-create default-first-option style="width: 100%" placeholder="输入或选择Secret名称" />
-            </el-form-item>
-          </el-form>
+    <el-dialog v-model="createDialogVisible" title="创建ServiceAccount" width="1600px" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">创建ServiceAccount</h3>
+          <div class="dialog-actions">
+            <el-switch v-model="createYamlMode" active-text="编辑 YAML" @change="(v) => v && buildCreateYaml()" />
+          </div>
+        </div>
+      </template>
+
+      <div class="config-editor">
+        <div v-if="!createYamlMode" class="step-tabs">
+          <div :class="['step-tab', { active: createSection === 'basic', completed: createForm.name }]" @click="createSection = 'basic'">
+            <div class="step-icon">
+              <span v-if="!createForm.name">1</span>
+              <el-icon v-else><Check /></el-icon>
+            </div>
+            <div class="step-info">
+              <div class="step-title">基本信息</div>
+              <div class="step-desc">已设置</div>
+            </div>
+          </div>
+          <div :class="['step-tab', { active: createSection === 'settings' }]" @click="createSection = 'settings'">
+            <div class="step-icon">
+              <span>2</span>
+            </div>
+            <div class="step-info">
+              <div class="step-title">关联设置</div>
+              <div class="step-desc">当前</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-content">
+          <div v-if="createYamlMode" class="yaml-view">
+            <YamlEditor :model-value="createYaml" :readonly="true" height="550px" />
+          </div>
+
+          <div v-else-if="createSection === 'basic'" class="basic-form">
+            <el-form :model="createForm" label-width="100px" label-position="right">
+              <el-form-item label="命名空间" required>
+                <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 100%">
+                  <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="名称" required>
+                <el-input v-model="createForm.name" placeholder="请输入名称" />
+              </el-form-item>
+              <el-form-item label="自动挂载Token">
+                <el-switch v-model="createForm.automountServiceAccountToken" />
+              </el-form-item>
+            </el-form>
+
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">标签</div>
+                <el-button size="small" @click="addMetaRow(createLabelRows)">添加标签</el-button>
+              </div>
+              <el-table :data="createLabelRows" size="default" style="width: 100%">
+                <el-table-column label="键" width="300">
+                  <template #default="{ row }">
+                    <el-input v-model="row.key" placeholder="key" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="值">
+                  <template #default="{ row }">
+                    <el-input v-model="row.value" placeholder="value" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="100" align="center">
+                  <template #default="{ $index }">
+                    <el-button link type="danger" @click="removeMetaRow(createLabelRows, $index)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">注解</div>
+                <el-button size="small" @click="addMetaRow(createAnnotationRows)">添加注解</el-button>
+              </div>
+              <el-table :data="createAnnotationRows" size="default" style="width: 100%">
+                <el-table-column label="键" width="300">
+                  <template #default="{ row }">
+                    <el-input v-model="row.key" placeholder="key" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="值">
+                  <template #default="{ row }">
+                    <el-input v-model="row.value" placeholder="value" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="100" align="center">
+                  <template #default="{ $index }">
+                    <el-button link type="danger" @click="removeMetaRow(createAnnotationRows, $index)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
+
+          <div v-else class="data-form">
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">关联设置</div>
+              </div>
+              <el-form :model="createForm" label-width="120px" label-position="right" style="max-width: 900px">
+                <el-form-item label="镜像拉取Secrets">
+                  <el-select v-model="createForm.imagePullSecrets" multiple filterable allow-create default-first-option style="width: 100%" placeholder="输入或选择Secret名称" />
+                </el-form-item>
+                <el-form-item label="挂载Secrets">
+                  <el-select v-model="createForm.secrets" multiple filterable allow-create default-first-option style="width: 100%" placeholder="输入或选择Secret名称" />
+                </el-form-item>
+              </el-form>
+            </div>
+          </div>
         </div>
       </div>
-    </StepWizardDialog>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="createDialogVisible = false">取消</el-button>
+          <template v-if="!createYamlMode">
+            <el-button v-if="createSection === 'settings'" @click="createSection = 'basic'">上一步</el-button>
+            <el-button v-if="createSection === 'basic'" type="primary" @click="createSection = 'settings'">下一步</el-button>
+            <el-button v-if="createSection === 'settings'" type="primary" :loading="createLoading" @click="confirmCreate">创建</el-button>
+          </template>
+          <el-button v-else type="primary" :loading="createLoading" @click="confirmCreate">创建</el-button>
+        </div>
+      </template>
+    </el-dialog>
 
     <UnifiedDialog v-model="editInfoDialogVisible" title="编辑信息" subtitle="修改标签与注解" width="80%">
       <div class="group-box" style="margin-bottom: 12px;">
@@ -178,6 +258,105 @@
         <el-button type="primary" :loading="editInfoLoading" @click="confirmEditInfo">确定</el-button>
       </template>
     </UnifiedDialog>
+
+    <el-dialog v-model="editDialogVisible" title="编辑设置" width="1600px" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">编辑设置</h3>
+        </div>
+      </template>
+
+      <div class="config-editor">
+        <div class="resource-info-bar">
+          <div class="resource-info-item">
+            <span class="resource-info-label">命名空间:</span>
+            <span class="resource-info-value">{{ currentRow?.namespace || '-' }}</span>
+          </div>
+          <div class="resource-info-item">
+            <span class="resource-info-label">名称:</span>
+            <span class="resource-info-value">{{ currentRow?.name || '-' }}</span>
+          </div>
+          <div class="resource-info-item">
+            <span class="resource-info-label">创建时间:</span>
+            <span class="resource-info-value">{{ formatDate(currentRow?.creationTimestamp) }}</span>
+          </div>
+        </div>
+
+        <div class="config-content">
+          <div class="form-section">
+            <div class="section-header-row">
+              <div class="section-title">关联设置</div>
+            </div>
+            <el-form :model="editForm" label-width="120px" label-position="right" style="max-width: 900px">
+              <el-form-item label="自动挂载Token">
+                <el-switch v-model="editForm.automountServiceAccountToken" />
+              </el-form-item>
+              <el-form-item label="镜像拉取Secrets">
+                <el-select v-model="editForm.imagePullSecrets" multiple filterable allow-create default-first-option style="width: 100%" placeholder="输入或选择Secret名称" />
+              </el-form-item>
+              <el-form-item label="挂载Secrets">
+                <el-select v-model="editForm.secrets" multiple filterable allow-create default-first-option style="width: 100%" placeholder="输入或选择Secret名称" />
+              </el-form-item>
+            </el-form>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header-row">
+              <div class="section-title">标签</div>
+              <el-button size="small" @click="addMetaRow(editLabelRows)">添加标签</el-button>
+            </div>
+            <el-table :data="editLabelRows" size="default" style="width: 100%">
+              <el-table-column label="键" width="300">
+                <template #default="{ row }">
+                  <el-input v-model="row.key" placeholder="key" />
+                </template>
+              </el-table-column>
+              <el-table-column label="值">
+                <template #default="{ row }">
+                  <el-input v-model="row.value" placeholder="value" />
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="100" align="center">
+                <template #default="{ $index }">
+                  <el-button link type="danger" @click="removeMetaRow(editLabelRows, $index)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header-row">
+              <div class="section-title">注解</div>
+              <el-button size="small" @click="addMetaRow(editAnnotationRows)">添加注解</el-button>
+            </div>
+            <el-table :data="editAnnotationRows" size="default" style="width: 100%">
+              <el-table-column label="键" width="300">
+                <template #default="{ row }">
+                  <el-input v-model="row.key" placeholder="key" />
+                </template>
+              </el-table-column>
+              <el-table-column label="值">
+                <template #default="{ row }">
+                  <el-input v-model="row.value" placeholder="value" />
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="100" align="center">
+                <template #default="{ $index }">
+                  <el-button link type="danger" @click="removeMetaRow(editAnnotationRows, $index)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="editLoading" @click="confirmEditSetting">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
 
     <UnifiedDialog v-model="yamlDialogVisible" title="查看/编辑YAML" subtitle="仅应用到当前集群" width="90%">
       <div class="yaml-editor-wrapper">
@@ -206,15 +385,17 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-vue'
+import { Search, Refresh, ArrowDown, Plus, Document, Check } from '@element-plus/icons-vue'
 import { serviceAccountApi, type ServiceAccountVO, type ServiceAccountPageQueryDTO } from '@/api/serviceaccount'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
 import UnifiedDialog from '@/components/UnifiedDialog.vue'
-import StepWizardDialog from '@/components/StepWizardDialog.vue'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
+import '@/assets/styles/config-editor.css'
+
+type KvRow = { key: string; value: string }
 
 const router = useRouter()
 
@@ -255,11 +436,81 @@ const editInfoForm = reactive({
   annotationsJson: ''
 })
 
+const addMetaRow = (rows: KvRow[]) => {
+  rows.push({ key: '', value: '' })
+}
+const removeMetaRow = (rows: KvRow[], idx: number) => {
+  rows.splice(idx, 1)
+}
+const rowsToRecord = (rows: KvRow[]) => {
+  const out: Record<string, string> = {}
+  for (const r of rows) {
+    const k = (r.key || '').trim()
+    if (!k) continue
+    out[k] = String(r.value ?? '')
+  }
+  return out
+}
+
 const yamlDialogVisible = ref(false)
 const yamlLoading = ref(false)
 const yamlReadOnly = ref(false)
 let yamlApplyLoading = ref(false)
 let yamlContent = ref('')
+
+const buildServiceAccountYaml = (opts: {
+  name: string
+  namespace: string
+  automountServiceAccountToken?: boolean
+  imagePullSecrets?: string[]
+  secrets?: string[]
+  labels?: Record<string, string>
+  annotations?: Record<string, string>
+}) => {
+  const lines: string[] = [
+    'apiVersion: v1',
+    'kind: ServiceAccount',
+    'metadata:',
+    `  name: ${opts.name}`,
+    `  namespace: ${opts.namespace}`
+  ]
+
+  const labels = opts.labels || {}
+  const annotations = opts.annotations || {}
+
+  if (Object.keys(labels).length > 0) {
+    lines.push('  labels:')
+    for (const [k, v] of Object.entries(labels)) {
+      lines.push(`    ${k}: ${JSON.stringify(String(v ?? ''))}`)
+    }
+  }
+  if (Object.keys(annotations).length > 0) {
+    lines.push('  annotations:')
+    for (const [k, v] of Object.entries(annotations)) {
+      lines.push(`    ${k}: ${JSON.stringify(String(v ?? ''))}`)
+    }
+  }
+
+  if (typeof opts.automountServiceAccountToken === 'boolean') {
+    lines.push(`automountServiceAccountToken: ${opts.automountServiceAccountToken}`)
+  }
+  if (opts.imagePullSecrets?.length) {
+    lines.push('imagePullSecrets:')
+    for (const name of opts.imagePullSecrets) {
+      if (!name) continue
+      lines.push(`  - name: ${name}`)
+    }
+  }
+  if (opts.secrets?.length) {
+    lines.push('secrets:')
+    for (const name of opts.secrets) {
+      if (!name) continue
+      lines.push(`  - name: ${name}`)
+    }
+  }
+
+  return lines.join('\n') + '\n'
+}
 
 const handleSelectionChange = (rows: ServiceAccountVO[]) => {
   selectedRows.value = rows
@@ -353,11 +604,7 @@ const handleRowAction = (cmd: string, row: ServiceAccountVO) => {
       yamlLoading.value = false
       break
     case 'editSetting':
-      yamlLoading.value = true
-      yamlDialogVisible.value = true
-      yamlReadOnly.value = false
-      yamlContent.value = row.yaml || ''
-      yamlLoading.value = false
+      openEditSetting(row)
       break
   }
 }
@@ -427,7 +674,7 @@ const confirmApplyYaml = async () => {
 
 const yamlAddDialogVisible = ref(false)
 const yamlAddLoading = ref(false)
-const yamlAddForm = reactive({ clusterId: '' as string, namespace: '' as string })
+const yamlAddForm = reactive({ namespace: '' as string })
 let yamlAddContent = ref(
   [
     'apiVersion: v1',
@@ -439,20 +686,19 @@ let yamlAddContent = ref(
 )
 
 const openYamlAdd = () => {
-  yamlAddForm.clusterId = clusterId.value || ''
   yamlAddForm.namespace = searchForm.namespace || ''
   yamlAddDialogVisible.value = true
 }
 
 const confirmYamlAdd = async () => {
-  if (!yamlAddForm.clusterId || !yamlAddContent.value) {
-    ElMessage.warning('请选择集群并填写YAML')
+  if (!clusterId.value || !yamlAddContent.value) {
+    ElMessage.warning('请先选择集群并填写YAML')
     return
   }
   yamlAddLoading.value = true
   try {
     await serviceAccountApi.applyYaml({
-      clusterId: yamlAddForm.clusterId,
+      clusterId: clusterId.value,
       namespace: yamlAddForm.namespace || '',
       yaml: yamlAddContent.value
     })
@@ -468,6 +714,9 @@ const confirmYamlAdd = async () => {
 
 const createDialogVisible = ref(false)
 const createLoading = ref(false)
+const createSection = ref<'basic' | 'settings'>('basic')
+const createYamlMode = ref(false)
+const createYaml = ref('')
 const createForm = reactive({
   clusterId: '' as string,
   namespace: '' as string,
@@ -476,12 +725,21 @@ const createForm = reactive({
   imagePullSecrets: [] as string[],
   secrets: [] as string[]
 })
-const createSteps = [
-  { key: 'base', label: '基本信息' },
-  { key: 'settings', label: '关联设置' }
-]
-let createActive = ref(0)
-let createYaml = ref('')
+const createLabelRows = ref<KvRow[]>([])
+const createAnnotationRows = ref<KvRow[]>([])
+
+const buildCreateYaml = () => {
+  createYaml.value = buildServiceAccountYaml({
+    name: createForm.name,
+    namespace: createForm.namespace,
+    automountServiceAccountToken: createForm.automountServiceAccountToken,
+    imagePullSecrets: createForm.imagePullSecrets,
+    secrets: createForm.secrets,
+    labels: rowsToRecord(createLabelRows.value),
+    annotations: rowsToRecord(createAnnotationRows.value)
+  })
+  return createYaml.value
+}
 
 const openCreate = () => {
   createForm.clusterId = clusterId.value || ''
@@ -490,45 +748,37 @@ const openCreate = () => {
   createForm.automountServiceAccountToken = true
   createForm.imagePullSecrets = []
   createForm.secrets = []
-  createActive.value = 0
+  createLabelRows.value = []
+  createAnnotationRows.value = []
+  createSection.value = 'basic'
+  createYamlMode.value = false
   createYaml.value = ''
   createDialogVisible.value = true
 }
 
+watch(
+  () => [createForm.name, createForm.namespace, createForm.automountServiceAccountToken, createForm.imagePullSecrets, createForm.secrets, createLabelRows.value, createAnnotationRows.value],
+  () => {
+    if (createYamlMode.value) buildCreateYaml()
+  },
+  { deep: true }
+)
+
 const confirmCreate = async () => {
-  if (!createForm.clusterId || !createForm.namespace || !createForm.name) {
+  if (!createForm.namespace || !createForm.name) {
     ElMessage.warning('请填写必填项')
     return
   }
-  const lines: string[] = [
-    'apiVersion: v1',
-    'kind: ServiceAccount',
-    'metadata:',
-    `  name: ${createForm.name}`,
-    `  namespace: ${createForm.namespace}`
-  ]
-  if (typeof createForm.automountServiceAccountToken === 'boolean') {
-    lines.push(`automountServiceAccountToken: ${createForm.automountServiceAccountToken}`)
+  if (!clusterId.value) {
+    ElMessage.warning('请先选择集群')
+    return
   }
-  if (createForm.imagePullSecrets.length) {
-    lines.push('imagePullSecrets:')
-    for (const name of createForm.imagePullSecrets) {
-      lines.push(`  - name: ${name}`)
-    }
-  }
-  if (createForm.secrets.length) {
-    lines.push('secrets:')
-    for (const name of createForm.secrets) {
-      lines.push(`  - name: ${name}`)
-    }
-  }
-  const yaml = lines.join('\n') + '\n'
-  createYaml.value = yaml
+  const yaml = buildCreateYaml()
   createLoading.value = true
   try {
-    const toApply = createYaml.value || yaml
+    const toApply = createYamlMode.value ? createYaml.value : yaml
     await serviceAccountApi.applyYaml({
-      clusterId: createForm.clusterId,
+      clusterId: clusterId.value,
       namespace: createForm.namespace,
       yaml: toApply
     })
@@ -539,6 +789,50 @@ const confirmCreate = async () => {
     ElMessage.error('创建失败')
   } finally {
     createLoading.value = false
+  }
+}
+
+const editDialogVisible = ref(false)
+const editLoading = ref(false)
+const editForm = reactive({
+  automountServiceAccountToken: true as boolean | undefined,
+  imagePullSecrets: [] as string[],
+  secrets: [] as string[]
+})
+const editLabelRows = ref<KvRow[]>([])
+const editAnnotationRows = ref<KvRow[]>([])
+
+const openEditSetting = (row: ServiceAccountVO) => {
+  currentRow.value = row
+  editForm.automountServiceAccountToken = row.automountServiceAccountToken
+  editForm.imagePullSecrets = (row.imagePullSecrets || []).map(s => s.name)
+  editForm.secrets = (row.secrets || []).map(s => s.name)
+  editLabelRows.value = Object.entries(row.labels || {}).map(([k, v]) => ({ key: k, value: String(v ?? '') }))
+  editAnnotationRows.value = Object.entries(row.annotations || {}).map(([k, v]) => ({ key: k, value: String(v ?? '') }))
+  editDialogVisible.value = true
+}
+
+const confirmEditSetting = async () => {
+  if (!currentRow.value) return
+  editLoading.value = true
+  try {
+    await serviceAccountApi.update({
+      clusterId: clusterId.value,
+      namespace: currentRow.value.namespace,
+      name: currentRow.value.name,
+      automountServiceAccountToken: editForm.automountServiceAccountToken,
+      imagePullSecrets: (editForm.imagePullSecrets || []).filter(Boolean),
+      secrets: (editForm.secrets || []).filter(Boolean),
+      labels: rowsToRecord(editLabelRows.value),
+      annotations: rowsToRecord(editAnnotationRows.value)
+    })
+    ElMessage.success('保存成功')
+    editDialogVisible.value = false
+    fetchList()
+  } catch {
+    ElMessage.error('保存失败')
+  } finally {
+    editLoading.value = false
   }
 }
 
@@ -606,5 +900,18 @@ onMounted(async () => {
 <style scoped>
 .sa-page {
   padding: 20px;
+}
+
+.config-dialog :deep(.el-dialog__header) {
+  padding: 0;
+  margin: 0;
+}
+
+.config-dialog :deep(.el-dialog__body) {
+  padding: 0;
+}
+
+.config-dialog :deep(.el-dialog__footer) {
+  padding: 0;
 }
 </style>

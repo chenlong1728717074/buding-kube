@@ -85,11 +85,6 @@
 
     <UnifiedDialog v-model="yamlAddDialogVisible" title="YAML添加" subtitle="通过 YAML 快速创建 Secret" width="80%">
       <el-form :model="yamlAddForm" label-width="100px">
-        <el-form-item label="集群">
-          <el-select v-model="yamlAddForm.clusterId" placeholder="请选择集群" style="width: 240px">
-            <el-option v-for="c in clusterList" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="命名空间">
           <el-select v-model="yamlAddForm.namespace" placeholder="请选择命名空间" style="width: 240px">
             <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
@@ -105,271 +100,226 @@
       </template>
     </UnifiedDialog>
 
-    <UnifiedDialog v-model="createDialogVisible" title="创建 Secret" subtitle="填写元数据并配置数据键值" width="92%">
-      <div class="cm-editor">
-        <div class="cm-topbar">
-          <el-form :model="createForm" inline class="cm-topbar-form">
-            <el-form-item label="集群" required>
-              <el-select v-model="createForm.clusterId" placeholder="请选择集群" style="width: 220px">
-                <el-option v-for="c in clusterList" :key="c.id" :label="c.name" :value="c.id" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="命名空间" required>
-              <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 220px">
-                <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="名称" required>
-              <el-input v-model="createForm.name" placeholder="请输入名称" style="width: 260px" />
-            </el-form-item>
-            <el-form-item label="类型">
-              <el-select v-model="createForm.type" placeholder="请选择类型" style="width: 260px">
-                <el-option label="Opaque" value="Opaque" />
-                <el-option label="kubernetes.io/dockerconfigjson" value="kubernetes.io/dockerconfigjson" />
-                <el-option label="kubernetes.io/tls" value="kubernetes.io/tls" />
-              </el-select>
-            </el-form-item>
-          </el-form>
-        </div>
-
-        <div class="cm-workbench">
-          <div v-if="createYamlMode" class="cm-yaml">
-            <YamlEditor :model-value="createYaml" :readonly="true" height="520px" />
-          </div>
-          <div v-else class="cm-panel">
-            <el-tabs v-model="createSection" class="cm-tabs">
-              <el-tab-pane label="数据" name="data">
-                <div class="cm-data">
-                  <template v-if="createForm.type === 'Opaque'">
-                    <div class="kv-toolbar">
-                      <div class="kv-toolbar-left">
-                        <el-button size="small" type="primary" @click="kvCreateRef?.addBlank()">添加条目</el-button>
-                        <el-button size="small" @click="openCreateImport">从文件导入</el-button>
-                        <input ref="createImportInputRef" class="cm-file-input" type="file" accept=".properties,.ini,.conf,.txt" @change="handleCreateImportChange" />
-                      </div>
-                      <div class="kv-toolbar-right">
-                        <el-button size="small" @click="resetCreateDataRows">清空</el-button>
-                      </div>
-                    </div>
-                    <KVEditorPane ref="kvCreateRef" v-model="createDataRows" height="420px" />
-                  </template>
-
-                  <template v-else-if="createForm.type === 'kubernetes.io/dockerconfigjson'">
-                    <el-form :model="createDockerForm" label-width="140px" style="max-width: 720px">
-                      <el-form-item label="docker server" required>
-                        <el-input v-model="createDockerForm.server" placeholder="例如 registry.example.com" />
-                      </el-form-item>
-                      <el-form-item label="docker username" required>
-                        <el-input v-model="createDockerForm.username" placeholder="用户名" />
-                      </el-form-item>
-                      <el-form-item label="docker password" required>
-                        <el-input v-model="createDockerForm.password" type="password" show-password placeholder="密码" />
-                      </el-form-item>
-                    </el-form>
-                  </template>
-
-                  <template v-else-if="createForm.type === 'kubernetes.io/tls'">
-                    <el-form :model="createTlsForm" label-width="100px">
-                      <el-form-item label="tls.crt" required>
-                        <el-input v-model="createTlsForm.crt" type="textarea" :rows="8" placeholder="粘贴证书内容" />
-                      </el-form-item>
-                      <el-form-item label="tls.key" required>
-                        <el-input v-model="createTlsForm.key" type="textarea" :rows="8" placeholder="粘贴私钥内容" />
-                      </el-form-item>
-                    </el-form>
-                  </template>
-                </div>
-              </el-tab-pane>
-              <el-tab-pane label="元数据" name="meta">
-                <div class="cm-meta">
-                  <el-form :model="createForm" label-width="100px">
-                    <el-form-item label="别名">
-                      <el-input v-model="createForm.alias" placeholder="可选" />
-                    </el-form-item>
-                    <el-form-item label="描述">
-                      <el-input v-model="createForm.describe" type="textarea" :rows="3" placeholder="可选" />
-                    </el-form-item>
-                  </el-form>
-                  <div class="cm-meta-kv">
-                    <div class="cm-meta-kv__block">
-                      <div class="cm-meta-kv__header">
-                        <div class="cm-meta-kv__title">标签</div>
-                        <el-button size="small" @click="addMetaRow(createLabelRows)">添加</el-button>
-                      </div>
-                      <el-table :data="createLabelRows" size="small" border style="width: 100%">
-                        <el-table-column label="key" width="260">
-                          <template #default="{ row }">
-                            <el-input v-model="row.key" placeholder="key" />
-                          </template>
-                        </el-table-column>
-                        <el-table-column label="value">
-                          <template #default="{ row }">
-                            <el-input v-model="row.value" placeholder="value" />
-                          </template>
-                        </el-table-column>
-                        <el-table-column label="操作" width="90" align="center">
-                          <template #default="{ $index }">
-                            <el-button link type="danger" @click="removeMetaRow(createLabelRows, $index)">删除</el-button>
-                          </template>
-                        </el-table-column>
-                      </el-table>
-                    </div>
-
-                    <div class="cm-meta-kv__block">
-                      <div class="cm-meta-kv__header">
-                        <div class="cm-meta-kv__title">注解</div>
-                        <el-button size="small" @click="addMetaRow(createAnnotationRows)">添加</el-button>
-                      </div>
-                      <el-table :data="createAnnotationRows" size="small" border style="width: 100%">
-                        <el-table-column label="key" width="260">
-                          <template #default="{ row }">
-                            <el-input v-model="row.key" placeholder="key" />
-                          </template>
-                        </el-table-column>
-                        <el-table-column label="value">
-                          <template #default="{ row }">
-                            <el-input v-model="row.value" placeholder="value" />
-                          </template>
-                        </el-table-column>
-                        <el-table-column label="操作" width="90" align="center">
-                          <template #default="{ $index }">
-                            <el-button link type="danger" @click="removeMetaRow(createAnnotationRows, $index)">删除</el-button>
-                          </template>
-                        </el-table-column>
-                      </el-table>
-                    </div>
-                  </div>
-                </div>
-              </el-tab-pane>
-            </el-tabs>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="cm-footer">
-          <el-button text @click="toggleCreateYamlMode">{{ createYamlMode ? '返回表单' : '预览 YAML' }}</el-button>
-          <div class="cm-footer-right">
-            <el-button @click="createDialogVisible = false">取消</el-button>
-            <el-button type="primary" :loading="createLoading" @click="confirmCreate">创建</el-button>
+    <el-dialog v-model="createDialogVisible" title="创建 Secret" width="1600px" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">创建 Secret</h3>
+          <div class="dialog-actions">
+            <el-switch v-model="createYamlMode" active-text="编辑 YAML" @change="(v) => v && buildCreateYaml()" />
           </div>
         </div>
       </template>
-    </UnifiedDialog>
 
-    <UnifiedDialog v-model="editDialogVisible" title="编辑 Secret" subtitle="修改元数据与数据键值" width="92%">
-      <div class="cm-editor">
-        <div class="cm-topbar cm-topbar--edit">
-          <div class="cm-topbar-left">
-            <div class="cm-ident">{{ currentRow?.namespace || '-' }} / {{ currentRow?.name || '-' }}</div>
-            <div class="cm-meta-line">创建时间：{{ formatDate(currentRow?.creationTimestamp) }}</div>
+      <div class="config-editor">
+        <div v-if="!createYamlMode" class="step-tabs">
+          <div :class="['step-tab', { active: createSection === 'meta', completed: createForm.name }]" @click="createSection = 'meta'">
+            <div class="step-icon">
+              <el-icon v-if="createForm.name"><Check /></el-icon>
+              <span v-else>1</span>
+            </div>
+            <div class="step-info">
+              <div class="step-title">基本信息</div>
+              <div class="step-desc">已设置</div>
+            </div>
           </div>
-          <div class="cm-topbar-right">
-            <el-button text @click="toggleEditYamlMode">{{ editYamlMode ? '返回表单' : '预览 YAML' }}</el-button>
+          <div :class="['step-tab', { active: createSection === 'data' }]" @click="createSection = 'data'">
+            <div class="step-icon">
+              <span>2</span>
+            </div>
+            <div class="step-info">
+              <div class="step-title">数据设置</div>
+              <div class="step-desc">当前</div>
+            </div>
           </div>
         </div>
 
-        <div class="cm-workbench">
-          <div v-if="editYamlMode" class="cm-yaml">
-            <YamlEditor :model-value="editYaml" :readonly="true" height="520px" />
+        <div class="config-content">
+          <div v-if="createYamlMode" class="yaml-view">
+            <YamlEditor :model-value="createYaml" :readonly="true" height="550px" />
           </div>
-          <div v-else class="cm-panel">
-            <el-tabs v-model="editSection" class="cm-tabs">
-              <el-tab-pane label="数据" name="data">
-                <div class="cm-data">
-                  <div class="kv-toolbar">
-                    <div class="kv-toolbar-left">
-                      <el-button size="small" type="primary" @click="kvEditSettingRef?.addBlank()">添加条目</el-button>
-                      <el-button size="small" @click="openEditImport">从文件导入</el-button>
-                      <input ref="editImportInputRef" class="cm-file-input" type="file" accept=".properties,.ini,.conf,.txt" @change="handleEditImportChange" />
-                    </div>
-                    <div class="kv-toolbar-right">
-                      <el-button size="small" @click="resetEditDataRows">重置</el-button>
-                    </div>
-                  </div>
-                  <KVEditorPane ref="kvEditSettingRef" v-model="editDataRows" height="420px" />
-                </div>
-              </el-tab-pane>
-              <el-tab-pane label="元数据" name="meta">
-                <div class="cm-meta">
-                  <el-form :model="editForm" label-width="100px">
-                    <el-form-item label="类型">
-                      <el-select v-model="editForm.type" placeholder="请选择类型" style="width: 320px">
-                        <el-option label="Opaque" value="Opaque" />
-                        <el-option label="kubernetes.io/dockerconfigjson" value="kubernetes.io/dockerconfigjson" />
-                        <el-option label="kubernetes.io/tls" value="kubernetes.io/tls" />
-                      </el-select>
-                    </el-form-item>
-                    <el-form-item label="别名">
-                      <el-input v-model="editForm.alias" placeholder="可选" />
-                    </el-form-item>
-                    <el-form-item label="描述">
-                      <el-input v-model="editForm.describe" type="textarea" :rows="3" placeholder="可选" />
-                    </el-form-item>
-                  </el-form>
-                  <div class="cm-meta-kv">
-                    <div class="cm-meta-kv__block">
-                      <div class="cm-meta-kv__header">
-                        <div class="cm-meta-kv__title">标签</div>
-                        <el-button size="small" @click="addMetaRow(editLabelRows)">添加</el-button>
-                      </div>
-                      <el-table :data="editLabelRows" size="small" border style="width: 100%">
-                        <el-table-column label="key" width="260">
-                          <template #default="{ row }">
-                            <el-input v-model="row.key" placeholder="key" />
-                          </template>
-                        </el-table-column>
-                        <el-table-column label="value">
-                          <template #default="{ row }">
-                            <el-input v-model="row.value" placeholder="value" />
-                          </template>
-                        </el-table-column>
-                        <el-table-column label="操作" width="90" align="center">
-                          <template #default="{ $index }">
-                            <el-button link type="danger" @click="removeMetaRow(editLabelRows, $index)">删除</el-button>
-                          </template>
-                        </el-table-column>
-                      </el-table>
-                    </div>
 
-                    <div class="cm-meta-kv__block">
-                      <div class="cm-meta-kv__header">
-                        <div class="cm-meta-kv__title">注解</div>
-                        <el-button size="small" @click="addMetaRow(editAnnotationRows)">添加</el-button>
-                      </div>
-                      <el-table :data="editAnnotationRows" size="small" border style="width: 100%">
-                        <el-table-column label="key" width="260">
-                          <template #default="{ row }">
-                            <el-input v-model="row.key" placeholder="key" />
-                          </template>
-                        </el-table-column>
-                        <el-table-column label="value">
-                          <template #default="{ row }">
-                            <el-input v-model="row.value" placeholder="value" />
-                          </template>
-                        </el-table-column>
-                        <el-table-column label="操作" width="90" align="center">
-                          <template #default="{ $index }">
-                            <el-button link type="danger" @click="removeMetaRow(editAnnotationRows, $index)">删除</el-button>
-                          </template>
-                        </el-table-column>
-                      </el-table>
-                    </div>
-                  </div>
+          <div v-else-if="createSection === 'meta'" class="basic-form">
+            <el-form :model="createForm" label-width="100px" label-position="right">
+              <el-form-item label="命名空间" required>
+                <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 100%">
+                  <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="名称" required>
+                <el-input v-model="createForm.name" placeholder="请输入名称" />
+              </el-form-item>
+              <el-form-item label="类型">
+                <el-select v-model="createForm.type" placeholder="请选择类型" style="width: 100%">
+                  <el-option label="Opaque" value="Opaque" />
+                  <el-option label="kubernetes.io/dockerconfigjson" value="kubernetes.io/dockerconfigjson" />
+                  <el-option label="kubernetes.io/tls" value="kubernetes.io/tls" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="别名">
+                <el-input v-model="createForm.alias" placeholder="可选" />
+              </el-form-item>
+              <el-form-item label="描述">
+                <el-input v-model="createForm.describe" type="textarea" :rows="4" placeholder="可选" />
+              </el-form-item>
+            </el-form>
+
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">标签</div>
+                <el-button size="small" @click="addMetaRow(createLabelRows)">添加标签</el-button>
+              </div>
+              <el-table :data="createLabelRows" size="default" style="width: 100%">
+                <el-table-column label="键" width="300">
+                  <template #default="{ row }">
+                    <el-input v-model="row.key" placeholder="key" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="值">
+                  <template #default="{ row }">
+                    <el-input v-model="row.value" placeholder="value" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="100" align="center">
+                  <template #default="{ $index }">
+                    <el-button link type="danger" @click="removeMetaRow(createLabelRows, $index)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">注解</div>
+                <el-button size="small" @click="addMetaRow(createAnnotationRows)">添加注解</el-button>
+              </div>
+              <el-table :data="createAnnotationRows" size="default" style="width: 100%">
+                <el-table-column label="键" width="300">
+                  <template #default="{ row }">
+                    <el-input v-model="row.key" placeholder="key" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="值">
+                  <template #default="{ row }">
+                    <el-input v-model="row.value" placeholder="value" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="100" align="center">
+                  <template #default="{ $index }">
+                    <el-button link type="danger" @click="removeMetaRow(createAnnotationRows, $index)">删除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
+
+          <div v-else class="data-form">
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">数据 *</div>
+                <div class="section-actions" v-if="createForm.type === 'Opaque'">
+                  <el-button size="small" @click="kvCreateRef?.addBlank()">添加数据</el-button>
+                  <el-button size="small" @click="openCreateImport">从文件导入</el-button>
+                  <input ref="createImportInputRef" style="display: none" type="file" accept=".properties,.ini,.conf,.txt" @change="handleCreateImportChange" />
+                  <el-button size="small" @click="resetCreateDataRows">清空</el-button>
                 </div>
-              </el-tab-pane>
-            </el-tabs>
+              </div>
+
+              <div v-if="createForm.type === 'Opaque'" class="data-editor">
+                <KVEditorPane ref="kvCreateRef" v-model="createDataRows" height="500px" />
+              </div>
+
+              <div v-else-if="createForm.type === 'kubernetes.io/dockerconfigjson'">
+                <el-form :model="createDockerForm" label-width="140px" label-position="right" style="max-width: 900px">
+                  <el-form-item label="docker server" required>
+                    <el-input v-model="createDockerForm.server" placeholder="例如 registry.example.com" />
+                  </el-form-item>
+                  <el-form-item label="docker username" required>
+                    <el-input v-model="createDockerForm.username" placeholder="用户名" />
+                  </el-form-item>
+                  <el-form-item label="docker password" required>
+                    <el-input v-model="createDockerForm.password" type="password" show-password placeholder="密码" />
+                  </el-form-item>
+                </el-form>
+              </div>
+
+              <div v-else-if="createForm.type === 'kubernetes.io/tls'">
+                <el-form :model="createTlsForm" label-width="100px" label-position="right">
+                  <el-form-item label="tls.crt" required>
+                    <el-input v-model="createTlsForm.crt" type="textarea" :rows="10" placeholder="粘贴证书内容" />
+                  </el-form-item>
+                  <el-form-item label="tls.key" required>
+                    <el-input v-model="createTlsForm.key" type="textarea" :rows="10" placeholder="粘贴私钥内容" />
+                  </el-form-item>
+                </el-form>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
       <template #footer>
-        <div class="cm-footer">
-          <div class="cm-footer-right">
-            <el-button @click="editDialogVisible = false">取消</el-button>
-            <el-button type="primary" :loading="editLoading" @click="confirmEditSetting">保存</el-button>
-          </div>
+        <div class="dialog-footer">
+          <el-button @click="createDialogVisible = false">取消</el-button>
+          <template v-if="!createYamlMode">
+            <el-button v-if="createSection === 'data'" @click="createSection = 'meta'">上一步</el-button>
+            <el-button v-if="createSection === 'meta'" type="primary" @click="createSection = 'data'">下一步</el-button>
+            <el-button v-if="createSection === 'data'" type="primary" :loading="createLoading" @click="confirmCreate">创建</el-button>
+          </template>
+          <el-button v-else type="primary" :loading="createLoading" @click="confirmCreate">创建</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
+
+    <el-dialog v-model="editDialogVisible" title="编辑数据设置" width="1600px" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">编辑数据设置</h3>
+        </div>
+      </template>
+
+      <div class="config-editor">
+        <div class="resource-info-bar">
+          <div class="resource-info-item">
+            <span class="resource-info-label">命名空间:</span>
+            <span class="resource-info-value">{{ currentRow?.namespace || '-' }}</span>
+          </div>
+          <div class="resource-info-item">
+            <span class="resource-info-label">名称:</span>
+            <span class="resource-info-value">{{ currentRow?.name || '-' }}</span>
+          </div>
+          <div class="resource-info-item">
+            <span class="resource-info-label">创建时间:</span>
+            <span class="resource-info-value">{{ formatDate(currentRow?.creationTimestamp) }}</span>
+          </div>
+        </div>
+
+        <div class="config-content">
+          <div class="data-form">
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">数据 *</div>
+                <div class="section-actions">
+                  <el-button size="small" @click="kvEditSettingRef?.addBlank()">添加数据</el-button>
+                  <el-button size="small" @click="openEditImport">从文件导入</el-button>
+                  <input ref="editImportInputRef" style="display: none" type="file" accept=".properties,.ini,.conf,.txt" @change="handleEditImportChange" />
+                  <el-button size="small" @click="resetEditDataRows">重置</el-button>
+                </div>
+              </div>
+              <div class="data-editor">
+                <KVEditorPane ref="kvEditSettingRef" v-model="editDataRows" height="500px" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="editLoading" @click="confirmEditSetting">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
 
     <UnifiedDialog v-model="editInfoDialogVisible" title="编辑信息" subtitle="修改别名与备注" width="80%">
       <div class="group-box" style="margin-bottom: 12px;">
@@ -436,7 +386,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown, Plus, Document } from '@element-plus/icons-vue'
+import { Search, Refresh, ArrowDown, Plus, Document, Check } from '@element-plus/icons-vue'
 import { secretApi, type SecretVO, type SecretPageQueryDTO } from '@/api/secret'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
@@ -445,6 +395,8 @@ import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import KVEditorPane from '@/components/KVEditorPane.vue'
+import { ref as vRef } from 'vue'
+import '@/assets/styles/config-editor.css'
 
 type KvRow = { key: string; value: string }
 
@@ -737,7 +689,7 @@ const confirmApplyYaml = async () => {
 
 const yamlAddDialogVisible = ref(false)
 const yamlAddLoading = ref(false)
-const yamlAddForm = reactive({ clusterId: '' as string, namespace: '' as string })
+const yamlAddForm = reactive({ namespace: '' as string })
 let yamlAddContent = ref(
   [
     'apiVersion: v1',
@@ -753,20 +705,19 @@ let yamlAddContent = ref(
 )
 
 const openYamlAdd = () => {
-  yamlAddForm.clusterId = clusterId.value || ''
   yamlAddForm.namespace = searchForm.namespace || ''
   yamlAddDialogVisible.value = true
 }
 
 const confirmYamlAdd = async () => {
-  if (!yamlAddForm.clusterId || !yamlAddContent.value) {
-    ElMessage.warning('请选择集群并填写YAML')
+  if (!clusterId.value || !yamlAddContent.value) {
+    ElMessage.warning('请先选择集群并填写YAML')
     return
   }
   yamlAddLoading.value = true
   try {
     await secretApi.applyYaml({
-      clusterId: yamlAddForm.clusterId,
+      clusterId: clusterId.value,
       namespace: yamlAddForm.namespace || '',
       yaml: yamlAddContent.value
     })
@@ -970,7 +921,7 @@ const openCreate = () => {
   createDataRows.value = []
   createLabelRows.value = []
   createAnnotationRows.value = []
-  createSection.value = 'data'
+  createSection.value = 'meta'
   createYamlMode.value = false
   createYaml.value = ''
   createDialogVisible.value = true
@@ -989,15 +940,6 @@ const buildCreateYaml = () => {
   const stringData = getCreateStringData()
   createYaml.value = buildSecretYamlFromRows(createForm.name, createForm.namespace, createForm.type, labels, annotations, stringData)
   return { labels, annotations, stringData }
-}
-
-const toggleCreateYamlMode = () => {
-  if (!createYamlMode.value) {
-    buildCreateYaml()
-    createYamlMode.value = true
-    return
-  }
-  createYamlMode.value = false
 }
 
 const openCreateImport = () => {
@@ -1023,8 +965,12 @@ const handleCreateImportChange = async (e: Event) => {
 }
 
 const confirmCreate = async () => {
-  if (!createForm.clusterId || !createForm.namespace || !createForm.name) {
+  if (!createForm.namespace || !createForm.name) {
     ElMessage.warning('请填写必填项')
+    return
+  }
+  if (!clusterId.value) {
+    ElMessage.warning('请先选择集群')
     return
   }
 
@@ -1048,7 +994,7 @@ const confirmCreate = async () => {
   createLoading.value = true
   try {
     await secretApi.add({
-      clusterId: createForm.clusterId,
+      clusterId: clusterId.value,
       namespace: createForm.namespace,
       name: createForm.name,
       type: createForm.type,
@@ -1089,36 +1035,9 @@ watch(
 
 const editDialogVisible = ref(false)
 const editLoading = ref(false)
-const editSection = ref<'data' | 'meta'>('data')
-const editYamlMode = ref(false)
-const editYaml = ref('')
 const kvEditSettingRef = ref<any>()
 const editImportInputRef = ref<HTMLInputElement | null>(null)
-const editForm = reactive({ type: '' as string, alias: '' as string, describe: '' as string })
 const editDataRows = ref<KvRow[]>([])
-const editLabelRows = ref<KvRow[]>([])
-const editAnnotationRows = ref<KvRow[]>([])
-
-const buildEditYaml = () => {
-  if (!currentRow.value) return
-  const labels = rowsToRecord(editLabelRows.value)
-  const annotations: Record<string, string> = {}
-  if (editForm.alias) annotations.alias = editForm.alias
-  if (editForm.describe) annotations.describe = editForm.describe
-  Object.assign(annotations, rowsToRecord(editAnnotationRows.value, { excludeKeys: ['alias', 'describe'] }))
-  const stringData = rowsToStringData(editDataRows.value)
-  editYaml.value = buildSecretYamlFromRows(currentRow.value.name, currentRow.value.namespace, editForm.type, labels, annotations, stringData)
-}
-
-const toggleEditYamlMode = () => {
-  if (!currentRow.value) return
-  if (!editYamlMode.value) {
-    buildEditYaml()
-    editYamlMode.value = true
-    return
-  }
-  editYamlMode.value = false
-}
 
 const resetEditDataRows = () => {
   editDataRows.value = rowsFromSecret(currentRow.value)
@@ -1156,20 +1075,7 @@ const openEditSetting = async (row: SecretVO) => {
   } finally {
     editLoading.value = false
   }
-
-  editForm.type = currentRow.value?.type || 'Opaque'
-  editForm.alias = currentRow.value?.alias || ''
-  editForm.describe = currentRow.value?.describe || ''
-
   editDataRows.value = rowsFromSecret(currentRow.value)
-  editLabelRows.value = Object.entries(currentRow.value?.labels || {}).map(([k, v]) => ({ key: k, value: String(v ?? '') }))
-  editAnnotationRows.value = Object.entries(currentRow.value?.annotations || {})
-    .filter(([k]) => k !== 'alias' && k !== 'describe')
-    .map(([k, v]) => ({ key: k, value: String(v ?? '') }))
-
-  editSection.value = 'data'
-  editYamlMode.value = false
-  editYaml.value = ''
   editDialogVisible.value = true
 }
 
@@ -1177,25 +1083,7 @@ const confirmEditSetting = async () => {
   if (!currentRow.value) return
   editLoading.value = true
   try {
-    const labels = rowsToRecord(editLabelRows.value)
-    const annotations = rowsToRecord(editAnnotationRows.value, { excludeKeys: ['alias', 'describe'] })
     const stringData = rowsToStringData(editDataRows.value)
-    buildEditYaml()
-    await secretApi.updateInfo({
-      clusterId: clusterId.value,
-      namespace: currentRow.value.namespace,
-      name: currentRow.value.name,
-      alias: editForm.alias,
-      describe: editForm.describe
-    })
-    await secretApi.updateSetting({
-      clusterId: clusterId.value,
-      namespace: currentRow.value.namespace,
-      name: currentRow.value.name,
-      type: editForm.type,
-      labels,
-      annotations
-    })
     await secretApi.updateData({
       clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
@@ -1307,5 +1195,18 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+.config-dialog :deep(.el-dialog__header) {
+  padding: 0;
+  margin: 0;
+}
+
+.config-dialog :deep(.el-dialog__body) {
+  padding: 0;
+}
+
+.config-dialog :deep(.el-dialog__footer) {
+  padding: 0;
 }
 </style>

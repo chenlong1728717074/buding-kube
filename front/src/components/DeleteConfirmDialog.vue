@@ -1,44 +1,42 @@
 <template>
   <el-dialog
     v-model="visible"
-    width="400px"
+    :title="title"
+    :width="dialogWidth"
     :before-close="handleClose"
-    center
+    class="delete-confirm-dialog"
   >
     <div class="delete-confirm-content">
-      <div class="content-header">
-        <el-icon size="32" color="#F56C6C" class="warning-icon">
-          <WarningFilled />
-        </el-icon>
-        <div class="warning-text">
-          <p class="main-message">{{ message }}</p>
-          <p class="danger-text">此操作不可恢复！</p>
+      <div class="content-row">
+        <div class="danger-icon">
+          <el-icon :size="20" color="#ffffff">
+            <CloseBold />
+          </el-icon>
         </div>
+        <p class="main-message">{{ message }}</p>
       </div>
-      
+
       <div class="input-section">
-        <p class="input-label">请输入 <strong>{{ itemName }}</strong> 来确认删除：</p>
+        <p class="input-label">请输入 <strong>{{ displayName }}</strong> 来确认删除：</p>
         <el-input
           v-model="confirmInput"
-          :placeholder="`请输入 ${itemName}`"
+          :placeholder="`请输入 ${displayName}`"
           @keyup.enter="handleConfirm"
           ref="inputRef"
-          size="small"
-          :class="{ 'ok-border': confirmInput === itemName }"
         />
       </div>
     </div>
     
     <template #footer>
-      <div class="dialog-footer">
+      <div class="delete-confirm-footer">
         <el-button @click="handleClose">取消</el-button>
         <el-button
           type="danger"
-          :disabled="confirmInput !== itemName"
+          :disabled="!canConfirm"
           :loading="loading"
           @click="handleConfirm"
         >
-          确认删除
+          确定
         </el-button>
       </div>
     </template>
@@ -46,14 +44,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
-import { WarningFilled } from '@element-plus/icons-vue'
+import { computed, ref, watch, nextTick } from 'vue'
+import { CloseBold } from '@element-plus/icons-vue'
 
 interface Props {
   modelValue: boolean
   title?: string
   message?: string
   itemName: string
+  width?: string
   loading?: boolean
 }
 
@@ -66,6 +65,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   title: '确认删除',
   message: '确定要删除此项吗？',
+  width: '600px',
   loading: false
 })
 
@@ -74,6 +74,10 @@ const emit = defineEmits<Emits>()
 const visible = ref(false)
 const confirmInput = ref('')
 const inputRef = ref()
+
+const dialogWidth = computed(() => props.width || '600px')
+const displayName = computed(() => props.itemName || '资源名称')
+const canConfirm = computed(() => Boolean(props.itemName) && confirmInput.value === props.itemName)
 
 // 监听 modelValue 变化
 watch(
@@ -102,49 +106,41 @@ const handleClose = () => {
 }
 
 const handleConfirm = () => {
-  if (confirmInput.value === props.itemName) {
+  if (canConfirm.value) {
     emit('confirm')
   }
 }
 </script>
 
 <style scoped>
-:deep(.el-dialog__header) { display: none; }
 .delete-confirm-content {
-  padding: 8px 0;
+  padding: 0;
 }
 
-.content-header {
+.content-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 16px;
-  padding: 12px;
-  border-radius: 12px;
-  background: #fff7f7;
 }
 
-.warning-icon {
+.danger-icon {
   flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.warning-text {
-  flex: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #F56C6C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .main-message {
-  margin: 0 0 4px 0;
-  font-size: 14px;
-  color: #303133;
-  font-weight: 500;
-}
-
-.danger-text {
   margin: 0;
-  font-size: 12px;
-  color: #F56C6C !important;
-  font-weight: 400;
+  font-size: 16px;
+  color: #303133;
+  line-height: 1.5;
+  padding-top: 4px;
 }
 
 .input-section {
@@ -152,8 +148,8 @@ const handleConfirm = () => {
 }
 
 .input-label {
-  margin-bottom: 8px;
-  font-size: 13px;
+  margin-bottom: 10px;
+  font-size: 15px;
   color: #606266;
   line-height: 1.4;
 }
@@ -163,29 +159,40 @@ const handleConfirm = () => {
   font-weight: 600;
 }
 
-.dialog-footer {
-  text-align: right;
-  padding-top: 8px;
+.input-section :deep(.el-input__wrapper) {
+  padding: 10px 12px;
+}
+
+.input-section :deep(.el-input__inner) {
+  font-size: 15px;
+}
+
+.delete-confirm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+:deep(.delete-confirm-dialog .el-dialog__header) {
+  padding: 18px 24px 14px 24px;
+}
+
+:deep(.delete-confirm-dialog .el-dialog__title) {
+  font-size: 18px;
+  font-weight: 700;
 }
 
 :deep(.el-dialog__body) {
-  padding: 16px 20px 8px 20px;
+  padding: 18px 24px 18px 24px;
 }
 
 :deep(.el-dialog__footer) {
-  padding: 8px 20px 16px 20px;
+  padding: 16px 24px;
+  background: #f3f4f6;
+  border-top: 1px solid #e5e7eb;
 }
 
-:deep(.el-dialog) {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-:deep(.el-button--danger) {
-  border-radius: 20px;
-}
-
-.ok-border :deep(.el-input__wrapper) {
-  box-shadow: 0 0 0 1px #22c55e inset !important;
+.delete-confirm-footer :deep(.el-button) {
+  min-width: 96px;
 }
 </style>
