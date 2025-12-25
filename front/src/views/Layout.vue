@@ -501,7 +501,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   background: #ffffff;
-  border-bottom: 1px solid rgba(59,130,246,0.12);
+  border-bottom: 1px solid rgba(59,130,246,0.16);
 }
 
 .logo h2 {
@@ -563,7 +563,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  height: 72px !important;
+  height: 60px !important;
 }
 
 .header-left {
