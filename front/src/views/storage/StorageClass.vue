@@ -192,19 +192,4 @@ onMounted(async () => {
 
 <style scoped>
 .storageclass-page { padding: 20px; }
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: var(--gap-4);
-  background: #ffffff;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
-}
-.page-header h1 { margin: 0; font-size: 24px; font-weight: 600; color: #2c3e50; }
-.search-card { margin-bottom: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
-.table-card { margin-bottom: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
-.pagination-wrapper { display: flex; justify-content: flex-end; margin-top: 20px; }
 </style>
-

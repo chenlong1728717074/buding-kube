@@ -930,26 +930,6 @@ const removeMetaRow = (rows: KvRow[], idx: number) => {
 .configmap-page {
   padding: 20px;
 }
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: var(--gap-4);
-  background: #ffffff;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #2c3e50;
-}
-.header-actions { display: flex; gap: 12px; }
-.search-card { margin-bottom: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
-.table-card { margin-bottom: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
-.pagination-wrapper { display: flex; justify-content: flex-end; margin-top: 20px; }
 .kv-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .kv-toolbar-left, .kv-toolbar-right { display: flex; align-items: center; gap: 8px; }
 .cm-file-input { display: none; }
@@ -961,9 +941,4 @@ const removeMetaRow = (rows: KvRow[], idx: number) => {
 .cm-meta-kv__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .cm-meta-kv__title { font-weight: 600; color: #334155; }
 .cm-topbar--edit { display: flex; justify-content: space-between; gap: 12px; }
-
-/* 下拉菜单圆润样式 */
-:deep(.el-dropdown-menu) { border-radius: 10px; padding: 6px; }
-:deep(.el-dropdown-menu__item) { border-radius: 12px; margin: 2px 4px; }
-:deep(.el-dropdown-menu__item:hover) { background-color: #eef2ff; color: #3b82f6; }
 </style>

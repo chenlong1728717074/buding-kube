@@ -100,14 +100,7 @@
         <el-table-column prop="username" label="用户名" min-width="150">
           <template #default="{ row }">
             <div class="user-info">
-              <div class="user-avatar">
-                <el-avatar :size="32" :src="getUserAvatar(row.username)">
-                  {{ row.username.charAt(0).toUpperCase() }}
-                </el-avatar>
-              </div>
-              <div class="user-details">
-                <div class="user-name">{{ row.username }}</div>
-              </div>
+              <div class="user-name">{{ row.username }}</div>
             </div>
           </template>
         </el-table-column>
@@ -159,7 +152,7 @@
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" plain @click="handleEdit(row)">
+              <el-button size="small" type="primary" @click="handleEdit(row)">
                 <el-icon><Edit /></el-icon>
                 编辑
               </el-button>
@@ -455,12 +448,6 @@ const resetPasswordRules = {
     { required: true, message: '请输入新密码', trigger: 'blur' },
     { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
   ]
-}
-
-// 获取用户头像
-const getUserAvatar = (username: string) => {
-  // 这里可以根据实际需求返回头像URL
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${username}`
 }
 
 // 获取角色类型
@@ -920,27 +907,12 @@ onMounted(() => {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.user-avatar {
-  flex-shrink: 0;
-}
-
-.user-details {
-  flex: 1;
   min-width: 0;
 }
 
 .user-name {
   font-weight: 500;
   color: #2c3e50;
-  margin-bottom: 4px;
-}
-
-.user-email {
-  font-size: 12px;
-  color: #7f8c8d;
 }
 
 .action-buttons {
@@ -997,13 +969,7 @@ onMounted(() => {
   }
   
   .user-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .user-avatar {
-    align-self: center;
+    justify-content: flex-start;
   }
 }
 </style>

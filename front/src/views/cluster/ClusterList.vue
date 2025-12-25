@@ -148,10 +148,10 @@
     <el-dialog
       v-model="showAddDialog"
       title="添加集群"
-      width="800px"
+      width="92%"
       :close-on-click-modal="false"
     >
-      <el-form :model="clusterForm" :rules="rules" ref="formRef" label-width="100px" label-position="top">
+      <el-form :model="clusterForm" :rules="addRules" ref="formRef" label-width="100px" label-position="top">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="集群名称" prop="name">
@@ -171,7 +171,7 @@
           <el-input 
             v-model="clusterForm.config" 
             type="textarea" 
-            :rows="12" 
+            :rows="18" 
             placeholder="请粘贴完整的 kubeconfig 配置文件内容"
             style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 13px;"
           />
@@ -190,10 +190,10 @@
     <el-dialog
       v-model="showEditDialog"
       title="编辑集群"
-      width="800px"
+      width="92%"
       :close-on-click-modal="false"
     >
-      <el-form :model="editClusterForm" :rules="rules" ref="editFormRef" label-width="100px" label-position="top">
+      <el-form :model="editClusterForm" :rules="editRules" ref="editFormRef" label-width="100px" label-position="top">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="集群名称" prop="name">
@@ -213,7 +213,7 @@
           <el-input 
             v-model="editClusterForm.config" 
             type="textarea" 
-            :rows="12" 
+            :rows="18" 
             placeholder="如需更新配置，请粘贴完整的 kubeconfig 配置文件内容"
             style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 13px;"
           />
@@ -272,9 +272,12 @@ const editClusterForm = ref({
   config: ''
 })
 
-const rules = {
+const addRules = {
   name: [{ required: true, message: '请输入集群名称', trigger: 'blur' }],
   config: [{ required: true, message: '请输入集群配置', trigger: 'blur' }]
+}
+const editRules = {
+  name: [{ required: true, message: '集群名称为空', trigger: 'blur' }]
 }
 
 // 加载集群列表
