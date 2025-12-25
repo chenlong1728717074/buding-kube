@@ -18,8 +18,8 @@
         </div>
         <div class="info-item">
           <span class="label">状态</span>
-          <el-tag :type="clusterStore.currentCluster?.status === 'healthy' ? 'success' : 'danger'" size="small">
-            {{ clusterStore.currentCluster?.status === 'healthy' ? '健康' : '异常' }}
+          <el-tag :type="getStatusType(currentStatus)" size="small">
+            {{ getStatusText(currentStatus) }}
           </el-tag>
         </div>
         <div class="info-item">
@@ -110,11 +110,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useClusterStore } from '@/stores/cluster'
 import { Monitor, Box, FolderOpened, Grid, Connection, Setting } from '@element-plus/icons-vue'
 
 const clusterStore = useClusterStore()
+
+const currentStatus = computed(() => clusterStore.currentCluster?.status || 'Active')
+
+const getStatusType = (status: string) => {
+  const statusMap: Record<string, any> = {
+    Active: 'success',
+    Running: 'success',
+    Pending: 'warning',
+    Unknown: 'info',
+    Error: 'danger',
+    Failed: 'danger'
+  }
+  return statusMap[status] || 'info'
+}
+
+const getStatusText = (status: string) => {
+  const statusMap: Record<string, string> = {
+    Active: '活跃',
+    Running: '运行中',
+    Pending: '等待中',
+    Unknown: '未知',
+    Error: '异常',
+    Failed: '失败'
+  }
+  return statusMap[status] || status
+}
 
 const stats = ref({
   nodeCount: 0,

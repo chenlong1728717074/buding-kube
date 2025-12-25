@@ -17,7 +17,11 @@ export const useClusterStore = defineStore('cluster', () => {
     try {
       const saved = localStorage.getItem('currentCluster')
       if (saved) {
-        currentCluster.value = JSON.parse(saved)
+        const parsed = JSON.parse(saved) as ClusterInfo
+        currentCluster.value = {
+          ...parsed,
+          status: parsed.status || 'Active'
+        }
       }
     } catch (error) {
       console.error('Failed to load cluster context:', error)
@@ -27,10 +31,15 @@ export const useClusterStore = defineStore('cluster', () => {
   
   // 设置当前集群
   const setCurrentCluster = (cluster: ClusterInfo | null) => {
-    currentCluster.value = cluster
     if (cluster) {
-      localStorage.setItem('currentCluster', JSON.stringify(cluster))
+      const normalized: ClusterInfo = {
+        ...cluster,
+        status: cluster.status || 'Active'
+      }
+      currentCluster.value = normalized
+      localStorage.setItem('currentCluster', JSON.stringify(normalized))
     } else {
+      currentCluster.value = null
       localStorage.removeItem('currentCluster')
     }
   }
