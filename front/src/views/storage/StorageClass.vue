@@ -56,14 +56,28 @@
       </div>
     </el-card>
 
-    <UnifiedDialog v-model="yamlDialogVisible" title="查看YAML" subtitle="StorageClass 配置" width="90%">
-      <div class="yaml-editor-wrapper">
-        <YamlEditor :model-value="yamlContent" :readonly="true" height="520px" />
+    <el-dialog v-model="yamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">查看YAML</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">StorageClass 配置</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-view">
+            <YamlEditor :model-value="yamlContent" :readonly="true" height="100%" />
+          </div>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="yamlDialogVisible = false">关闭</el-button>
+        <div class="dialog-footer">
+          <el-button @click="yamlDialogVisible = false">关闭</el-button>
+        </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
   </div>
 </template>
 
@@ -74,8 +88,8 @@ import { Search, Refresh } from '@element-plus/icons-vue'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { storageClassApi, type StorageClassVO, type StorageClassPageQueryDTO } from '@/api/storageclass'
 import { useClusterStore } from '@/stores/cluster'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
+import '@/assets/styles/config-editor.css'
 
 // 集群上下文
 const clusterStore = useClusterStore()

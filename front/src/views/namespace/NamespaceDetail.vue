@@ -161,33 +161,37 @@
     </div>
 
     <!-- YAML查看对话框 -->
-    <UnifiedDialog 
-      v-model="yamlDialogVisible" 
-      title="查看YAML" 
-      subtitle="Namespace 配置"
-      width="80%"
-    >
-      <div class="yaml-dialog-content">
-        <div class="yaml-info">
-          <div class="info-item">
-            <span class="label">集群:</span>
-            <span class="value">{{ route.query.clusterName || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">命名空间:</span>
-            <span class="value">{{ namespaceInfo?.name }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">资源类型:</span>
-            <span class="value">Namespace</span>
+    <el-dialog v-model="yamlDialogVisible" title="查看YAML" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">查看YAML</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">Namespace 配置</div>
           </div>
         </div>
-        
-        <div class="yaml-editor-wrapper">
-          <YamlEditor 
-            :model-value="yamlContent"
-            :readonly="true"
-          />
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-dialog-content">
+            <div class="yaml-info">
+              <div class="info-item">
+                <span class="label">集群:</span>
+                <span class="value">{{ route.query.clusterName || '-' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">命名空间:</span>
+                <span class="value">{{ namespaceInfo?.name }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">资源类型:</span>
+                <span class="value">Namespace</span>
+              </div>
+            </div>
+
+            <div class="yaml-view">
+              <YamlEditor :model-value="yamlContent" :readonly="true" height="100%" />
+            </div>
+          </div>
         </div>
       </div>
       
@@ -196,7 +200,7 @@
           <el-button @click="yamlDialogVisible = false">关闭</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 删除确认对话框 -->
     <DeleteConfirmDialog
@@ -224,7 +228,7 @@ import {
 import { namespaceApi, type NamespaceVO, type NamespaceBaseDTO } from '@/api/namespace'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
+import '@/assets/styles/config-editor.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -497,7 +501,6 @@ onMounted(() => {
 .yaml-dialog-content {
   display: flex;
   flex-direction: column;
-  height: 600px;
 }
 
 .yaml-info {

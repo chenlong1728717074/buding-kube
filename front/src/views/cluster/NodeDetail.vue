@@ -281,8 +281,8 @@ const nodeInfo = ref<any>(null)
 const fetchNodeDetail = async () => {
   try {
     loading.value = true
-    const clusterId = route.query.clusterId as string
-    const hostname = route.query.nodeName as string || route.query.hostname as string
+    const clusterId = (route.params.clusterId as string) || (route.query.clusterId as string)
+    const hostname = (route.query.hostname as string) || (route.query.nodeName as string) || (route.query.node as string)
     
     if (!clusterId || !hostname) {
       ElMessage.error('缺少必要参数')
@@ -306,11 +306,10 @@ const handleBack = () => {
 
 // 查看Pod详情
 const handleViewPodDetail = (pod: any) => {
-  const clusterId = route.query.clusterId as string
+  const clusterId = (route.params.clusterId as string) || (route.query.clusterId as string)
   router.push({
-    path: '/pod/detail',
+    path: `/cluster/${clusterId}/pod/detail`,
     query: {
-      clusterId: clusterId,
       namespace: pod.namespace,
       name: pod.name
     }
@@ -319,7 +318,7 @@ const handleViewPodDetail = (pod: any) => {
 
 // 更多操作
 const handleMoreActions = async (command: string) => {
-  const clusterId = route.query.clusterId as string
+  const clusterId = (route.params.clusterId as string) || (route.query.clusterId as string)
   const hostname = nodeInfo.value?.server?.hostname
   
   switch (command) {

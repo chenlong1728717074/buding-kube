@@ -82,7 +82,6 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   title: 'YAML配置',
   readonly: true,
-  height: '400px',
   theme: 'dark',
   filename: 'config.yaml'
 })
@@ -99,7 +98,14 @@ const isFullscreen = ref(false)
 const editorView = ref<EditorView | null>(null)
 
 // 计算属性
-const editorHeight = computed(() => props.height)
+const autoHeight = computed(() => {
+  const lines = (content.value || '').split('\n').length
+  const estimated = lines * 22 + 24
+  const clamped = Math.max(260, Math.min(520, estimated))
+  return `${clamped}px`
+})
+
+const editorHeight = computed(() => props.height || autoHeight.value)
 
 // CodeMirror扩展配置
 const extensions = computed(() => {
@@ -234,6 +240,9 @@ defineExpose({
   border-radius: var(--radius-md);
   overflow: hidden;
   background: #fff;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .editor-toolbar {
@@ -259,11 +268,14 @@ defineExpose({
 
 .editor-container {
   position: relative;
+  flex: 1;
+  min-height: 0;
 }
 
 .editor-container :deep(.cm-editor) {
   border: none;
   border-radius: 0;
+  height: 100%;
 }
 
 .editor-container :deep(.cm-focused) {

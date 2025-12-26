@@ -122,19 +122,18 @@
     </el-card>
 
     <!-- 新增/编辑命名空间对话框 -->
-    <UnifiedDialog 
-      v-model="dialogVisible" 
-      :title="dialogTitle" 
-      subtitle="命名空间基础信息"
-      width="80%"
-    >
-      <el-form 
-        ref="formRef" 
-        :model="namespaceForm" 
-        :rules="formRules" 
-        label-width="100px"
-        class="namespace-form"
-      >
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">{{ dialogTitle }}</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">命名空间基础信息</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <el-form ref="formRef" :model="namespaceForm" :rules="formRules" label-width="100px" class="namespace-form">
         <el-form-item label="命名空间" prop="namespace">
           <el-input 
             v-model="namespaceForm.namespace" 
@@ -158,7 +157,9 @@
             placeholder="请输入描述" 
           />
         </el-form-item>
-      </el-form>
+          </el-form>
+        </div>
+      </div>
       
       <template #footer>
         <div class="dialog-footer">
@@ -166,29 +167,31 @@
           <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- YAML添加命名空间对话框 -->
-    <UnifiedDialog 
-      v-model="yamlDialogVisible" 
-      title="YAML添加命名空间" 
-      subtitle="通过 YAML 快速创建"
-      width="80%"
-    >
-      <el-form 
-        :model="yamlForm" 
-        label-width="100px"
-      >
-        <el-form-item label="YAML配置" class="yaml-form-item">
-           <YamlEditor
-             v-model="yamlForm.yaml"
-             title="命名空间 YAML"
-             :readonly="false"
-             height="500px"
-             filename="namespace.yaml"
-           />
-         </el-form-item>
-      </el-form>
+    <el-dialog v-model="yamlDialogVisible" title="YAML添加命名空间" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">YAML添加命名空间</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">通过 YAML 快速创建</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-editor-wrapper">
+            <YamlEditor
+              v-model="yamlForm.yaml"
+              title="命名空间 YAML"
+              :readonly="false"
+              height="100%"
+              filename="namespace.yaml"
+            />
+          </div>
+        </div>
+      </div>
       
       <template #footer>
         <div class="dialog-footer">
@@ -196,34 +199,40 @@
           <el-button type="primary" @click="handleApplyYaml" :loading="yamlSubmitLoading">应用</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 查看/编辑YAML对话框 -->
-    <UnifiedDialog 
-      v-model="viewYamlDialogVisible" 
-      title="查看/编辑YAML" 
-      subtitle="命名空间配置"
-      width="90%"
-    >
-      <div class="yaml-dialog-content">
-        <div class="yaml-info">
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
-            <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
-            <el-descriptions-item label="名称">{{ currentNamespace?.name }}</el-descriptions-item>
-            <el-descriptions-item label="类型">Namespace</el-descriptions-item>
-          </el-descriptions>
+    <el-dialog v-model="viewYamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">查看/编辑YAML</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">命名空间配置</div>
+          </div>
         </div>
-        
-        <div class="yaml-editor-wrapper">
-          <YamlEditor
-            v-model="viewYamlForm.yaml"
-            :title="`${currentNamespace?.name} - Namespace YAML`"
-            :readonly="false"
-            height="500px"
-            :filename="`${currentNamespace?.name}-namespace.yaml`"
-            @change="handleYamlChange"
-          />
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-dialog-content">
+            <div class="yaml-info">
+              <el-descriptions :column="2" border>
+                <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
+                <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
+                <el-descriptions-item label="名称">{{ currentNamespace?.name }}</el-descriptions-item>
+                <el-descriptions-item label="类型">Namespace</el-descriptions-item>
+              </el-descriptions>
+            </div>
+
+            <div class="yaml-view">
+              <YamlEditor
+                v-model="viewYamlForm.yaml"
+                :title="`${currentNamespace?.name} - Namespace YAML`"
+                :readonly="false"
+                :filename="`${currentNamespace?.name}-namespace.yaml`"
+                @change="handleYamlChange"
+              />
+            </div>
+          </div>
         </div>
       </div>
       
@@ -233,7 +242,7 @@
           <el-button type="primary" @click="handleApplyEditYaml" :loading="applyLoading">应用修改</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 删除确认对话框 -->
     <DeleteConfirmDialog
@@ -270,8 +279,8 @@ import {
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { useClusterStore } from '@/stores/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
+import '@/assets/styles/config-editor.css'
 
 const route = useRoute()
 const router = useRouter()

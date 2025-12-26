@@ -81,53 +81,89 @@
     </div>
 
     <!-- 编辑信息 -->
-    <UnifiedDialog v-model="editInfoDialogVisible" title="编辑信息" subtitle="修改别名与备注" width="80%">
-      <el-form :model="editInfoForm" label-width="100px">
-        <el-form-item label="别名"><el-input v-model="editInfoForm.alias" /></el-form-item>
-        <el-form-item label="备注"><el-input v-model="editInfoForm.describe" type="textarea" :rows="3" /></el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editInfoDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="editInfoLoading" @click="confirmEditInfo">确定</el-button>
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="900px" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">编辑信息</h3>
+        </div>
       </template>
-    </UnifiedDialog>
+      <div class="config-editor">
+        <div class="config-content">
+          <el-form :model="editInfoForm" label-width="100px">
+            <el-form-item label="别名"><el-input v-model="editInfoForm.alias" /></el-form-item>
+            <el-form-item label="备注"><el-input v-model="editInfoForm.describe" type="textarea" :rows="3" /></el-form-item>
+          </el-form>
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="editInfoDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="editInfoLoading" @click="confirmEditInfo">确定</el-button>
+        </div>
+      </template>
+    </el-dialog>
 
     <!-- 编辑设置（data） -->
-    <UnifiedDialog v-model="editDataDialogVisible" title="编辑设置" subtitle="仅修改 data 键值" width="80%">
-      <div class="kv-editor">
-        <div class="kv-toolbar">
-          <el-button size="small" type="primary" @click="addDataRow">新增键值</el-button>
-          <el-button size="small" @click="resetDataRows">重置</el-button>
+    <el-dialog v-model="editDataDialogVisible" title="编辑设置" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">编辑设置</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">仅修改 data 键值</div>
+          </div>
         </div>
-        <el-table :data="editRows" size="small" style="width: 100%">
-          <el-table-column label="键" width="220">
-            <template #default="{ row }"><el-input v-model="row.key" /></template>
-          </el-table-column>
-          <el-table-column label="值">
-            <template #default="{ row }"><el-input v-model="row.value" type="textarea" :rows="3" /></template>
-          </el-table-column>
-          <el-table-column label="操作" width="100" align="center">
-            <template #default="{ $index }"><el-button type="danger" size="small" @click="removeDataRow($index)">删除</el-button></template>
-          </el-table-column>
-        </el-table>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="kv-editor">
+            <div class="kv-toolbar">
+              <el-button size="small" type="primary" @click="addDataRow">新增键值</el-button>
+              <el-button size="small" @click="resetDataRows">重置</el-button>
+            </div>
+            <el-table :data="editRows" size="small" style="width: 100%">
+              <el-table-column label="键" width="220">
+                <template #default="{ row }"><el-input v-model="row.key" /></template>
+              </el-table-column>
+              <el-table-column label="值">
+                <template #default="{ row }"><el-input v-model="row.value" type="textarea" :rows="3" /></template>
+              </el-table-column>
+              <el-table-column label="操作" width="100" align="center">
+                <template #default="{ $index }"><el-button type="danger" size="small" @click="removeDataRow($index)">删除</el-button></template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="editDataDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="editDataLoading" @click="confirmEditData">保存</el-button>
+        <div class="dialog-footer">
+          <el-button @click="editDataDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="editDataLoading" @click="confirmEditData">保存</el-button>
+        </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 查看/编辑YAML（修改时不允许选择集群） -->
-    <UnifiedDialog v-model="yamlDialogVisible" title="查看/编辑YAML" subtitle="应用到当前集群" width="90%">
-      <div class="yaml-editor-wrapper">
-        <YamlEditor :model-value="yamlContent" :readonly="false" height="500px" @update:modelValue="val => yamlContent = val" />
+    <el-dialog v-model="yamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">查看/编辑YAML</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-editor-wrapper">
+            <YamlEditor :model-value="yamlContent" :readonly="false" height="100%" @update:modelValue="val => yamlContent = val" />
+          </div>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="yamlDialogVisible = false">关闭</el-button>
-        <el-button type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
-        <span style="color:#909399;font-size:12px;margin-left:10px;">应用到当前集群：{{ clusterId }}</span>
+        <div class="dialog-footer">
+          <el-button @click="yamlDialogVisible = false">关闭</el-button>
+          <el-button type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
+          <span style="color:#909399;font-size:12px;margin-left:10px;">应用到当前集群：{{ clusterId }}</span>
+        </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 删除确认 -->
     <DeleteConfirmDialog
@@ -149,7 +185,7 @@ import { ArrowLeft, ArrowDown } from '@element-plus/icons-vue'
 import { configMapApi, type ConfigMapVO } from '@/api/configmap'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
+import '@/assets/styles/config-editor.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -324,4 +360,17 @@ onMounted(() => {
 .info-card { border-radius:8px; }
 .info-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
 .info-item label { color:#64748b; margin-right:8px; }
+
+.config-dialog :deep(.el-dialog__header) {
+  padding: 0;
+  margin: 0;
+}
+
+.config-dialog :deep(.el-dialog__body) {
+  padding: 0;
+}
+
+.config-dialog :deep(.el-dialog__footer) {
+  padding: 0;
+}
 </style>

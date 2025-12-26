@@ -117,39 +117,46 @@
     </el-card>
 
     <!-- 查看YAML对话框 -->
-    <UnifiedDialog 
-      v-model="viewYamlDialogVisible" 
-      title="查看YAML" 
-      subtitle="Ingress 配置"
-      width="90%"
-    >
-      <div class="yaml-dialog-content">
-        <div class="yaml-info">
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
-            <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
-            <el-descriptions-item label="名称">{{ currentIngress?.name }}</el-descriptions-item>
-            <el-descriptions-item label="类型">Ingress</el-descriptions-item>
-          </el-descriptions>
+    <el-dialog v-model="viewYamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">查看YAML</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">Ingress 配置</div>
+          </div>
         </div>
-        
-        <div class="yaml-editor-wrapper">
-          <YamlEditor
-            v-model="viewYamlForm.yaml"
-            :title="`${currentIngress?.name} - Ingress YAML`"
-            :readonly="true"
-            height="500px"
-            :filename="`${currentIngress?.name}-ingress.yaml`"
-          />
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-dialog-content">
+            <div class="yaml-info">
+              <el-descriptions :column="2" border>
+                <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
+                <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
+                <el-descriptions-item label="名称">{{ currentIngress?.name }}</el-descriptions-item>
+                <el-descriptions-item label="类型">Ingress</el-descriptions-item>
+              </el-descriptions>
+            </div>
+
+            <div class="yaml-view">
+              <YamlEditor
+                v-model="viewYamlForm.yaml"
+                :title="`${currentIngress?.name} - Ingress YAML`"
+                :readonly="true"
+                height="100%"
+                :filename="`${currentIngress?.name}-ingress.yaml`"
+              />
+            </div>
+          </div>
         </div>
       </div>
-      
+
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="viewYamlDialogVisible = false">关闭</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
   </div>
 </template>
 
@@ -164,8 +171,8 @@ import { namespaceApi } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
+import '@/assets/styles/config-editor.css'
 
 // 路由
 const router = useRouter()
@@ -378,7 +385,6 @@ const handleViewYaml = async (row: IngressVO) => {
 .yaml-dialog-content {
   display: flex;
   flex-direction: column;
-  height: 70vh;
 }
 
 .yaml-info {

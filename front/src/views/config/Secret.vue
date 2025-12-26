@@ -58,7 +58,6 @@
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="editInfo">编辑信息</el-dropdown-item>
-                    <el-dropdown-item command="editData">编辑数据</el-dropdown-item>
                     <el-dropdown-item command="yaml">YAML</el-dropdown-item>
                     <el-dropdown-item command="editSetting">编辑设置</el-dropdown-item>
                   </el-dropdown-menu>
@@ -83,22 +82,33 @@
       </div>
     </el-card>
 
-    <UnifiedDialog v-model="yamlAddDialogVisible" title="YAML添加" subtitle="通过 YAML 快速创建 Secret" width="80%">
-      <el-form :model="yamlAddForm" label-width="100px">
-        <el-form-item label="命名空间">
-          <el-select v-model="yamlAddForm.namespace" placeholder="请选择命名空间" style="width: 240px">
-            <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <div class="yaml-editor-wrapper">
-        <YamlEditor :model-value="yamlAddContent" :readonly="false" height="400px" @update:modelValue="val => yamlAddContent = val" />
+    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加" width="1200px" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">YAML添加</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <el-form :model="yamlAddForm" label-width="100px">
+            <el-form-item label="命名空间">
+              <el-select v-model="yamlAddForm.namespace" placeholder="请选择命名空间" style="width: 240px">
+                <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
+              </el-select>
+            </el-form-item>
+          </el-form>
+          <div class="yaml-editor-wrapper">
+            <YamlEditor :model-value="yamlAddContent" :readonly="false" height="100%" @update:modelValue="val => yamlAddContent = val" />
+          </div>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="yamlAddDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
+        <div class="dialog-footer">
+          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
+        </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <el-dialog v-model="createDialogVisible" title="创建 Secret" width="1600px" :close-on-click-modal="false" class="config-dialog">
       <template #header>
@@ -321,55 +331,60 @@
       </template>
     </el-dialog>
 
-    <UnifiedDialog v-model="editInfoDialogVisible" title="编辑信息" subtitle="修改别名与备注" width="80%">
-      <div class="group-box" style="margin-bottom: 12px;">
-        <div class="group-title">基本信息</div>
-        <el-form :model="editInfoForm" label-width="100px">
-          <el-form-item label="名称">
-            <el-input :model-value="currentRow?.name || ''" disabled />
-          </el-form-item>
-          <el-form-item label="别名">
-            <el-input v-model="editInfoForm.alias" />
-            <div class="helper">别名只能包含中文、字母、数字和连字符（-），不得以连字符（-）开头或结尾，最长 63 个字符。</div>
-          </el-form-item>
-          <el-form-item label="备注">
-            <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" />
-            <div class="helper">描述可包含任意字符，最长 256 个字符。</div>
-          </el-form-item>
-          <el-form-item label="快捷操作">
-            <el-button type="primary" @click="openEditDataQuick">添加数据</el-button>
-          </el-form-item>
-        </el-form>
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="900px" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">编辑信息</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="group-box" style="margin-bottom: 12px;">
+            <div class="group-title">基本信息</div>
+            <el-form :model="editInfoForm" label-width="100px">
+              <el-form-item label="名称">
+                <el-input :model-value="currentRow?.name || ''" disabled />
+              </el-form-item>
+              <el-form-item label="别名">
+                <el-input v-model="editInfoForm.alias" />
+                <div class="helper">别名只能包含中文、字母、数字和连字符（-），不得以连字符（-）开头或结尾，最长 63 个字符。</div>
+              </el-form-item>
+              <el-form-item label="备注">
+                <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" />
+                <div class="helper">描述可包含任意字符，最长 256 个字符。</div>
+              </el-form-item>
+            </el-form>
+          </div>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="editInfoDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="editInfoLoading" @click="confirmEditInfo">确定</el-button>
+        <div class="dialog-footer">
+          <el-button @click="editInfoDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="editInfoLoading" @click="confirmEditInfo">确定</el-button>
+        </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
-    <UnifiedDialog v-model="editDataDialogVisible" title="编辑数据" subtitle="仅修改数据键值" width="80%">
-      <div class="kv-toolbar">
-        <el-button size="small" type="primary" @click="kvEditRef?.addBlank()">添加数据</el-button>
-        <el-button size="small" @click="resetDataRows()">重置</el-button>
-      </div>
-      <KVEditorPane ref="kvEditRef" v-model="dataRows" height="420px" />
-      <template #footer>
-        <el-button @click="editDataDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="editDataLoading" @click="confirmEditData">保存</el-button>
+    <el-dialog v-model="yamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">查看/编辑YAML</h3>
+        </div>
       </template>
-    </UnifiedDialog>
-
-    <UnifiedDialog v-model="yamlDialogVisible" title="查看/编辑YAML" subtitle="仅应用到当前集群" width="90%">
-      <div class="yaml-editor-wrapper">
-        <YamlEditor :model-value="yamlContent" :readonly="yamlReadOnly" :loading="yamlLoading" height="500px" @update:modelValue="val => yamlContent = val" />
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-editor-wrapper">
+            <YamlEditor :model-value="yamlContent" :readonly="yamlReadOnly" :loading="yamlLoading" height="100%" @update:modelValue="val => yamlContent = val" />
+          </div>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="yamlDialogVisible = false">关闭</el-button>
-        <template v-if="!yamlReadOnly">
-          <el-button type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
-        </template>
+        <div class="dialog-footer">
+          <el-button @click="yamlDialogVisible = false">关闭</el-button>
+          <el-button v-if="!yamlReadOnly" type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
+        </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <DeleteConfirmDialog
       v-model="deleteDialogVisible"
@@ -391,11 +406,9 @@ import { secretApi, type SecretVO, type SecretPageQueryDTO } from '@/api/secret'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import KVEditorPane from '@/components/KVEditorPane.vue'
-import { ref as vRef } from 'vue'
 import '@/assets/styles/config-editor.css'
 
 type KvRow = { key: string; value: string }
@@ -435,11 +448,6 @@ const currentRow = ref<SecretVO | null>(null)
 const editInfoDialogVisible = ref(false)
 const editInfoLoading = ref(false)
 const editInfoForm = reactive({ alias: '', describe: '' })
-
-const editDataDialogVisible = ref(false)
-const editDataLoading = ref(false)
-const dataRows = ref<{ key: string; value: string }[]>([])
-const kvEditRef = ref<any>()
 
 const yamlDialogVisible = ref(false)
 const yamlLoading = ref(false)
@@ -565,14 +573,6 @@ const handleRowAction = async (cmd: string, row: SecretVO) => {
       editInfoForm.describe = row.describe || ''
       editInfoDialogVisible.value = true
       break
-    case 'editData':
-      try {
-        const detail = await fetchSecretDetail(row)
-        currentRow.value = { ...row, ...detail }
-      } catch {}
-      dataRows.value = rowsFromSecret(currentRow.value)
-      editDataDialogVisible.value = true
-      break
     case 'yaml':
       yamlLoading.value = true
       yamlDialogVisible.value = true
@@ -597,17 +597,6 @@ const openDelete = (row: SecretVO) => {
   currentRow.value = row
   deleteDialogVisible.value = true
 }
-const openEditDataQuick = async () => {
-  editInfoDialogVisible.value = false
-  if (currentRow.value) {
-    try {
-      const detail = await fetchSecretDetail(currentRow.value)
-      currentRow.value = { ...currentRow.value, ...detail }
-    } catch {}
-  }
-  dataRows.value = rowsFromSecret(currentRow.value)
-  editDataDialogVisible.value = true
-}
 
 const confirmEditInfo = async () => {
   if (!currentRow.value) return
@@ -628,36 +617,6 @@ const confirmEditInfo = async () => {
     ElMessage.error('更新失败')
   } finally {
     editInfoLoading.value = false
-  }
-}
-
-const resetDataRows = () => {
-  dataRows.value = rowsFromSecret(currentRow.value)
-}
-
-const confirmEditData = async () => {
-  if (!currentRow.value) return
-  editDataLoading.value = true
-  try {
-    const stringData: Record<string, string> = {}
-    for (const { key, value } of dataRows.value) {
-      if (!key) continue
-      stringData[key] = value
-    }
-    const payload = {
-      clusterId: clusterId.value,
-      namespace: currentRow.value.namespace,
-      name: currentRow.value.name,
-      stringData
-    }
-    await secretApi.updateData(payload)
-    ElMessage.success('数据已保存')
-    editDataDialogVisible.value = false
-    fetchList()
-  } catch {
-    ElMessage.error('保存失败')
-  } finally {
-    editDataLoading.value = false
   }
 }
 

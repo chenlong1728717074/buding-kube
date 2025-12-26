@@ -142,39 +142,40 @@
     </el-card>
 
     <!-- 查看YAML对话框 -->
-    <UnifiedDialog 
-      v-model="yamlDialogVisible" 
-      title="查看YAML" 
-      subtitle="Pod 配置"
-      width="90%"
-    >
-      <div class="yaml-dialog-content">
-        <div class="yaml-info">
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="集群">{{ currentClusterName }}</el-descriptions-item>
-            <el-descriptions-item label="命名空间">{{ selectedPod?.namespace }}</el-descriptions-item>
-            <el-descriptions-item label="名称">{{ selectedPod?.name }}</el-descriptions-item>
-            <el-descriptions-item label="类型">Pod</el-descriptions-item>
-          </el-descriptions>
+    <el-dialog v-model="yamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">查看YAML</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">Pod 配置</div>
+          </div>
         </div>
-        
-        <div class="yaml-editor-wrapper">
-          <YamlEditor 
-            :model-value="yamlContent"
-            :loading="yamlLoading"
-            :readonly="true"
-            height="500px"
-          />
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-dialog-content">
+            <div class="yaml-info">
+              <el-descriptions :column="2" border>
+                <el-descriptions-item label="集群">{{ currentClusterName }}</el-descriptions-item>
+                <el-descriptions-item label="命名空间">{{ selectedPod?.namespace }}</el-descriptions-item>
+                <el-descriptions-item label="名称">{{ selectedPod?.name }}</el-descriptions-item>
+                <el-descriptions-item label="类型">Pod</el-descriptions-item>
+              </el-descriptions>
+            </div>
+
+            <div class="yaml-view">
+              <YamlEditor :model-value="yamlContent" :loading="yamlLoading" :readonly="true" height="100%" />
+            </div>
+          </div>
         </div>
       </div>
-      
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="yamlDialogVisible = false">关闭</el-button>
           <span style="color: #909399; font-size: 12px; margin-left: 10px;">注意：Pod不支持修改操作</span>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <PodLogViewer
       v-model="logDialogVisible"
@@ -215,10 +216,10 @@ import {
 } from '@/api/pod'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import PodLogViewer from '@/components/PodLogViewer.vue'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
+import '@/assets/styles/config-editor.css'
 
 const route = useRoute()
 const router = useRouter()

@@ -144,62 +144,40 @@
     </el-card>
 
     <!-- 编辑DaemonSet对话框 -->
-    <UnifiedDialog
-      v-model="editDialogVisible"
-      title="编辑DaemonSet"
-      subtitle="修改别名与描述"
-      width="80%"
-    >
-      <el-form
-        :model="editForm"
-        label-width="100px"
-        class="daemonset-form"
-      >
-        <el-form-item label="集群">
-          <el-input
-            v-model="editForm.clusterName"
-            placeholder="集群名称"
-            disabled
-            style="width: 100%;"
-          />
-        </el-form-item>
+    <el-dialog v-model="editDialogVisible" title="编辑DaemonSet" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">编辑DaemonSet</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">修改别名与描述</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <el-form :model="editForm" label-width="100px" class="daemonset-form">
+            <el-form-item label="集群">
+              <el-input v-model="editForm.clusterName" placeholder="集群名称" disabled style="width: 100%;" />
+            </el-form-item>
 
-        <el-form-item label="命名空间">
-          <el-input
-            v-model="editForm.namespace"
-            placeholder="命名空间"
-            disabled
-            style="width: 100%;"
-          />
-        </el-form-item>
+            <el-form-item label="命名空间">
+              <el-input v-model="editForm.namespace" placeholder="命名空间" disabled style="width: 100%;" />
+            </el-form-item>
 
-        <el-form-item label="名称">
-          <el-input
-            v-model="editForm.name"
-            placeholder="DaemonSet名称"
-            disabled
-            style="width: 100%;"
-          />
-        </el-form-item>
+            <el-form-item label="名称">
+              <el-input v-model="editForm.name" placeholder="DaemonSet名称" disabled style="width: 100%;" />
+            </el-form-item>
 
-        <el-form-item label="别名">
-          <el-input
-            v-model="editForm.alias"
-            placeholder="请输入别名"
-            style="width: 100%;"
-          />
-        </el-form-item>
+            <el-form-item label="别名">
+              <el-input v-model="editForm.alias" placeholder="请输入别名" style="width: 100%;" />
+            </el-form-item>
 
-        <el-form-item label="描述">
-          <el-input
-            v-model="editForm.describe"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入描述"
-            style="width: 100%;"
-          />
-        </el-form-item>
-      </el-form>
+            <el-form-item label="描述">
+              <el-input v-model="editForm.describe" type="textarea" :rows="3" placeholder="请输入描述" style="width: 100%;" />
+            </el-form-item>
+          </el-form>
+        </div>
+      </div>
 
       <template #footer>
         <div class="dialog-footer">
@@ -207,46 +185,31 @@
           <el-button type="primary" @click="handleSaveEdit">保存</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- YAML添加对话框 -->
-    <UnifiedDialog
-      v-model="yamlDialogVisible"
-      title="YAML添加DaemonSet"
-      subtitle="通过 YAML 快速创建"
-      width="80%"
-    >
-      <el-form
-        :model="yamlForm"
-        label-width="100px"
-      >
-        <el-form-item label="集群" prop="clusterId">
-          <el-select
-            v-model="yamlForm.clusterId"
-            placeholder="请选择集群"
-            style="width: 100%;"
-          >
-            <el-option
-              v-for="cluster in clusterList"
-              :key="cluster.id"
-              :label="cluster.name"
-              :value="cluster.id"
-            />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="YAML配置">
+    <el-dialog v-model="yamlDialogVisible" title="YAML添加DaemonSet" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">YAML添加DaemonSet</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">通过 YAML 快速创建</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
           <div class="yaml-editor-wrapper">
             <YamlEditor
               v-model="yamlForm.yaml"
               title="DaemonSet YAML"
               :readonly="false"
-              height="500px"
+              height="100%"
               filename="daemonset.yaml"
             />
           </div>
-        </el-form-item>
-      </el-form>
+        </div>
+      </div>
 
       <template #footer>
         <div class="dialog-footer">
@@ -254,32 +217,34 @@
           <el-button type="primary" @click="handleApplyYaml">应用</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 查看YAML对话框 -->
-    <UnifiedDialog
-      v-model="viewYamlDialogVisible"
-      title="查看/编辑YAML"
-      subtitle="DaemonSet 配置"
-      width="90%"
-    >
-      <div class="yaml-dialog-content">
-        <div class="yaml-info">
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
-            <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
-            <el-descriptions-item label="名称" v-if="currentDaemonSet">{{ currentDaemonSet.name }}</el-descriptions-item>
-            <el-descriptions-item label="类型">DaemonSet</el-descriptions-item>
-          </el-descriptions>
+    <el-dialog v-model="viewYamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">查看/编辑YAML</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">DaemonSet 配置</div>
+          </div>
         </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-dialog-content">
+            <div class="yaml-info">
+              <el-descriptions :column="2" border>
+                <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
+                <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
+                <el-descriptions-item label="名称" v-if="currentDaemonSet">{{ currentDaemonSet.name }}</el-descriptions-item>
+                <el-descriptions-item label="类型">DaemonSet</el-descriptions-item>
+              </el-descriptions>
+            </div>
 
-        <div class="yaml-editor-wrapper">
-          <YamlEditor
-            :modelValue="viewYamlForm.yaml"
-            :readonly="false"
-            height="500px"
-            @change="handleYamlChange"
-          />
+            <div class="yaml-view">
+              <YamlEditor :modelValue="viewYamlForm.yaml" :readonly="false" height="100%" @change="handleYamlChange" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -289,7 +254,7 @@
           <el-button type="primary" @click="handleApplyEditYaml" :loading="applyLoading">应用修改</el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
   </div>
 </template>
 
@@ -303,7 +268,7 @@ import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
 import YamlEditor from '@/components/YamlEditor.vue'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
+import '@/assets/styles/config-editor.css'
 
 // 路由
 const router = useRouter()
@@ -335,7 +300,6 @@ const editForm = reactive({
 
 // YAML表单
 const yamlForm = reactive({
-  clusterId: '',
   yaml: ''
 })
 
@@ -557,15 +521,14 @@ const handleAddDaemonSet = () => {
 
 // YAML添加DaemonSet
 const handleAddDaemonSetByYaml = () => {
-  yamlForm.clusterId = clusterId.value
   yamlForm.yaml = ''
   yamlDialogVisible.value = true
 }
 
 // 应用YAML
 const handleApplyYaml = async () => {
-  if (!yamlForm.clusterId) {
-    ElMessage.warning('请选择集群')
+  if (!clusterId.value) {
+    ElMessage.warning('请先选择集群')
     return
   }
 
@@ -576,7 +539,7 @@ const handleApplyYaml = async () => {
 
   try {
     const params = {
-      clusterId: yamlForm.clusterId,
+      clusterId: clusterId.value,
       namespace: searchForm.namespace || 'default',
       yaml: yamlForm.yaml
     }
@@ -794,7 +757,6 @@ onMounted(() => {
 .yaml-dialog-content {
   display: flex;
   flex-direction: column;
-  height: 70vh;
 }
 
 .yaml-info {

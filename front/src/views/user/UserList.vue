@@ -206,18 +206,15 @@
     </el-card>
 
     <!-- 新增/编辑用户对话框 -->
-    <UnifiedDialog 
-      v-model="dialogVisible" 
-      :title="dialogTitle" 
-      width="80%"
-    >
-      <el-form 
-        ref="formRef" 
-        :model="userForm" 
-        :rules="formRules" 
-        label-width="100px"
-        class="user-form"
-      >
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">{{ dialogTitle }}</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <el-form ref="formRef" :model="userForm" :rules="formRules" label-width="100px" class="user-form">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="用户名" prop="username">
@@ -279,7 +276,9 @@
             </el-form-item>
           </el-col>
         </el-row>
-      </el-form>
+          </el-form>
+        </div>
+      </div>
       
       <template #footer>
         <div class="dialog-footer">
@@ -289,20 +288,18 @@
           </el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 重置密码对话框 -->
-    <UnifiedDialog 
-      v-model="resetPasswordDialogVisible" 
-      title="重置密码" 
-      width="80%"
-    >
-      <el-form 
-        ref="resetPasswordFormRef" 
-        :model="resetPasswordForm" 
-        :rules="resetPasswordRules" 
-        label-width="80px"
-      >
+    <el-dialog v-model="resetPasswordDialogVisible" title="重置密码" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">重置密码</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <el-form ref="resetPasswordFormRef" :model="resetPasswordForm" :rules="resetPasswordRules" label-width="80px">
         <el-form-item label="新密码" prop="newPassword">
           <el-input 
             v-model="resetPasswordForm.newPassword" 
@@ -311,7 +308,9 @@
             show-password
           />
         </el-form-item>
-      </el-form>
+          </el-form>
+        </div>
+      </div>
       
       <template #footer>
         <div class="dialog-footer">
@@ -321,7 +320,7 @@
           </el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 删除确认对话框（单个用户） -->
     <DeleteConfirmDialog
@@ -367,8 +366,8 @@ import {
   type UpdateUserDTO, 
   type ResetPasswordDTO 
 } from '@/api/user'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import '@/assets/styles/config-editor.css'
 
 const loading = ref(false)
 const submitLoading = ref(false)

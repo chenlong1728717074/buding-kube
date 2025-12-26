@@ -203,13 +203,18 @@
     </el-card>
 
     <!-- Pod详情对话框 -->
-    <UnifiedDialog 
-      v-model="detailDialogVisible" 
-      title="Pod详情" 
-      subtitle="基础信息与容器"
-      width="80%"
-    >
-      <div v-if="selectedPod" class="pod-detail">
+    <el-dialog v-model="detailDialogVisible" title="Pod详情" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">Pod详情</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">基础信息与容器</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div v-if="selectedPod" class="pod-detail">
         <!-- 基本信息 -->
         <el-descriptions title="基本信息" :column="2" border>
           <el-descriptions-item label="Pod名称">{{ selectedPod.name }}</el-descriptions-item>
@@ -298,18 +303,30 @@
           </div>
         </div>
       </div>
-    </UnifiedDialog>
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="detailDialogVisible = false">关闭</el-button>
+        </div>
+      </template>
+    </el-dialog>
 
     <!-- 日志对话框 -->
-    <UnifiedDialog 
-      v-model="logDialogVisible" 
-      title="Pod日志" 
-      subtitle="容器日志查看"
-      width="80%"
-    >
-      <div class="log-container">
-        <div class="log-header">
-          <el-form inline>
+    <el-dialog v-model="logDialogVisible" title="Pod日志" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">Pod日志</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">容器日志查看</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="log-container">
+            <div class="log-header">
+              <el-form inline>
             <el-form-item label="容器:">
               <el-select v-model="selectedContainer" placeholder="选择容器" style="width: 200px;">
                 <el-option 
@@ -362,13 +379,20 @@
                 下载
               </el-button>
             </el-form-item>
-          </el-form>
-        </div>
-        <div class="log-content" :style="{ backgroundColor: logBackgroundColor }">
-          <pre v-loading="logLoading" :style="{ color: logTextColor, backgroundColor: logBackgroundColor }">{{ logContent }}</pre>
+              </el-form>
+            </div>
+            <div class="log-content" :style="{ backgroundColor: logBackgroundColor }">
+              <pre v-loading="logLoading" :style="{ color: logTextColor, backgroundColor: logBackgroundColor }">{{ logContent }}</pre>
+            </div>
+          </div>
         </div>
       </div>
-    </UnifiedDialog>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="logDialogVisible = false">关闭</el-button>
+        </div>
+      </template>
+    </el-dialog>
 
     <!-- 删除确认对话框 -->
     <DeleteConfirmDialog
@@ -386,7 +410,6 @@
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import { 
   ArrowLeft, 
   Refresh, 
@@ -398,6 +421,7 @@ import {
 } from '@element-plus/icons-vue'
 import { clusterApi } from '@/api/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import '@/assets/styles/config-editor.css'
 
 const route = useRoute()
 const router = useRouter()

@@ -276,46 +276,50 @@
     />
 
     <!-- YAML查看对话框 -->
-    <UnifiedDialog 
-      v-model="yamlDialogVisible" 
-      title="查看YAML" 
-      subtitle="Pod 配置"
-      width="90%"
-    >
-      <div class="yaml-dialog-content">
-        <div class="yaml-info">
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="集群">{{ clusterName || clusterId }}</el-descriptions-item>
-            <el-descriptions-item label="命名空间">{{ podInfo?.namespace }}</el-descriptions-item>
-            <el-descriptions-item label="名称">{{ podInfo?.name }}</el-descriptions-item>
-            <el-descriptions-item label="类型">Pod</el-descriptions-item>
-          </el-descriptions>
+    <el-dialog v-model="yamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">查看YAML</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">Pod 配置</div>
+          </div>
         </div>
-        
-        <div class="yaml-editor-wrapper">
-          <YamlEditor 
-            :model-value="yamlContent"
-            :loading="yamlLoading"
-            :readonly="true"
-            height="500px"
-          />
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-dialog-content">
+            <div class="yaml-info">
+              <el-descriptions :column="2" border>
+                <el-descriptions-item label="集群">{{ clusterName || clusterId }}</el-descriptions-item>
+                <el-descriptions-item label="命名空间">{{ podInfo?.namespace }}</el-descriptions-item>
+                <el-descriptions-item label="名称">{{ podInfo?.name }}</el-descriptions-item>
+                <el-descriptions-item label="类型">Pod</el-descriptions-item>
+              </el-descriptions>
+            </div>
+
+            <div class="yaml-view">
+              <YamlEditor :model-value="yamlContent" :loading="yamlLoading" :readonly="true" height="100%" />
+            </div>
+          </div>
         </div>
       </div>
-      
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="yamlDialogVisible = false">关闭</el-button>
           <span style="color: #909399; font-size: 12px; margin-left: 10px;">注意：Pod不支持修改操作</span>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 文件下载对话框 -->
-    <UnifiedDialog
-      v-model="downloadDialogVisible"
-      title="下载文件"
-      width="80%"
-    >
+    <el-dialog v-model="downloadDialogVisible" title="下载文件" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">下载文件</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
       <el-alert
         title="重要提示"
         type="warning"
@@ -338,6 +342,8 @@
           />
         </el-form-item>
       </el-form>
+        </div>
+      </div>
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="downloadDialogVisible = false">取消</el-button>
@@ -351,56 +357,51 @@
           </el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 文件上传对话框 -->
-    <UnifiedDialog
-      v-model="uploadDialogVisible"
-      title="上传文件"
-      width="80%"
-    >
-      <el-form :model="uploadForm" label-width="100px">
-        <el-form-item label="容器名称:">
-          <el-input v-model="uploadForm.containerName" disabled />
-        </el-form-item>
-        <el-form-item label="目标路径:" required>
-          <el-input 
-            v-model="uploadForm.filePath" 
-            placeholder="请输入目标路径，如: /app/config.json"
-          />
-        </el-form-item>
-        <el-form-item label="选择文件:" required>
-          <el-upload
-            ref="uploadRef"
-            :auto-upload="false"
-            :show-file-list="true"
-            :limit="1"
-            :on-change="handleFileChange"
-            :on-remove="handleFileRemove"
-          >
-            <el-button type="primary">选择文件</el-button>
-            <template #tip>
-              <div class="el-upload__tip">
-                只能上传一个文件
-              </div>
-            </template>
-          </el-upload>
-        </el-form-item>
-      </el-form>
+    <el-dialog v-model="uploadDialogVisible" title="上传文件" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">上传文件</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <el-form :model="uploadForm" label-width="100px">
+            <el-form-item label="容器名称:">
+              <el-input v-model="uploadForm.containerName" disabled />
+            </el-form-item>
+            <el-form-item label="目标路径:" required>
+              <el-input v-model="uploadForm.filePath" placeholder="请输入目标路径，如: /app/config.json" />
+            </el-form-item>
+            <el-form-item label="选择文件:" required>
+              <el-upload
+                ref="uploadRef"
+                :auto-upload="false"
+                :show-file-list="true"
+                :limit="1"
+                :on-change="handleFileChange"
+                :on-remove="handleFileRemove"
+              >
+                <el-button type="primary">选择文件</el-button>
+                <template #tip>
+                  <div class="el-upload__tip">只能上传一个文件</div>
+                </template>
+              </el-upload>
+            </el-form-item>
+          </el-form>
+        </div>
+      </div>
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="uploadDialogVisible = false">取消</el-button>
-          <el-button 
-            type="primary" 
-            @click="confirmUpload"
-            :loading="uploadLoading"
-            :disabled="!uploadForm.filePath || !selectedFile"
-          >
+          <el-button type="primary" @click="confirmUpload" :loading="uploadLoading" :disabled="!uploadForm.filePath || !selectedFile">
             上传
           </el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <PodLogViewer
       v-model="logDialogVisible"
@@ -435,8 +436,8 @@ import {
 } from '@/api/pod'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import PodLogViewer from '@/components/PodLogViewer.vue'
+import '@/assets/styles/config-editor.css'
 
 const route = useRoute()
 const router = useRouter()

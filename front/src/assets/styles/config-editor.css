@@ -1,0 +1,415 @@
+/* 配置编辑器样式 - 参考 Kuboard 设计 */
+
+.config-editor {
+  min-height: 0;
+}
+
+/* 对话框头部 */
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dialog-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1f2937;
+  margin: 0;
+}
+
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 步骤标签 */
+.step-tabs {
+  display: flex;
+  background: #f9fafb;
+  padding: 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.step-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 3px solid transparent;
+}
+
+.step-tab:hover {
+  background: #f3f4f6;
+}
+
+.step-tab.active {
+  background: #ffffff;
+  border-bottom-color: #3b82f6;
+}
+
+.step-tab.completed .step-icon {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.step-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.step-tab.active .step-icon {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.step-info {
+  flex: 1;
+}
+
+.step-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 2px;
+}
+
+.step-desc {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* 内容区域 */
+.config-content {
+  padding: 24px;
+  min-height: 0;
+  background: #ffffff;
+}
+
+.yaml-view {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.config-dialog .config-content .el-form {
+  width: 100%;
+  display: block;
+}
+
+.config-dialog :is(.yaml-view, .yaml-editor-wrapper) {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.el-dialog.yaml-dialog {
+  width: min(96vw, 1680px) !important;
+  max-width: 1680px !important;
+  height: 92vh;
+  max-height: 92vh;
+  margin-top: 4vh !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.el-dialog.yaml-dialog .dialog-header {
+  padding: 14px 18px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.el-dialog.yaml-dialog .dialog-title {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.el-dialog.yaml-dialog .config-content {
+  padding: 12px 16px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.el-dialog.yaml-dialog .dialog-footer {
+  padding: 10px 16px;
+  background: #ffffff;
+  border-radius: 0;
+  margin: 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.el-dialog.yaml-dialog .dialog-footer .el-button--default {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.el-dialog.yaml-dialog .dialog-footer .el-button--default:hover {
+  background: #f3f4f6;
+  border-color: #cbd5e1;
+  color: #111827;
+}
+
+.el-dialog.yaml-dialog .dialog-footer .el-button--primary {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.el-dialog.yaml-dialog .dialog-footer .el-button--primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.el-dialog.yaml-dialog .el-dialog__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.el-dialog.yaml-dialog .config-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.el-dialog.yaml-dialog .yaml-dialog-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.el-dialog.yaml-dialog :is(.yaml-editor-wrapper, .yaml-view) {
+  flex: 1;
+  min-height: 0;
+}
+
+.el-dialog.yaml-dialog :is(.yaml-editor-wrapper, .yaml-view) > * {
+  height: 100%;
+}
+
+.config-dialog .el-form-item__content > :is(.yaml-view, .yaml-editor-wrapper) {
+  flex: 1;
+  min-width: 0;
+}
+
+.basic-form,
+.data-form {
+  max-width: 100%;
+}
+
+/* 表单区块 */
+.form-section {
+  margin-bottom: 32px;
+}
+
+.form-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 16px;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.data-editor {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* 对话框底部 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 18px;
+  background: #2d3748;
+  border-radius: 14px;
+  margin: 12px 16px 16px;
+}
+
+.dialog-footer .el-button {
+  min-width: 80px;
+}
+
+.dialog-footer .el-button--default {
+  background: transparent;
+  border-color: #4a5568;
+  color: #e2e8f0;
+}
+
+.dialog-footer .el-button--default:hover {
+  background: #4a5568;
+  border-color: #4a5568;
+  color: #ffffff;
+}
+
+.dialog-footer .el-button--primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.dialog-footer .el-button--primary:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.section-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 编辑器容器 */
+.kv-editor-container {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.meta-table-container {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* 简约表格 */
+.modern-table {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.modern-table :deep(.el-table__header) {
+  background: #f9fafb;
+}
+
+.modern-table :deep(.el-table__row:hover) {
+  background: #f9fafb;
+}
+
+/* 空状态提示 */
+.empty-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  color: #9ca3af;
+  font-size: 12px;
+  background: #fafafa;
+  border-radius: 4px;
+  border: 1px dashed #e5e7eb;
+  margin-top: 8px;
+}
+
+.empty-hint .el-icon {
+  font-size: 14px;
+}
+
+/* 现代化页脚 */
+.modern-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0;
+}
+
+/* Secret 特定样式 */
+.docker-config-form,
+.tls-config-form {
+  background: #ffffff;
+  padding: 0;
+}
+
+.docker-config-form .el-form-item,
+.tls-config-form .el-form-item {
+  margin-bottom: 16px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .step-tabs {
+    flex-direction: column;
+  }
+  
+  .step-tab {
+    border-bottom: 1px solid #e5e7eb;
+    border-left: 3px solid transparent;
+  }
+  
+  .step-tab.active {
+    border-bottom-color: #e5e7eb;
+    border-left-color: #3b82f6;
+  }
+  
+  .config-content {
+    padding: 16px;
+  }
+  
+  .section-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+
+/* 资源信息栏 */
+.resource-info-bar {
+  display: flex;
+  gap: 24px;
+  padding: 12px 24px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.resource-info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resource-info-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.resource-info-value {
+  font-size: 13px;
+  color: #111827;
+  font-weight: 500;
+}

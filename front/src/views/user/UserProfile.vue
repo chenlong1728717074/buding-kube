@@ -182,17 +182,15 @@
     </div>
 
     <!-- 修改密码对话框 -->
-    <UnifiedDialog 
-      v-model="passwordDialogVisible" 
-      title="修改密码" 
-      width="80%"
-    >
-      <el-form 
-        ref="passwordFormRef" 
-        :model="passwordForm" 
-        :rules="passwordRules" 
-        label-width="100px"
-      >
+    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">修改密码</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="100px">
         <el-form-item label="当前密码" prop="currentPassword">
           <el-input 
             v-model="passwordForm.currentPassword" 
@@ -217,7 +215,9 @@
             show-password
           />
         </el-form-item>
-      </el-form>
+          </el-form>
+        </div>
+      </div>
       
       <template #footer>
         <div class="dialog-footer">
@@ -227,7 +227,7 @@
           </el-button>
         </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
   </div>
 </template>
 
@@ -245,7 +245,7 @@ import {
 } from '@element-plus/icons-vue'
 import { userApi } from '@/api/user'
 import { useUserStore } from '@/stores/user'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
+import '@/assets/styles/config-editor.css'
 
 const userStore = useUserStore()
 

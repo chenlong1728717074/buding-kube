@@ -88,22 +88,33 @@
 
     
     <!-- YAML添加 -->
-    <UnifiedDialog v-model="yamlAddDialogVisible" title="YAML添加" subtitle="通过 YAML 快速创建 ConfigMap" width="80%">
-      <el-form :model="yamlAddForm" label-width="100px">
-        <el-form-item label="命名空间">
-          <el-select v-model="yamlAddForm.namespace" placeholder="请选择命名空间" style="width: 240px">
-            <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <div class="yaml-editor-wrapper">
-        <YamlEditor :model-value="yamlAddContent" :readonly="false" height="400px" @update:modelValue="val => yamlAddContent = val" />
+    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加" width="1200px" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">YAML添加</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <el-form :model="yamlAddForm" label-width="100px">
+            <el-form-item label="命名空间">
+              <el-select v-model="yamlAddForm.namespace" placeholder="请选择命名空间" style="width: 240px">
+                <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
+              </el-select>
+            </el-form-item>
+          </el-form>
+          <div class="yaml-editor-wrapper">
+            <YamlEditor :model-value="yamlAddContent" :readonly="false" height="100%" @update:modelValue="val => yamlAddContent = val" />
+          </div>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="yamlAddDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
+        <div class="dialog-footer">
+          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
+        </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 添加ConfigMap（参考设计） -->
     <el-dialog v-model="createDialogVisible" title="创建保密字典" width="1600px" :close-on-click-modal="false" class="config-dialog">
@@ -243,28 +254,39 @@
     </el-dialog>
 
     <!-- 修改别名/备注 -->
-    <UnifiedDialog v-model="editInfoDialogVisible" title="编辑信息" subtitle="修改别名与备注" width="80%">
-      <div class="group-box" style="margin-bottom: 12px;">
-        <div class="group-title">基本信息</div>
-        <el-form :model="editInfoForm" label-width="100px">
-          <el-form-item label="名称">
-            <el-input :model-value="currentRow?.name || ''" disabled />
-          </el-form-item>
-          <el-form-item label="别名">
-            <el-input v-model="editInfoForm.alias" placeholder="请输入别名" />
-            <div class="helper">别名只能包含中文、字母、数字和连字符（-），不得以连字符（-）开头或结尾，最长 63 个字符。</div>
-          </el-form-item>
-          <el-form-item label="备注">
-            <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" placeholder="请输入备注" />
-            <div class="helper">描述可包含任意字符，最长 256 个字符。</div>
-          </el-form-item>
-        </el-form>
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="900px" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">编辑信息</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="group-box" style="margin-bottom: 12px;">
+            <div class="group-title">基本信息</div>
+            <el-form :model="editInfoForm" label-width="100px">
+              <el-form-item label="名称">
+                <el-input :model-value="currentRow?.name || ''" disabled />
+              </el-form-item>
+              <el-form-item label="别名">
+                <el-input v-model="editInfoForm.alias" placeholder="请输入别名" />
+                <div class="helper">别名只能包含中文、字母、数字和连字符（-），不得以连字符（-）开头或结尾，最长 63 个字符。</div>
+              </el-form-item>
+              <el-form-item label="备注">
+                <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" placeholder="请输入备注" />
+                <div class="helper">描述可包含任意字符，最长 256 个字符。</div>
+              </el-form-item>
+            </el-form>
+          </div>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="editInfoDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="editInfoLoading" @click="confirmEditInfo">确定</el-button>
+        <div class="dialog-footer">
+          <el-button @click="editInfoDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="editInfoLoading" @click="confirmEditInfo">确定</el-button>
+        </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 编辑ConfigMap - 只编辑数据 -->
     <el-dialog v-model="editDialogVisible" title="编辑数据设置" width="1600px" :close-on-click-modal="false" class="config-dialog">
@@ -321,17 +343,26 @@
     </el-dialog>
 
     <!-- 查看/编辑YAML -->
-    <UnifiedDialog v-model="yamlDialogVisible" title="查看/编辑YAML" subtitle="仅应用到当前集群" width="90%">
-      <div class="yaml-editor-wrapper">
-        <YamlEditor :model-value="yamlContent" :readonly="yamlReadOnly" :loading="yamlLoading" height="500px" @update:modelValue="val => yamlContent = val" />
+    <el-dialog v-model="yamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <h3 class="dialog-title">查看/编辑YAML</h3>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-editor-wrapper">
+            <YamlEditor :model-value="yamlContent" :readonly="yamlReadOnly" :loading="yamlLoading" height="100%" @update:modelValue="val => yamlContent = val" />
+          </div>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="yamlDialogVisible = false">关闭</el-button>
-        <template v-if="!yamlReadOnly">
-          <el-button type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
-        </template>
+        <div class="dialog-footer">
+          <el-button @click="yamlDialogVisible = false">关闭</el-button>
+          <el-button v-if="!yamlReadOnly" type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
+        </div>
       </template>
-    </UnifiedDialog>
+    </el-dialog>
 
     <!-- 删除确认对话框 -->
     <DeleteConfirmDialog
@@ -354,7 +385,6 @@ import { configMapApi, type ConfigMapVO, type ConfigMapPageQueryDTO } from '@/ap
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import KVEditorPane from '@/components/KVEditorPane.vue'
 import { ref as vRef } from 'vue'

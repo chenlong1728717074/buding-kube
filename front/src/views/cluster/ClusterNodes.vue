@@ -193,79 +193,79 @@
     </el-card>
 
     <!-- 节点详情对话框 -->
-    <UnifiedDialog 
-      v-model="detailDialogVisible" 
-      title="节点详情" 
-      subtitle="基础信息与资源"
-      width="80%"
-    >
-      <div v-if="selectedNode" class="node-detail">
-        <!-- 基本信息 -->
-        <el-descriptions title="基本信息" :column="2" border>
-          <el-descriptions-item label="节点名称">{{ selectedNode.name }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="getStatusType(selectedNode.status)">
-              {{ getStatusText(selectedNode.status) }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="角色">
-            <el-tag :type="selectedNode.role === 'master' ? 'warning' : 'info'">
-              {{ selectedNode.role === 'master' ? 'Master' : 'Worker' }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="版本">{{ selectedNode.version }}</el-descriptions-item>
-          <el-descriptions-item label="内部IP">{{ selectedNode.internalIP }}</el-descriptions-item>
-          <el-descriptions-item label="外部IP">{{ selectedNode.externalIP || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="操作系统">{{ selectedNode.osImage || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="内核版本">{{ selectedNode.kernelVersion || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="容器运行时">{{ selectedNode.containerRuntime || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="可调度">{{ selectedNode.schedulable ? '是' : '否' }}</el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ selectedNode.createTime }}</el-descriptions-item>
-        </el-descriptions>
-
-        <!-- 资源信息 -->
-        <el-descriptions title="资源信息" :column="2" border style="margin-top: 20px;">
-          <el-descriptions-item label="CPU容量">{{ selectedNode.cpuCapacity || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="CPU可分配">{{ selectedNode.cpuAllocatable || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="内存容量">{{ selectedNode.memoryCapacity || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="内存可分配">{{ selectedNode.memoryAllocatable || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="存储容量">{{ selectedNode.storageCapacity || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="存储可分配">{{ selectedNode.storageAllocatable || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="Pod容量">{{ selectedNode.podCapacity || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="Pod数量">{{ selectedNode.podCount || 0 }}</el-descriptions-item>
-        </el-descriptions>
-
-        <!-- 标签 -->
-        <div style="margin-top: 20px;">
-          <h4>标签</h4>
-          <div class="labels-container">
-            <el-tag 
-              v-for="(value, key) in selectedNode.labels" 
-              :key="key"
-              style="margin: 4px;"
-            >
-              {{ key }}: {{ value }}
-            </el-tag>
+    <el-dialog v-model="detailDialogVisible" title="节点详情" width="80%" :close-on-click-modal="false" class="config-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">节点详情</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">基础信息与资源</div>
           </div>
         </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div v-if="selectedNode" class="node-detail">
+            <el-descriptions title="基本信息" :column="2" border>
+              <el-descriptions-item label="节点名称">{{ selectedNode.name }}</el-descriptions-item>
+              <el-descriptions-item label="状态">
+                <el-tag :type="getStatusType(selectedNode.status)">
+                  {{ getStatusText(selectedNode.status) }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="角色">
+                <el-tag :type="selectedNode.role === 'master' ? 'warning' : 'info'">
+                  {{ selectedNode.role === 'master' ? 'Master' : 'Worker' }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="版本">{{ selectedNode.version }}</el-descriptions-item>
+              <el-descriptions-item label="内部IP">{{ selectedNode.internalIP }}</el-descriptions-item>
+              <el-descriptions-item label="外部IP">{{ selectedNode.externalIP || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="操作系统">{{ selectedNode.osImage || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="内核版本">{{ selectedNode.kernelVersion || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="容器运行时">{{ selectedNode.containerRuntime || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="可调度">{{ selectedNode.schedulable ? '是' : '否' }}</el-descriptions-item>
+              <el-descriptions-item label="创建时间">{{ selectedNode.createTime }}</el-descriptions-item>
+            </el-descriptions>
 
-        <!-- 污点 -->
-        <div style="margin-top: 20px;">
-          <h4>污点</h4>
-          <div class="taints-container">
-            <el-tag 
-              v-for="taint in selectedNode.taints" 
-              :key="taint.key"
-              type="warning"
-              style="margin: 4px;"
-            >
-              {{ taint.key }}={{ taint.value }}:{{ taint.effect }}
-            </el-tag>
-            <span v-if="!selectedNode.taints || selectedNode.taints.length === 0">无污点</span>
+            <el-descriptions title="资源信息" :column="2" border style="margin-top: 20px;">
+              <el-descriptions-item label="CPU容量">{{ selectedNode.cpuCapacity || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="CPU可分配">{{ selectedNode.cpuAllocatable || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="内存容量">{{ selectedNode.memoryCapacity || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="内存可分配">{{ selectedNode.memoryAllocatable || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="存储容量">{{ selectedNode.storageCapacity || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="存储可分配">{{ selectedNode.storageAllocatable || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="Pod容量">{{ selectedNode.podCapacity || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="Pod数量">{{ selectedNode.podCount || 0 }}</el-descriptions-item>
+            </el-descriptions>
+
+            <div style="margin-top: 20px;">
+              <h4>标签</h4>
+              <div class="labels-container">
+                <el-tag v-for="(value, key) in selectedNode.labels" :key="key" style="margin: 4px;">
+                  {{ key }}: {{ value }}
+                </el-tag>
+              </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+              <h4>污点</h4>
+              <div class="taints-container">
+                <el-tag v-for="taint in selectedNode.taints" :key="taint.key" type="warning" style="margin: 4px;">
+                  {{ taint.key }}={{ taint.value }}:{{ taint.effect }}
+                </el-tag>
+                <span v-if="!selectedNode.taints || selectedNode.taints.length === 0">无污点</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </UnifiedDialog>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="detailDialogVisible = false">关闭</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -273,7 +273,6 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import UnifiedDialog from '@/components/UnifiedDialog.vue'
 import { 
   ArrowLeft, 
   Refresh, 
@@ -282,11 +281,12 @@ import {
   ArrowDown
 } from '@element-plus/icons-vue'
 import { clusterApi } from '@/api/cluster'
+import '@/assets/styles/config-editor.css'
 
 const route = useRoute()
 const router = useRouter()
 
-const clusterName = route.params.id as string
+const clusterName = route.params.clusterId as string
 const loading = ref(false)
 const clusterDisplayName = ref('')
 
@@ -392,10 +392,9 @@ const handleRefresh = () => {
 // 查看详情
 const handleViewDetail = (node: any) => {
   router.push({
-    path: '/node/detail',
+    path: `/cluster/${clusterName}/node/detail`,
     query: {
-      clusterName: clusterName,
-      nodeName: node.name
+      hostname: node.name
     }
   })
 }
