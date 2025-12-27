@@ -21,7 +21,7 @@
             <span style="display: inline-flex; align-items: center; gap: 6px;">
               命名空间
               <el-tooltip content="由于Secret数据过大，Kubernetes-client序列化会很慢，不建议查询所有数据。" placement="top">
-                <el-icon style="color: #f59e0b; cursor: help;">
+                <el-icon style="color: #ef4444; cursor: help;">
                   <WarningFilled />
                 </el-icon>
               </el-tooltip>
@@ -435,7 +435,7 @@ const secrets = ref<SecretVO[]>([])
 const selectedRows = ref<SecretVO[]>([])
 
 const searchForm = reactive<SecretPageQueryDTO>({
-  namespace: 'default',
+  namespace: '',
   page: 1,
   pageSize: 20,
   keyword: ''
@@ -514,7 +514,7 @@ const fetchList = async () => {
 }
 
 const handleClusterChange = async () => {
-  searchForm.namespace = 'default'
+  searchForm.namespace = ''
   pagination.page = 1
   await fetchNamespaces()
   secrets.value = []
@@ -532,7 +532,7 @@ const handleSearch = () => {
 }
 
 const handleReset = async () => {
-  searchForm.namespace = 'default'
+  searchForm.namespace = ''
   searchForm.keyword = ''
   pagination.page = 1
   await fetchNamespaces()
@@ -1112,7 +1112,7 @@ const formatDate = (dateString?: string) => {
 
 watch(clusterId, async (newClusterId) => {
   if (newClusterId) {
-    searchForm.namespace = 'default'
+    searchForm.namespace = ''
     await fetchNamespaces()
     await fetchList()
   }
