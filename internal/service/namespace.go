@@ -161,10 +161,9 @@ func (s *NamespaceService) List(query dto.NamespacePageQueryBaseDTO) ([]vo.Names
 		return nil, errors.New("获取集群失败")
 	}
 	listOptions := metav1.ListOptions{}
-	namespaces, err := clientSet.CoreV1().Namespaces().List(context.TODO(), listOptions)
-	if err != nil {
-		logs.Error("获取命名空间失败: %v", err)
-		return nil, err
+	namespaces, err2 := s.getAllNamespaces(listOptions, clientSet)
+	if err2 != nil {
+		return []vo.NamespaceVO{}, err2
 	}
 	result := make([]vo.NamespaceVO, 0)
 	for _, item := range namespaces.Items {
@@ -177,6 +176,15 @@ func (s *NamespaceService) List(query dto.NamespacePageQueryBaseDTO) ([]vo.Names
 		return result[i].CreationTimestamp.After(result[j].CreationTimestamp)
 	})
 	return result, nil
+}
+
+func (s *NamespaceService) getAllNamespaces(listOptions metav1.ListOptions, clientSet *kubernetes.Clientset) (*corev1.NamespaceList, error) {
+	namespaces, err := clientSet.CoreV1().Namespaces().List(context.TODO(), listOptions)
+	if err != nil {
+		logs.Error("获取命名空间失败: %v", err)
+		return nil, err
+	}
+	return namespaces, nil
 }
 
 func (s *NamespaceService) GetById(base dto.NamespaceBaseDTO) (*vo.NamespaceVO, error) {

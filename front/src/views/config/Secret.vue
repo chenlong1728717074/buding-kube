@@ -16,8 +16,19 @@
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
-        <el-form-item label="命名空间">
+        <el-form-item>
+          <template #label>
+            <span style="display: inline-flex; align-items: center; gap: 6px;">
+              命名空间
+              <el-tooltip content="由于Secret数据过大，Kubernetes-client序列化会很慢，不建议查询所有数据。" placement="top">
+                <el-icon style="color: #f59e0b; cursor: help;">
+                  <WarningFilled />
+                </el-icon>
+              </el-tooltip>
+            </span>
+          </template>
           <el-select v-model="searchForm.namespace" placeholder="请选择命名空间" style="width: 200px" clearable @change="handleNamespaceChange">
+            <el-option label="全部命名空间（全量查询）" value="" />
             <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
           </el-select>
         </el-form-item>
@@ -401,7 +412,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown, Plus, Document, Check } from '@element-plus/icons-vue'
+import { Search, Refresh, ArrowDown, Plus, Document, Check, WarningFilled } from '@element-plus/icons-vue'
 import { secretApi, type SecretVO, type SecretPageQueryDTO } from '@/api/secret'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
@@ -424,7 +435,7 @@ const secrets = ref<SecretVO[]>([])
 const selectedRows = ref<SecretVO[]>([])
 
 const searchForm = reactive<SecretPageQueryDTO>({
-  namespace: '',
+  namespace: 'default',
   page: 1,
   pageSize: 20,
   keyword: ''
@@ -503,7 +514,7 @@ const fetchList = async () => {
 }
 
 const handleClusterChange = async () => {
-  searchForm.namespace = ''
+  searchForm.namespace = 'default'
   pagination.page = 1
   await fetchNamespaces()
   secrets.value = []
@@ -521,7 +532,7 @@ const handleSearch = () => {
 }
 
 const handleReset = async () => {
-  searchForm.namespace = ''
+  searchForm.namespace = 'default'
   searchForm.keyword = ''
   pagination.page = 1
   await fetchNamespaces()
@@ -1101,7 +1112,7 @@ const formatDate = (dateString?: string) => {
 
 watch(clusterId, async (newClusterId) => {
   if (newClusterId) {
-    searchForm.namespace = ''
+    searchForm.namespace = 'default'
     await fetchNamespaces()
     await fetchList()
   }

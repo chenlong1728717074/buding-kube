@@ -15,8 +15,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -45,6 +47,27 @@ type ClusterCache struct {
 
 type ClusterCacheMap struct {
 	caches sync.Map
+}
+
+type debugTransport struct {
+	rt http.RoundTripper
+}
+
+func (t *debugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	start := time.Now()
+	logs.Info("[HTTP] >>> %s %s", req.Method, req.URL.Path)
+
+	resp, err := t.rt.RoundTrip(req)
+
+	elapsed := time.Since(start)
+
+	if err != nil {
+		logs.Error("[HTTP] <<< 失败: %v, 耗时: %v", err, elapsed)
+		return resp, err
+	}
+
+	logs.Info("[HTTP] <<< status=%d, 耗时: %v", resp.StatusCode, elapsed)
+	return resp, err
 }
 
 func NewClusterCacheMap() *ClusterCacheMap {
@@ -216,6 +239,13 @@ func buildClientSet(config string) (*kubernetes.Clientset, *rest.Config, error) 
 	if err != nil {
 		return nil, nil, err
 	}
+	restConfig.QPS = 100
+	restConfig.Burst = 200
+	restConfig.Timeout = 30 * time.Second
+
+	restConfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
+		return &debugTransport{rt: rt}
+	})
 	clientSet, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, nil, err
