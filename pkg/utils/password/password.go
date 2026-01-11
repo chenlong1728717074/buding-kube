@@ -6,6 +6,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// 加密方式 Argon2id
 // Options 密码加密选项
 var Options = bcrypt.DefaultCost
 

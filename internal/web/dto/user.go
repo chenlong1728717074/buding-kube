@@ -1,6 +1,8 @@
 package dto
 
-import "buding-kube/internal/model"
+import (
+	"buding-kube/internal/model"
+)
 
 // LoginDTO 登录参数
 type LoginDTO struct {

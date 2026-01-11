@@ -11,7 +11,7 @@ package main
 
 import (
 	"buding-kube/internal"
-	_ "buding-kube/pkg/kube"
+	_ "buding-kube/internal/kube"
 	"buding-kube/pkg/logs"
 	"context"
 	"os"

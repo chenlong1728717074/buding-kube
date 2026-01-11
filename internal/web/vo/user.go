@@ -1,6 +1,8 @@
 package vo
 
-import "buding-kube/internal/model"
+import (
+	"buding-kube/internal/model"
+)
 
 // UserVO 用户视图对象
 type UserVO struct {

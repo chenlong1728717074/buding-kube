@@ -17,7 +17,7 @@ type KubeConfig struct {
 	Ns int `mapstructure:"ns"`
 }
 
-var GlobalConfig Config
+var globalConfig Config
 
 func init() {
 	viper.SetConfigName("conf")
@@ -30,11 +30,11 @@ func init() {
 		log.Fatal(err)
 	}
 
-	if err := viper.Unmarshal(&GlobalConfig); err != nil {
+	if err := viper.Unmarshal(&globalConfig); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func GetConfig() *Config {
-	return &GlobalConfig
+	return &globalConfig
 }

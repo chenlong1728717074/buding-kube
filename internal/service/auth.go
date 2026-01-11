@@ -1,10 +1,10 @@
 package service
 
 import (
+	kube2 "buding-kube/internal/kube"
 	"buding-kube/internal/model"
 	"buding-kube/internal/web/dto"
 	"buding-kube/internal/web/vo"
-	"buding-kube/pkg/kube"
 	"buding-kube/pkg/logs"
 	"buding-kube/pkg/utils/jwt"
 	"buding-kube/pkg/utils/password"
@@ -37,7 +37,7 @@ func NewAuthService() *AuthService {
 
 func (s *AuthService) Login(login dto.LoginDTO) (*vo.UserVO, error) {
 	labelSelector := fmt.Sprintf("%s=%s", model.UserConfigSecretLabelKey, login.Username)
-	item, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
+	item, err := kube2.InClusterClientSet.CoreV1().Secrets(kube2.ServerNamespace).
 		List(context.TODO(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
