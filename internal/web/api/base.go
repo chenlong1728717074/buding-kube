@@ -179,7 +179,7 @@ func (api *BaseApi) CurrentUser(ctx *gin.Context) (*model.User, error) {
 	}
 	return &model.User{
 		Username: jwtClaims.Username,
-		Role:     jwtClaims.Role,
+		Role:     model.UserRole(jwtClaims.Role),
 		Cluster:  jwtClaims.Cluster,
 	}, nil
 }

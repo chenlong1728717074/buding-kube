@@ -3,55 +3,101 @@ package jwt
 import (
 	"buding-kube/internal/model"
 	"errors"
-	"github.com/golang-jwt/jwt/v4"
+	"fmt"
+	"github.com/golang-jwt/jwt/v5"
+	"os"
 	"time"
 )
 
-var jwtSecret = []byte("your-secret-key") // 在实际应用中应该从配置文件中读取
+var Token TokenManager
+
+func init() {
+	Token = TokenManager{
+		JwtSecret: getJWTSecret(),
+	}
+}
+
+type TokenManager struct {
+	JwtSecret []byte
+}
+
+func getJWTSecret() []byte {
+	secret := os.Getenv("JWT_SECRET_KEY")
+	if secret == "" {
+		panic("JWT_SECRET_KEY environment variable is not set")
+	}
+	return []byte(secret)
+}
 
 type Claims struct {
-	Username string         `json:"username"`
-	Role     model.UserRole `json:"role"`
-	Cluster  string         `json:"cluster"`
-	jwt.StandardClaims
+	Username string `json:"username"`
+	Role     int    `json:"role"`
+	Cluster  string `json:"cluster"`
+	jwt.RegisteredClaims
 }
 
 // GenerateToken 生成JWT token
-func GenerateToken(user *model.User) (string, error) {
-	nowTime := time.Now()
-	expireTime := nowTime.Add(24 * time.Hour)
+func (m *TokenManager) GenerateToken(user *model.User) (string, error) {
+	now := time.Now()
+	expiresAt := now.Add(24 * time.Hour)
 
 	claims := Claims{
 		Username: user.Username,
-		Role:     user.Role,
+		Role:     int(user.Role),
 		Cluster:  user.Cluster,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expireTime.Unix(),
-			IssuedAt:  nowTime.Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			Issuer:    "kube.buding.goaigc.fun", // 添加签发者
+			Subject:   user.Username,            // 添加主题
 		},
 	}
 
-	tokenClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return tokenClaims.SignedString(jwtSecret)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString(m.JwtSecret)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign token: %w", err)
+	}
+
+	return signedToken, nil
 }
 
 // ParseToken 解析JWT token
-func ParseToken(token string) (*Claims, error) {
-	tokenClaims, err := jwt.ParseWithClaims(token, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
+func (m *TokenManager) ParseToken(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		// 验证签名算法，防止算法替换攻击
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return m.JwtSecret, nil
 	})
 
 	if err != nil {
-		return nil, err
-	}
-
-	if claims, ok := tokenClaims.Claims.(*Claims); ok && tokenClaims.Valid {
-		// 添加显式的过期时间检查
-		if time.Now().Unix() > claims.ExpiresAt {
+		if errors.Is(err, jwt.ErrTokenExpired) {
 			return nil, errors.New("token has expired")
 		}
-		return claims, nil
+		if errors.Is(err, jwt.ErrTokenMalformed) {
+			return nil, errors.New("token is malformed")
+		}
+		if errors.Is(err, jwt.ErrTokenSignatureInvalid) {
+			return nil, errors.New("token signature is invalid")
+		}
+		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}
 
-	return nil, errors.New("invalid token")
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+		return nil, errors.New("invalid token claims")
+	}
+
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	if claims.Issuer != "kube.buding.goaigc.fun" {
+		return nil, errors.New("invalid token issuer")
+	}
+
+	return claims, nil
 }

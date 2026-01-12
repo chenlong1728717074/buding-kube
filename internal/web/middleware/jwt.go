@@ -33,7 +33,7 @@ func JWTAuth() gin.HandlerFunc {
 		}
 
 		// 解析token
-		claims, err := jwt.ParseToken(parts[1])
+		claims, err := jwt.Token.ParseToken(parts[1])
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code": 401,

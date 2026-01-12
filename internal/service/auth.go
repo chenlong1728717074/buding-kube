@@ -56,7 +56,7 @@ func (s *AuthService) Login(login dto.LoginDTO) (*vo.UserVO, error) {
 		Status:   1,
 		Email:    user.Spec.Email,
 	}
-	token, err := jwt.GenerateToken(&u)
+	token, err := jwt.Token.GenerateToken(&u)
 	if err != nil {
 		logs.Error("token 生成失败 %v", err)
 		return nil, errors.New("token 生成失败")
