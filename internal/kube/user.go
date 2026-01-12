@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/alexedwards/argon2id"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 )
@@ -166,4 +167,75 @@ func buildSuperAdmin() *User {
 		},
 	}
 	return adminUser
+}
+
+// GetUser 获取单个用户
+func GetUser(name string) (*User, error) {
+	ctx := context.Background()
+
+	unstructuredObj, err := GlobalClient.DynamicClient.Resource(UserGVR).Get(
+		ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("用户不存在: %s", name)
+		}
+		return nil, fmt.Errorf("获取用户失败: %w", err)
+	}
+
+	user := &User{}
+	if err := utils.FromUnstructured(unstructuredObj, user); err != nil {
+		return nil, fmt.Errorf("转换用户数据失败: %w", err)
+	}
+
+	return user, nil
+}
+
+// ListUsersWithFilter 带过滤条件的用户列表查询
+func ListUsersWithFilter(opts metav1.ListOptions) ([]User, error) {
+	ctx := context.Background()
+
+	list, err := GlobalClient.DynamicClient.Resource(UserGVR).List(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("列出用户失败: %w", err)
+	}
+
+	users := make([]User, 0, len(list.Items))
+	for _, item := range list.Items {
+		user := User{}
+		if err := utils.FromUnstructured(&item, user); err != nil {
+			return nil, fmt.Errorf("转换用户数据失败: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+// UpdateUser 更新用户
+func UpdateUser(user *User) error {
+	ctx := context.Background()
+
+	// 先获取现有资源获得 ResourceVersion
+	existing, err := GlobalClient.DynamicClient.Resource(UserGVR).Get(
+		ctx, user.Name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("获取用户失败: %w", err)
+	}
+
+	// 设置 ResourceVersion（必须）
+	user.ResourceVersion = existing.GetResourceVersion()
+
+	unstructuredObj, err := utils.ToUnstructured(user)
+	if err != nil {
+		return fmt.Errorf("转换失败: %w", err)
+	}
+
+	_, err = GlobalClient.DynamicClient.Resource(UserGVR).Update(
+		ctx, unstructuredObj, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("更新用户失败: %w", err)
+	}
+
+	fmt.Printf("✅ 更新用户: %s\n", user.Name)
+	return nil
 }

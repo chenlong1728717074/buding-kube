@@ -7,12 +7,8 @@ import (
 	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
 	"buding-kube/pkg/utils/jwt"
-	"buding-kube/pkg/utils/password"
-	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/alexedwards/argon2id"
 	"sync"
 )
 
@@ -36,33 +32,34 @@ func NewAuthService() *AuthService {
 }
 
 func (s *AuthService) Login(login dto.LoginDTO) (*vo.UserVO, error) {
-	labelSelector := fmt.Sprintf("%s=%s", model.UserConfigSecretLabelKey, login.Username)
-	item, err := kube2.InClusterClientSet.CoreV1().Secrets(kube2.ServerNamespace).
-		List(context.TODO(), metav1.ListOptions{
-			LabelSelector: labelSelector,
-		})
+	var err error
+	var user *kube2.User
+	user, err = kube2.GetUser(login.Username)
 	if err != nil {
 		logs.Error("获取用户失败: %s", err.Error())
 		return nil, err
 	}
-	if len(item.Items) == 0 {
-		logs.Error("用户不存在")
-		return nil, errors.New("用户不存在")
-	}
-	secret := item.Items[0]
-	var user model.User
-	json.Unmarshal(secret.Data["config"], &user)
-	if user.Status == 0 {
+	if !user.Spec.Enabled {
 		return nil, errors.New("用户已停用")
 	}
-	if !password.CheckPassword(login.Password, user.Salt, user.Password) {
-		logs.Error("密码校验失败%s %s", login.Username, login.Password)
-		return nil, errors.New("密码校验失败")
+	var match bool
+	match, err = argon2id.ComparePasswordAndHash(login.Password, user.Spec.Password)
+	if err != nil {
+		return nil, errors.New("密码校验失败,原因是:" + err.Error())
 	}
-	token, err := jwt.GenerateToken(&user)
+	if !match {
+		return nil, errors.New("用户名或密码错误")
+	}
+	u := model.User{
+		Username: login.Username,
+		Role:     1,
+		Status:   1,
+		Email:    user.Spec.Email,
+	}
+	token, err := jwt.GenerateToken(&u)
 	if err != nil {
 		logs.Error("token 生成失败 %v", err)
 		return nil, errors.New("token 生成失败")
 	}
-	return vo.User2VO(user, token), nil
+	return vo.User2VO(u, token), nil
 }

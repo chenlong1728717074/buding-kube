@@ -19,3 +19,11 @@ func ToUnstructured(obj interface{}) (*unstructured.Unstructured, error) {
 
 	return &unstructured.Unstructured{Object: m}, nil
 }
+
+func FromUnstructured(u *unstructured.Unstructured, obj interface{}) error {
+	data, err := json.Marshal(u.Object)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, obj)
+}
