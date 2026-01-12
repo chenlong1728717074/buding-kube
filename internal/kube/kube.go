@@ -2,6 +2,7 @@ package kube
 
 import (
 	"buding-kube/internal/model"
+	"buding-kube/pkg/consts"
 	"buding-kube/pkg/logs"
 	"context"
 	"encoding/json"
@@ -20,11 +21,9 @@ import (
 )
 
 var (
-	InClusterClientSet      *kubernetes.Clientset
-	ServerNamespace         string
-	DefaultServerNamespace  = "kube-buding"
-	DefaultServerConfigPath = "configs/conf.yaml"
-	GlobalClient            *ClientManager
+	InClusterClientSet *kubernetes.Clientset
+	ServerNamespace    string
+	GlobalClient       *ClientManager
 )
 
 func init() {
@@ -92,14 +91,14 @@ func getConfig() (*rest.Config, error) {
 	}
 	//如果不是k8s的环境就拿环境变量
 	ns := os.Getenv("KUBE_RUNTIME_NAMESPACE")
-	ServerNamespace = DefaultServerNamespace
+	ServerNamespace = consts.DefaultServerNamespace
 	if ns != "" {
 		ServerNamespace = ns
 	}
 	//加载非k8s环境的配置文件
 	configPath := os.Getenv("KUBE_RUNTIME_NAMESPACE")
 	if configPath == "" {
-		configPath = DefaultServerConfigPath
+		configPath = consts.DefaultServerConfigPath
 	}
 	return clientcmd.BuildConfigFromFlags("", configPath)
 }
@@ -128,13 +127,13 @@ func getConfig2() (*rest.Config, string, error) {
 	// 如果不再k8s容器中运行的话就需要 从环境变量读取命名空间
 	namespace = os.Getenv("KUBE_RUNTIME_NAMESPACE")
 	if namespace == "" {
-		namespace = DefaultServerNamespace
+		namespace = consts.DefaultServerNamespace
 	}
 
 	// 从环境变量读取配置文件路径
 	configPath := os.Getenv("KUBE_CONFIG_PATH")
 	if configPath == "" {
-		configPath = DefaultServerConfigPath
+		configPath = consts.DefaultServerConfigPath
 	}
 
 	// 加载 kubeconfig

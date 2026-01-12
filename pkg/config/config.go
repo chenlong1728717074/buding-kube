@@ -1,6 +1,7 @@
 package config
 
 import (
+	"buding-kube/pkg/logs"
 	"github.com/spf13/viper"
 	"log"
 )
@@ -10,7 +11,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port int `mapstructure:"port"`
+	Port      int    `mapstructure:"port"`
+	JwtSecret string `mapstructure:"jwtSecret"`
 }
 
 type KubeConfig struct {
@@ -27,7 +29,8 @@ func init() {
 	viper.AddConfigPath(".")
 
 	if err := viper.ReadInConfig(); err != nil {
-		log.Fatal(err)
+		logs.Info("未能读取到有效的config,将会以默认模式启动✅")
+		return
 	}
 
 	if err := viper.Unmarshal(&globalConfig); err != nil {

@@ -167,7 +167,6 @@ func Warn(msg string, fields ...interface{}) {
 
 func Fatal(msg string, fields ...interface{}) {
 	Sugar.Fatalf(msg, fields...)
-	os.Exit(1)
 }
 
 // 结构化日志方法

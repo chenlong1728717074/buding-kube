@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"buding-kube/pkg/consts"
 	"buding-kube/pkg/logs"
 	"buding-kube/pkg/utils"
 	"context"
@@ -151,8 +152,8 @@ func buildSuperAdmin() *User {
 
 	adminUser := &User{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: fmt.Sprintf("%s/%s", GroupCrd, ClusterCrdVersion),
-			Kind:       UserKind,
+			APIVersion: fmt.Sprintf("%s/%s", consts.GroupCrd, consts.ClusterCrdVersion),
+			Kind:       consts.UserKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: SuperAdmin,

@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"buding-kube/pkg/consts"
 	"buding-kube/pkg/logs"
 	"context"
 	"fmt"
@@ -11,16 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"time"
-)
-
-const (
-	GroupCrd    string = "kube.buding.goaigc.fun"
-	ClusterCrd  string = "clusters.kube.buding.goaigc.fun"
-	ClusterKind        = "Cluster"
-
-	UserCrd           string = "users.kube.buding.goaigc.fun"
-	UserKind                 = "User"
-	ClusterCrdVersion string = "v1"
 )
 
 var (
@@ -43,16 +34,16 @@ func buildClusterCRD() *apiextensionsv1.CustomResourceDefinition {
 	return &apiextensionsv1.CustomResourceDefinition{
 		// ObjectMeta 定义 CRD 的元数据
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ClusterCrd,
+			Name: consts.ClusterCrd,
 		},
 		// Spec 定义
 		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-			Group: GroupCrd,
+			Group: consts.GroupCrd,
 			// CRD 的名称定义(单数、复数、kind 等)
 			Names: apiextensionsv1.CustomResourceDefinitionNames{
 				Plural:     "clusters",
 				Singular:   "cluster",
-				Kind:       ClusterKind,
+				Kind:       consts.ClusterKind,
 				ShortNames: []string{"cls"},
 			},
 			Scope: apiextensionsv1.ClusterScoped,
@@ -60,7 +51,7 @@ func buildClusterCRD() *apiextensionsv1.CustomResourceDefinition {
 			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
 				{
 					// 版本号
-					Name:    ClusterCrdVersion,
+					Name:    consts.ClusterCrdVersion,
 					Served:  true,
 					Storage: true,
 					// Schema
@@ -207,12 +198,12 @@ func buildUserCRD() *apiextensionsv1.CustomResourceDefinition {
 		// ObjectMeta 定义 CRD 的元数据
 		ObjectMeta: metav1.ObjectMeta{
 			// CRD 的名称必须符合 <plural>.<group> 的格式
-			Name: UserCrd,
+			Name: consts.UserCrd,
 		},
 		// Spec 定义 CRD 的规范
 		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 			// API 组名
-			Group: GroupCrd,
+			Group: consts.GroupCrd,
 			// CRD 的名称定义
 			Names: apiextensionsv1.CustomResourceDefinitionNames{
 				// 复数名称
@@ -220,7 +211,7 @@ func buildUserCRD() *apiextensionsv1.CustomResourceDefinition {
 				// 单数名称
 				Singular: "user",
 				// Kind 名称
-				Kind: UserKind,
+				Kind: consts.UserKind,
 				// 短名称
 				ShortNames: []string{"usr"},
 			},
@@ -229,7 +220,7 @@ func buildUserCRD() *apiextensionsv1.CustomResourceDefinition {
 			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
 				{
 					// 版本号
-					Name: ClusterCrdVersion,
+					Name: consts.ClusterCrdVersion,
 					// 通过 API 服务
 					Served: true,
 					// 存储版本

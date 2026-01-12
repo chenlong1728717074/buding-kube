@@ -2,6 +2,8 @@ package jwt
 
 import (
 	"buding-kube/internal/model"
+	"buding-kube/pkg/config"
+	"buding-kube/pkg/logs"
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
@@ -23,10 +25,15 @@ type TokenManager struct {
 
 func getJWTSecret() []byte {
 	secret := os.Getenv("JWT_SECRET_KEY")
-	if secret == "" {
-		panic("JWT_SECRET_KEY environment variable is not set")
+	if secret != "" {
+		return []byte(secret)
 	}
-	return []byte(secret)
+	secret = config.GetConfig().Server.JwtSecret
+	if secret != "" {
+		return []byte(secret)
+	}
+	logs.Fatal("jwt secret variable is not set")
+	return make([]byte, 0)
 }
 
 type Claims struct {
