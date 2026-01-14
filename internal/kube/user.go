@@ -16,8 +16,7 @@ const (
 	// RoleSuperAdmin 角色定义
 	RoleSuperAdmin = "super"
 	RoleAdmin      = "admin"
-	RoleUser       = "user"
-	RoleReadOnly   = "readonly"
+	RoleNormal     = "normal"
 
 	// UserStateActive 用户状态
 	UserStateActive    = "active"
@@ -44,6 +43,14 @@ const (
 	SuperAdminPass string = "123456"
 )
 
+type Role string
+
+var roleLevel = map[Role]int{
+	RoleNormal:     3,
+	RoleAdmin:      2,
+	RoleSuperAdmin: 1,
+}
+
 type User struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -56,8 +63,9 @@ type UserSpec struct {
 	Email      string            `json:"email"`
 	RealName   string            `json:"realName,omitempty"`
 	Password   string            `json:"password"`
-	Role       string            `json:"role"` // super/admin/normal
+	Role       Role              `json:"role"` // super/admin/normal
 	Enabled    bool              `json:"enabled"`
+	Department string            `json:"department"`
 	Attributes map[string]string `json:"attributes,omitempty"`
 }
 
@@ -126,6 +134,14 @@ func (u *User) IsAdmin() bool {
 func (u *User) CheckPassword(password string) bool {
 	match, _ := argon2id.ComparePasswordAndHash(password, u.Spec.Password)
 	return match
+}
+
+func (u *User) getRoleLevel() int {
+	return roleLevel[u.Spec.Role]
+}
+
+func (u *User) HasPermission(requiredRole Role) bool {
+	return roleLevel[u.Spec.Role] <= roleLevel[requiredRole]
 }
 
 func CreateUser(user *User, client dynamic.Interface) error {

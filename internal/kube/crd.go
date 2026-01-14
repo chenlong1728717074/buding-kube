@@ -253,6 +253,10 @@ func buildUserCRD() *apiextensionsv1.CustomResourceDefinition {
 											Type:        "string",
 											Description: "User password",
 										},
+										"department": {
+											Type:        "string",
+											Description: "User department",
+										},
 										// 用户角色列表
 										"role": {
 											Type:        "string",
@@ -347,7 +351,7 @@ func EnsureCRDs(crds []*apiextensionsv1.CustomResourceDefinition, client *apiext
 			return fmt.Errorf("等待 CRD %s 就绪失败: %w", crd.Name, err)
 		}
 
-		logs.Info("✅ CRD %s 已就绪", crd.Name)
+		logs.Info("✅  CRD %s 已就绪", crd.Name)
 	}
 
 	return nil

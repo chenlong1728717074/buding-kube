@@ -8,9 +8,11 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// ClientManager 创建连接管理器
+// kubernetes.Client 无法操作CRD，需要用apiextensionsclientset的
 type ClientManager struct {
 	Clientset *kubernetes.Clientset
-	//kubernetes.Client 无法操作CRD，需要用apiextensionsclientset的
+
 	CRDClient     *apiextensionsclientset.Clientset
 	DynamicClient dynamic.Interface
 	Config        *rest.Config

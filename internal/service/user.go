@@ -84,6 +84,18 @@ func (s *UserService) GetUserById(id string) (*model.User, *v1.Secret, error) {
 	return &user, items, nil
 }
 
+// GetUser  根据用户名获取用户
+func (s *UserService) GetUser(name string) (*kube2.User, error) {
+	var err error
+	var usr *kube2.User
+	usr, err = kube2.GetUser(name)
+	if err != nil {
+		logs.Error("获取用户失败: %s", err.Error())
+		return nil, err
+	}
+	return usr, nil
+}
+
 // ListUsers 获取用户列表
 func (s *UserService) ListUsers(query dto.UserQueryDTO) ([]vo.UserVO, error) {
 	labelSelector := fmt.Sprintf("%s", model.UserConfigSecretLabelKey)

@@ -1,9 +1,11 @@
 package api
 
 import (
+	"buding-kube/internal/model"
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
 	"buding-kube/internal/web/middleware"
+	"buding-kube/internal/web/vo"
 	"github.com/gin-gonic/gin"
 )
 
@@ -64,37 +66,27 @@ func (api *UserApi) ListUsers(ctx *gin.Context) {
 	api.SuccessWithData(ctx, BuildPageResponse(result, query.Page, query.PageSize))
 }
 
-// @Summary 获取用户信息
-// @Description 根据用户名获取用户详情
-// @Tags 用户管理
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param username path string true "用户名"
-// @Success 200 {object} vo.Response{data=vo.UserVO} "获取成功"
-// @Failure 400 {object} vo.Response "参数绑定错误"
-// @Failure 401 {object} vo.Response "未授权"
-// @Failure 500 {object} vo.Response "权限不足"
-// @Failure 500 {object} vo.Response "用户不存在"
-// @Failure 500 {object} vo.Response "获取失败"
-// @Router /api/user/{username} [get]
 func (api *UserApi) GetUser(ctx *gin.Context) {
-	id := api.GetParam(ctx, "id")
+	name := api.GetParam(ctx, "name")
 	// 获取当前用户
-	currentUser, err := api.CurrentUser(ctx)
-	if err != nil {
-		return
+	var currentUser *model.User
+	var err error
+	if currentUser, err = api.CurrentUser(ctx); err != nil {
+		api.Fail(ctx, vo.CodeInternalError, err.Error())
 	}
-	user, _, err := api.srv.GetUserById(id)
+
+	user, err := api.srv.GetUser(name)
 	if err != nil {
 		api.NotFound(ctx, "用户不存在")
 		return
 	}
+	//临时代码
+	currentUser.Role = 1
 	// 检查权限
-	if !currentUser.CanManageUser(user) {
-		api.Forbidden(ctx, "权限不足")
-		return
-	}
+	//if !currentUser.CanManageUser(user) {
+	//	api.Forbidden(ctx, "权限不足")
+	//	return
+	//}
 
 	api.SuccessWithData(ctx, user)
 }

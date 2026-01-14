@@ -29,12 +29,12 @@ func init() {
 	viper.AddConfigPath(".")
 
 	if err := viper.ReadInConfig(); err != nil {
-		logs.Info("未能读取到有效的config,将会以默认模式启动✅")
+		logs.Info("👉未能读取到有效的config,将会以默认模式启动")
 		return
 	}
 
 	if err := viper.Unmarshal(&globalConfig); err != nil {
-		log.Fatal(err)
+		log.Fatal("转换配置失败，将会以默认模式启动 😏")
 	}
 }
 

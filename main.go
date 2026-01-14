@@ -23,21 +23,25 @@ import (
 // swag init -d ./ -o ./pkg/docs
 func main() {
 	app := internal.NewApp()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	app.Start()
-	logs.Info("SERVER START SUCCESS")
+	logs.Info("SERVER STARTED SUCCESSFULLY")
 
-	// 处理信号
+	// 等待退出信号
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	logs.Info("Shutdown Server ...")
-	// 创建关闭超时上下文
-	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer shutdownCancel()
-	// 停止Web应用
-	app.Stop(shutdownCtx)
 
-	logs.Info("Server exiting")
+	logs.Info("Shutting down server...")
+
+	// 创建关闭超时上下文
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 停止应用
+	if err := app.Stop(ctx); err != nil {
+		logs.Error("Failed to stop server gracefully: %v", err)
+		os.Exit(1)
+	}
+
+	logs.Info("Server exited")
 }
