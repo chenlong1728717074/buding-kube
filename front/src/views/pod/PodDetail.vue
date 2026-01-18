@@ -448,6 +448,8 @@ const podInfo = ref<PodInfoVO | null>(null)
 const clusterId = ref('')
 const clusterName = ref('')
 
+const routeClusterId = computed(() => (route.params.clusterId as string) || (route.query.clusterId as string) || '')
+
 // YAML对话框相关
 const yamlDialogVisible = ref(false)
 const yamlContent = ref('')
@@ -484,7 +486,7 @@ const hasEnvironmentVariables = computed(() => {
 
 // 获取Pod详情
 const fetchPodDetail = async () => {
-  const clusterIdParam = route.query.clusterId as string
+  const clusterIdParam = routeClusterId.value
   const clusterNameParam = route.query.clusterName as string
   const namespace = route.query.namespace as string
   const name = route.query.name as string
@@ -534,7 +536,7 @@ const handleExpel = async () => {
       { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' }
     )
     const params: PodDTO = {
-      clusterId: route.query.clusterId as string,
+      clusterId: clusterId.value,
       namespace: podInfo.value.namespace,
       name: podInfo.value.name
     }
@@ -542,9 +544,8 @@ const handleExpel = async () => {
     if ((resp as any)?.code === 200) {
       ElMessage.success('已触发驱逐，正在返回列表')
       router.push({
-        path: '/pod',
+        path: `/cluster/${clusterId.value}/pod`,
         query: {
-          clusterId: route.query.clusterId as string,
           namespace: podInfo.value.namespace,
           refresh: '1'
         }
@@ -597,7 +598,7 @@ const confirmDeletePod = async () => {
   deleteLoading.value = true
   try {
     const params: PodDTO = {
-      clusterId: route.query.clusterId as string,
+      clusterId: clusterId.value,
       namespace: podInfo.value.namespace,
       name: podInfo.value.name
     }
