@@ -1,23 +1,47 @@
 package api
 
 import (
-	"buding-kube/internal/model"
+	"buding-kube/internal/kube"
 	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
 	"buding-kube/pkg/utils/jwt"
 	"bufio"
 	"context"
 	"errors"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 // 统一响应码
 
+type HandlerFunc[T any] func(ctx *gin.Context, req T) (any, error)
+
 type BaseApi struct {
+}
+
+func Execute[T any](api BaseApi, ctx *gin.Context, handler func(ctx *gin.Context, req T) (any, error)) {
+	var req T
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		api.ParamErrorWithError(ctx, err)
+		return
+	}
+
+	resp, err := handler(ctx, req)
+	if err != nil {
+		api.Fail(ctx, vo.CodeInternalError, err.Error())
+		return
+	}
+
+	if resp == nil {
+		api.SuccessNoData(ctx)
+		return
+	}
+
+	api.SuccessWithData(ctx, resp)
 }
 
 // BindJSON 绑定JSON请求
@@ -74,10 +98,26 @@ func (api *BaseApi) Success(c *gin.Context, msg string, data interface{}) {
 	})
 }
 
-// SuccessWithData 仅数据的成功响应
-func (api *BaseApi) SuccessWithData(c *gin.Context, data interface{}) {
-	api.Success(c, "操作成功", data)
+// OK 成功响应
+func (api *BaseApi) SuccessWithData(ctx *gin.Context, data any) {
+	ctx.JSON(http.StatusOK, vo.Response{
+		Code: vo.CodeSuccess,
+		Msg:  "操作成功",
+		Data: data,
+	})
 }
+
+func (api *BaseApi) SuccessNoData(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, vo.Response{
+		Code: vo.CodeSuccess,
+		Msg:  "操作成功",
+	})
+}
+
+// SuccessWithData 仅数据的成功响应
+//func (api *BaseApi) SuccessWithData(c *gin.Context, data interface{}) {
+//	api.Success(c, "操作成功", data)
+//}
 
 // SuccessMsg 仅消息的成功响应
 func (api *BaseApi) SuccessMsg(c *gin.Context, msg string) {
@@ -131,6 +171,11 @@ func (api *BaseApi) ParamError(c *gin.Context, msg string) {
 	api.Fail(c, vo.CodeInvalidParams, msg)
 }
 
+// ParamErrorWithError ParamError 参数错误
+func (api *BaseApi) ParamErrorWithError(c *gin.Context, err error) {
+	api.Fail(c, vo.CodeInvalidParams, err.Error())
+}
+
 func BuildPageResponse[T any](data []T, page, pageSize int) vo.PageResponse {
 	total := len(data)
 	if page <= 0 {
@@ -164,23 +209,20 @@ func BuildPageResponse[T any](data []T, page, pageSize int) vo.PageResponse {
 	}
 }
 
-func (api *BaseApi) CurrentUser(ctx *gin.Context) (*model.User, error) {
+func (api *BaseApi) CurrentUser(ctx *gin.Context) (*kube.LoginUser, error) {
 	claims, exists := ctx.Get("claims")
 	if !exists {
 		api.Unauthorized(ctx, "未认证")
 		return nil, errors.New("未认证")
 	}
-
-	// 将声明转换为JWT声明对象
 	jwtClaims, ok := claims.(*jwt.Claims)
 	if !ok {
 		api.InternalError(ctx, "无效的JWT声明", nil)
 		return nil, errors.New("无效的JWT声明")
 	}
-	return &model.User{
+	return &kube.LoginUser{
 		Username: jwtClaims.Username,
-		Role:     model.UserRole(jwtClaims.Role),
-		Cluster:  jwtClaims.Cluster,
+		Role:     jwtClaims.Role,
 	}, nil
 }
 

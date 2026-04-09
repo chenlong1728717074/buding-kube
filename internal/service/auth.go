@@ -1,15 +1,15 @@
 package service
 
 import (
-	kube2 "buding-kube/internal/kube"
-	"buding-kube/internal/model"
+	"buding-kube/internal/kube"
 	"buding-kube/internal/web/dto"
 	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
 	"buding-kube/pkg/utils/jwt"
 	"errors"
-	"github.com/alexedwards/argon2id"
 	"sync"
+
+	"github.com/alexedwards/argon2id"
 )
 
 var (
@@ -31,10 +31,10 @@ func NewAuthService() *AuthService {
 	return &AuthService{}
 }
 
-func (s *AuthService) Login(login dto.LoginDTO) (*vo.UserVO, error) {
+func (s *AuthService) Login(login dto.LoginDTO) (*vo.LoginUserVO, error) {
 	var err error
-	var user *kube2.User
-	user, err = kube2.GetUser(login.Username)
+	var user *kube.User
+	user, err = kube.GetUser(login.Username)
 	if err != nil {
 		logs.Error("获取用户失败: %s", err.Error())
 		return nil, err
@@ -50,16 +50,10 @@ func (s *AuthService) Login(login dto.LoginDTO) (*vo.UserVO, error) {
 	if !match {
 		return nil, errors.New("用户名或密码错误")
 	}
-	u := model.User{
-		Username: login.Username,
-		Role:     1,
-		Status:   1,
-		Email:    user.Spec.Email,
-	}
-	token, err := jwt.Token.GenerateToken(&u)
+	token, err := jwt.Token.GenerateToken(user)
 	if err != nil {
 		logs.Error("token 生成失败 %v", err)
 		return nil, errors.New("token 生成失败")
 	}
-	return vo.User2VO(u, token), nil
+	return vo.ToLoginUserVO(user, token), nil
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -43,17 +44,9 @@ func (api *AuthApi) Router() {
 // @Failure 500 {object} vo.Response "登录失败"
 // @Router /api/auth/login [post]
 func (api *AuthApi) Login(ctx *gin.Context) {
-	var login dto.LoginDTO
-	if err := ctx.ShouldBindJSON(&login); err != nil {
-		api.ParamBindError(ctx, err)
-		return
-	}
-	result, err := api.srv.Login(login)
-	if err != nil {
-		api.InternalError(ctx, "登录失败:", err)
-		return
-	}
-	api.SuccessWithData(ctx, result)
+	Execute[dto.LoginDTO](api.BaseApi, ctx, func(ctx *gin.Context, req dto.LoginDTO) (any, error) {
+		return api.srv.Login(req)
+	})
 }
 
 func (api *AuthApi) Logout(ctx *gin.Context) {

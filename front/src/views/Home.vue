@@ -7,7 +7,7 @@
     </div>
 
     <!-- 模块卡片 -->
-    <div class="module-grid">
+    <div class="module-grid" :class="{ 'single-card': !isAdmin }">
       <!-- 集群管理 -->
       <div class="module-card" @click="goToClusterManagement">
         <div class="module-icon cluster">
@@ -26,7 +26,7 @@
       </div>
 
       <!-- 用户管理 (仅管理员可见) -->
-      <div v-if="userStore.isAdmin" class="module-card" @click="goToUserManagement">
+      <div v-if="isAdmin" class="module-card" @click="goToUserManagement">
         <div class="module-icon user">
           <el-icon :size="40"><User /></el-icon>
         </div>
@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { Monitor, User, Document, Link } from '@element-plus/icons-vue'
@@ -69,6 +69,7 @@ import { clusterApi } from '@/api/cluster'
 
 const router = useRouter()
 const userStore = useUserStore()
+const isAdmin = computed(() => userStore.isAdmin)
 
 const clusterCount = ref(0)
 const userCount = ref(0)
@@ -132,6 +133,15 @@ onMounted(() => {
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 32px;
   margin-bottom: 60px;
+}
+
+.module-grid.single-card {
+  display: block;
+}
+
+.module-grid.single-card .module-card {
+  width: calc((100% - 32px) / 2);
+  margin: 0 auto;
 }
 
 .module-card {
@@ -265,6 +275,10 @@ onMounted(() => {
   .module-card {
     flex-direction: column;
     padding: 28px 24px;
+  }
+
+  .module-grid.single-card .module-card {
+    width: 100%;
   }
 
   .module-icon {

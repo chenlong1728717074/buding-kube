@@ -6,6 +6,7 @@ import (
 	"buding-kube/pkg/utils"
 	"context"
 	"fmt"
+
 	"github.com/alexedwards/argon2id"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,11 +52,40 @@ var roleLevel = map[Role]int{
 	RoleSuperAdmin: 1,
 }
 
+func RoleLevel(role Role) int {
+	return roleLevel[role]
+}
+
 type User struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              UserSpec   `json:"spec,omitempty"`
 	Status            UserStatus `json:"status,omitempty"`
+}
+
+type LoginUser struct {
+	Username string
+	Role     Role
+}
+
+func (u *LoginUser) CanManageUser(user *User) bool {
+	if u == nil || user == nil {
+		return false
+	}
+
+	if u.Username == user.Name {
+		return true
+	}
+
+	myLevel, ok1 := roleLevel[u.Role]
+	targetLevel, ok2 := roleLevel[user.Spec.Role]
+
+	if !ok1 || !ok2 {
+		return false
+	}
+
+	// 权限高（数值小）才能管理权限低（数值大）
+	return myLevel < targetLevel
 }
 
 // UserSpec 用户规格定义
@@ -207,8 +237,8 @@ func GetUser(name string) (*User, error) {
 	return user, nil
 }
 
-// ListUsersWithFilter 带过滤条件的用户列表查询
-func ListUsersWithFilter(opts metav1.ListOptions) ([]User, error) {
+// ListUsers  带过滤条件的用户列表查询
+func ListUsers(opts metav1.ListOptions) ([]User, error) {
 	ctx := context.Background()
 
 	list, err := GlobalClient.DynamicClient.Resource(UserGVR).List(ctx, opts)
@@ -219,7 +249,7 @@ func ListUsersWithFilter(opts metav1.ListOptions) ([]User, error) {
 	users := make([]User, 0, len(list.Items))
 	for _, item := range list.Items {
 		user := User{}
-		if err := utils.FromUnstructured(&item, user); err != nil {
+		if err := utils.FromUnstructured(&item, &user); err != nil {
 			return nil, fmt.Errorf("转换用户数据失败: %w", err)
 		}
 		users = append(users, user)
@@ -254,5 +284,18 @@ func UpdateUser(user *User) error {
 	}
 
 	fmt.Printf("✅ 更新用户: %s\n", user.Name)
+	return nil
+}
+
+// DeleteUser 删除用户
+func DeleteUser(name string) error {
+	ctx := context.Background()
+
+	err := GlobalClient.DynamicClient.
+		Resource(UserGVR).
+		Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
 	return nil
 }

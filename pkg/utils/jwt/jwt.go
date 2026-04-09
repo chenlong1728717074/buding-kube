@@ -1,14 +1,15 @@
 package jwt
 
 import (
-	"buding-kube/internal/model"
+	"buding-kube/internal/kube"
 	"buding-kube/pkg/config"
 	"buding-kube/pkg/logs"
 	"errors"
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
 	"os"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var Token TokenManager
@@ -37,27 +38,26 @@ func getJWTSecret() []byte {
 }
 
 type Claims struct {
-	Username string `json:"username"`
-	Role     int    `json:"role"`
-	Cluster  string `json:"cluster"`
+	Username string    `json:"username"`
+	Role     kube.Role `json:"role"`
+	Cluster  string    `json:"cluster"`
 	jwt.RegisteredClaims
 }
 
 // GenerateToken 生成JWT token
-func (m *TokenManager) GenerateToken(user *model.User) (string, error) {
+func (m *TokenManager) GenerateToken(user *kube.User) (string, error) {
 	now := time.Now()
 	expiresAt := now.Add(24 * time.Hour)
 
 	claims := Claims{
-		Username: user.Username,
-		Role:     int(user.Role),
-		Cluster:  user.Cluster,
+		Username: user.Name,
+		Role:     user.Spec.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    "kube.buding.goaigc.fun", // 添加签发者
-			Subject:   user.Username,            // 添加主题
+			Subject:   user.Name,                // 添加主题
 		},
 	}
 
