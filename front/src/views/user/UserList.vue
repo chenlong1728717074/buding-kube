@@ -14,6 +14,26 @@
       </div>
     </div>
 
+    <!-- 统计卡片 -->
+    <div class="stats-grid">
+      <el-card class="stat-card" shadow="never">
+        <div class="stat-label">总用户</div>
+        <div class="stat-value">{{ pagination.total }}</div>
+      </el-card>
+      <el-card class="stat-card" shadow="never">
+        <div class="stat-label">当前页启用</div>
+        <div class="stat-value text-success">{{ activeCount }}</div>
+      </el-card>
+      <el-card class="stat-card" shadow="never">
+        <div class="stat-label">当前页禁用</div>
+        <div class="stat-value text-danger">{{ inactiveCount }}</div>
+      </el-card>
+      <el-card class="stat-card" shadow="never">
+        <div class="stat-label">当前页管理员</div>
+        <div class="stat-value text-warning">{{ adminCount }}</div>
+      </el-card>
+    </div>
+
     <!-- 搜索和筛选区域 -->
     <el-card class="filter-card" shadow="never">
       <div class="filter-content">
@@ -59,6 +79,18 @@
           </el-button>
         </div>
       </div>
+      <transition name="filter-fade">
+        <div v-if="searchForm.role || searchForm.status" class="active-filters">
+          <span class="active-filters-label">已筛选：</span>
+          <el-tag v-if="searchForm.role" closable @close="removeFilter('role')">
+            角色: {{ getRoleText(searchForm.role) }}
+          </el-tag>
+          <el-tag v-if="searchForm.status" closable @close="removeFilter('status')">
+            状态: {{ getStatusText(searchForm.status) }}
+          </el-tag>
+          <el-button link type="primary" class="clear-filter-btn" @click="handleReset">清空筛选</el-button>
+        </div>
+      </transition>
     </el-card>
 
     <!-- 用户列表卡片 -->
@@ -90,12 +122,17 @@
         :data="userList" 
         stripe
         class="user-table"
+        :row-class-name="tableRowClassName"
         @selection-change="handleSelectionChange"
-        empty-text="暂无用户数据"
         style="width: 100%"
       >
         <el-table-column type="selection" width="50" />
-        
+
+        <template #empty>
+          <el-empty description="暂无用户数据">
+            <el-button type="primary" @click="handleAdd">去创建用户</el-button>
+          </el-empty>
+        </template>
 
         <el-table-column prop="username" label="用户名" min-width="150">
           <template #default="{ row }">
@@ -120,10 +157,11 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="status" label="状态" min-width="80" align="center">
+        <el-table-column prop="status" label="状态" min-width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" effect="light">
-              {{ getStatusText(row.status) }}
+            <el-tag :type="getStatusType(row.status)" effect="light" class="status-tag">
+              <el-icon class="status-icon"><component :is="getStatusIcon(row.status)" /></el-icon>
+              <span>{{ getStatusText(row.status) }}</span>
             </el-tag>
           </template>
         </el-table-column>
@@ -149,15 +187,16 @@
           </template>
         </el-table-column>
         
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right" align="center" header-align="center">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" @click="handleEdit(row)">
+              <el-button size="small" type="primary" class="btn-edit" @click="handleEdit(row)">
                 <el-icon><Edit /></el-icon>
                 编辑
               </el-button>
-              <el-button 
-                size="small" 
+              <el-button
+                size="small"
+                class="btn-toggle"
                 :type="isUserEnabled(row) ? 'warning' : 'success'"
                 plain
                 @click="handleToggleStatus(row)"
@@ -166,7 +205,7 @@
                 {{ isUserEnabled(row) ? '禁用' : '启用' }}
               </el-button>
               <el-dropdown @command="(command) => handleMoreActions(command, row)">
-                <el-button size="small" plain>
+                <el-button size="small" class="btn-more" plain>
                   更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
                 <template #dropdown>
@@ -319,18 +358,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  Plus, 
-  Search, 
-  Refresh, 
-  Delete, 
+import {
+  Plus,
+  Search,
+  Refresh,
+  Delete,
   ArrowDown,
   Edit,
   Switch,
   Key,
-  Lock
+  Lock,
+  SuccessFilled,
+  CircleCloseFilled,
+  WarningFilled,
+  InfoFilled
 } from '@element-plus/icons-vue'
 import {
   userApi,
@@ -355,6 +398,10 @@ const searchForm = reactive({
 // 用户列表
 const userList = ref<UserVO[]>([])
 const selectedUsers = ref<UserVO[]>([])
+
+const activeCount = computed(() => userList.value.filter(u => u.status === 'active').length)
+const inactiveCount = computed(() => userList.value.filter(u => u.status === 'inactive').length)
+const adminCount = computed(() => userList.value.filter(u => ['super', 'admin', '1', '2'].includes(String(u.role))).length)
 
 // 分页
 const pagination = reactive({
@@ -479,6 +526,20 @@ const getStatusText = (status: string) => {
   }
 }
 
+// 获取状态图标
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'active':
+      return SuccessFilled
+    case 'inactive':
+      return CircleCloseFilled
+    case 'suspended':
+      return WarningFilled
+    default:
+      return InfoFilled
+  }
+}
+
 const isUserEnabled = (user: UserVO) => {
   if (typeof user.enabled === 'boolean') {
     return user.enabled
@@ -536,6 +597,15 @@ const handleReset = () => {
   })
   pagination.page = 1
   fetchUserList()
+}
+
+const removeFilter = (key: 'role' | 'status') => {
+  searchForm[key] = undefined
+  handleSearch()
+}
+
+const tableRowClassName = ({ row }: { row: UserVO }) => {
+  return selectedUsers.value.some(item => item.username === row.username) ? 'row-selected' : ''
 }
 
 // 分页大小改变
@@ -795,6 +865,14 @@ onMounted(() => {
 
 <style scoped>
 .user-list-container {
+  --page-primary: var(--el-color-primary);
+  --page-success: var(--el-color-success);
+  --page-danger: var(--el-color-danger);
+  --page-warning: var(--el-color-warning);
+  --page-text-main: #1e293b;
+  --page-text-sub: #475569;
+  --page-border: #e2e8f0;
+  --page-soft-bg: #f8fafc;
   padding: 20px;
   background-color: #f5f7fa;
   min-height: 100vh;
@@ -834,6 +912,36 @@ onMounted(() => {
   gap: 12px;
 }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.text-success { color: var(--page-success); }
+.text-danger { color: var(--page-danger); }
+.text-warning { color: var(--page-warning); }
+
 .filter-card {
   margin-bottom: 20px;
   border: none;
@@ -845,6 +953,52 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.active-filters {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--page-soft-bg);
+  border: 1px solid var(--page-border);
+}
+
+.active-filters-label {
+  font-size: 13px;
+  color: var(--page-text-sub);
+  font-weight: 500;
+}
+
+.clear-filter-btn {
+  margin-left: auto;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--page-primary) !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 4px 6px !important;
+}
+
+.clear-filter-btn:hover,
+.clear-filter-btn:focus {
+  color: #2563eb !important;
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-radius: 6px;
+}
+
+.filter-fade-enter-active,
+.filter-fade-leave-active {
+  transition: all 0.2s ease;
+}
+
+.filter-fade-enter-from,
+.filter-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .filter-left {
@@ -885,6 +1039,19 @@ onMounted(() => {
   background-color: #f8fbff;
 }
 
+:deep(.user-table .el-table__row.row-selected > td:first-child) {
+  border-left: 3px solid var(--page-primary);
+}
+
+:deep(.user-table .action-buttons .el-button) {
+  opacity: 0.85;
+  transition: all 0.18s ease;
+}
+
+:deep(.user-table .el-table__row:hover .action-buttons .el-button) {
+  opacity: 1;
+}
+
 .toolbar-left {
   display: flex;
   align-items: center;
@@ -898,9 +1065,9 @@ onMounted(() => {
 }
 
 .count-tag {
-  background-color: #f0f9ff;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--page-primary);
+  border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 .toolbar-right {
@@ -924,10 +1091,33 @@ onMounted(() => {
   color: #2c3e50;
 }
 
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-icon {
+  font-size: 12px;
+}
+
 .action-buttons {
   display: flex;
   gap: 8px;
   flex-wrap: nowrap;
+  justify-content: center;
+}
+
+.btn-edit {
+  font-weight: 500;
+}
+
+.btn-toggle {
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.btn-more {
+  color: var(--page-text-sub);
 }
 
 .pagination-wrapper {
@@ -949,6 +1139,10 @@ onMounted(() => {
   .user-list-container {
     padding: 10px;
   }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   
   .page-header {
     flex-direction: column;
@@ -960,6 +1154,14 @@ onMounted(() => {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
+  }
+
+  .active-filters {
+    gap: 6px;
+  }
+
+  .clear-filter-btn {
+    margin-left: 0;
   }
   
   .table-toolbar {
