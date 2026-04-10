@@ -2,6 +2,12 @@
   <div class="cronjob-list">
     <div class="page-header">
       <h1>CronJob管理</h1>
+      <div class="header-actions">
+        <el-button type="success" @click="openYamlAdd">
+          <el-icon><Document /></el-icon>
+          YAML添加
+        </el-button>
+      </div>
     </div>
 
     <el-card class="search-card">
@@ -121,6 +127,31 @@
       </div>
     </el-card>
 
+    <!-- YAML添加对话框 -->
+    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加CronJob" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">YAML添加CronJob</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">已内置示例，可直接修改后使用</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-editor-wrapper">
+            <YamlEditor v-model="yamlAddContent" :readonly="false" height="100%" filename="cronjob.yaml" />
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 查看YAML对话框 -->
     <el-dialog v-model="viewYamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
       <template #header>
@@ -169,7 +200,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
+import { Search, Refresh, ArrowDown, Document } from '@element-plus/icons-vue'
 import { cronJobApi, type CronJobVO, type CronJobQueryDTO } from '@/api/cronjob'
 import { clusterApi } from '@/api/cluster'
 import { useClusterStore } from '@/stores/cluster'
@@ -196,6 +227,9 @@ const namespaceFetcher = computed(() => useNamespaceFetcher(clusterId.value))
 // 对话框状态
 const viewYamlDialogVisible = ref(false)
 const currentCronJob = ref<CronJobVO | null>(null)
+const yamlAddDialogVisible = ref(false)
+const yamlAddLoading = ref(false)
+const yamlAddContent = ref('')
 
 // 查看YAML表单
 const viewYamlForm = reactive({
@@ -319,6 +353,48 @@ const handleMoreAction = (command: string, row: CronJobVO) => {
   }
 }
 
+const buildCronJobYamlExample = () => {
+  const namespace = searchForm.namespace || 'default'
+  return [
+    'apiVersion: batch/v1',
+    'kind: CronJob',
+    'metadata:',
+    '  name: example-cronjob',
+    `  namespace: ${namespace}`,
+    'spec:',
+    '  schedule: "*/5 * * * *"',
+    '  successfulJobsHistoryLimit: 3',
+    '  failedJobsHistoryLimit: 1',
+    '  jobTemplate:',
+    '    spec:',
+    '      template:',
+    '        spec:',
+    '          restartPolicy: OnFailure',
+    '          containers:',
+    '            - name: busybox',
+    '              image: busybox:1.36',
+    '              command: ["sh", "-c", "date; echo cron running"]'
+  ].join('\n')
+}
+
+const openYamlAdd = () => {
+  yamlAddContent.value = buildCronJobYamlExample()
+  yamlAddDialogVisible.value = true
+}
+
+const confirmYamlAdd = async () => {
+  if (!yamlAddContent.value.trim()) {
+    ElMessage.warning('请输入YAML内容')
+    return
+  }
+  yamlAddLoading.value = true
+  try {
+    ElMessage.warning('当前版本后端暂未开放CronJob YAML应用接口，请先复制示例使用kubectl apply执行')
+  } finally {
+    yamlAddLoading.value = false
+  }
+}
+
 // 查看YAML
 const handleViewYaml = (row: CronJobVO) => {
   currentCronJob.value = row
@@ -386,6 +462,11 @@ onMounted(() => {
   font-size: 24px;
   font-weight: 600;
   color: #2c3e50;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
 .search-card {

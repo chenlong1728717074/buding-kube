@@ -2,7 +2,15 @@
   <div class="endpoint-list">
     <el-card class="header-card">
       <div class="page-header">
-        <h1 class="deprecated-title">Endpoint管理</h1>
+        <div class="page-header-top">
+          <h1 class="deprecated-title">Endpoint管理</h1>
+          <div class="header-actions">
+            <el-button type="success" @click="openYamlAdd">
+              <el-icon><Document /></el-icon>
+              YAML添加
+            </el-button>
+          </div>
+        </div>
         <el-alert
           title="功能已过时"
           type="warning"
@@ -102,6 +110,31 @@
       </div>
     </el-card>
 
+    <!-- YAML添加对话框 -->
+    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加Endpoint" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">YAML添加Endpoint</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">已内置示例，可直接修改后使用</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-editor-wrapper">
+            <YamlEditor v-model="yamlAddContent" :readonly="false" height="100%" filename="endpoint.yaml" />
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 查看YAML对话框 -->
     <el-dialog v-model="viewYamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
       <template #header>
@@ -150,7 +183,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
+import { Search, Refresh, ArrowDown, Document } from '@element-plus/icons-vue'
 import { endpointApi, type EndpointVO, type EndpointQueryDTO } from '@/api/endpoint'
 import { clusterApi } from '@/api/cluster'
 import { namespaceApi } from '@/api/namespace'
@@ -178,6 +211,9 @@ const namespaceFetcher = computed(() => useNamespaceFetcher(clusterId.value))
 // 对话框状态
 const viewYamlDialogVisible = ref(false)
 const currentEndpoint = ref<EndpointVO | null>(null)
+const yamlAddDialogVisible = ref(false)
+const yamlAddLoading = ref(false)
+const yamlAddContent = ref('')
 
 // 查看YAML表单
 const viewYamlForm = reactive({
@@ -311,6 +347,41 @@ const handleMoreAction = (command: string, row: EndpointVO) => {
   }
 }
 
+const buildEndpointYamlExample = () => {
+  const namespace = searchForm.namespace || 'default'
+  return [
+    'apiVersion: v1',
+    'kind: Endpoints',
+    'metadata:',
+    '  name: example-endpoint',
+    `  namespace: ${namespace}`,
+    'subsets:',
+    '  - addresses:',
+    '      - ip: 10.0.0.10',
+    '    ports:',
+    '      - port: 80',
+    '        protocol: TCP'
+  ].join('\n')
+}
+
+const openYamlAdd = () => {
+  yamlAddContent.value = buildEndpointYamlExample()
+  yamlAddDialogVisible.value = true
+}
+
+const confirmYamlAdd = async () => {
+  if (!yamlAddContent.value.trim()) {
+    ElMessage.warning('请输入YAML内容')
+    return
+  }
+  yamlAddLoading.value = true
+  try {
+    ElMessage.warning('当前版本后端暂未开放Endpoint YAML应用接口，请先复制示例使用kubectl apply执行')
+  } finally {
+    yamlAddLoading.value = false
+  }
+}
+
 // 查看YAML
 const handleViewYaml = async (row: EndpointVO) => {
   currentEndpoint.value = row
@@ -340,9 +411,15 @@ const handleViewYaml = async (row: EndpointVO) => {
 .page-header {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   width: 100%;
-  text-align: left;
+}
+
+.page-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
 }
 
 .deprecated-title {
@@ -362,6 +439,11 @@ const handleViewYaml = async (row: EndpointVO) => {
 
 .deprecated-button {
   text-decoration: line-through;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
 .search-card {

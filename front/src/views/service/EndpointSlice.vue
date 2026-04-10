@@ -3,6 +3,12 @@
     <el-card class="header-card">
       <div class="page-header">
         <h1>EndpointSlice管理</h1>
+        <div class="header-actions">
+          <el-button type="success" @click="openYamlAdd">
+            <el-icon><Document /></el-icon>
+            YAML添加
+          </el-button>
+        </div>
       </div>
     </el-card>
 
@@ -91,6 +97,31 @@
       </div>
     </el-card>
 
+    <!-- YAML添加对话框 -->
+    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加EndpointSlice" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">YAML添加EndpointSlice</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">已内置示例，可直接修改后使用</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-editor-wrapper">
+            <YamlEditor v-model="yamlAddContent" :readonly="false" height="100%" filename="endpointslice.yaml" />
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 查看YAML对话框 -->
     <el-dialog v-model="viewYamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
       <template #header>
@@ -139,7 +170,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
+import { Search, Refresh, ArrowDown, Document } from '@element-plus/icons-vue'
 import { endpointSliceApi, type EndpointSliceVO, type EndpointSliceQueryDTO } from '@/api/endpointslice'
 import { clusterApi } from '@/api/cluster'
 import { namespaceApi } from '@/api/namespace'
@@ -167,6 +198,9 @@ const namespaceFetcher = computed(() => useNamespaceFetcher(clusterId.value))
 // 对话框状态
 const viewYamlDialogVisible = ref(false)
 const currentEndpointSlice = ref<EndpointSliceVO | null>(null)
+const yamlAddDialogVisible = ref(false)
+const yamlAddLoading = ref(false)
+const yamlAddContent = ref('')
 
 // 查看YAML表单
 const viewYamlForm = reactive({
@@ -299,6 +333,46 @@ const handleMoreAction = (command: string, row: EndpointSliceVO) => {
   }
 }
 
+const buildEndpointSliceYamlExample = () => {
+  const namespace = searchForm.namespace || 'default'
+  return [
+    'apiVersion: discovery.k8s.io/v1',
+    'kind: EndpointSlice',
+    'metadata:',
+    '  name: example-endpointslice',
+    `  namespace: ${namespace}`,
+    '  labels:',
+    '    kubernetes.io/service-name: example-service',
+    'addressType: IPv4',
+    'ports:',
+    '  - name: http',
+    '    port: 80',
+    '    protocol: TCP',
+    'endpoints:',
+    '  - addresses: ["10.0.0.10"]',
+    '    conditions:',
+    '      ready: true'
+  ].join('\n')
+}
+
+const openYamlAdd = () => {
+  yamlAddContent.value = buildEndpointSliceYamlExample()
+  yamlAddDialogVisible.value = true
+}
+
+const confirmYamlAdd = async () => {
+  if (!yamlAddContent.value.trim()) {
+    ElMessage.warning('请输入YAML内容')
+    return
+  }
+  yamlAddLoading.value = true
+  try {
+    ElMessage.warning('当前版本后端暂未开放EndpointSlice YAML应用接口，请先复制示例使用kubectl apply执行')
+  } finally {
+    yamlAddLoading.value = false
+  }
+}
+
 // 查看YAML
 const handleViewYaml = async (row: EndpointSliceVO) => {
   currentEndpointSlice.value = row
@@ -329,6 +403,11 @@ const handleViewYaml = async (row: EndpointSliceVO) => {
   font-size: 24px;
   font-weight: 600;
   color: #303133;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
 .search-card {

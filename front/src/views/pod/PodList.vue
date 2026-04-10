@@ -2,6 +2,12 @@
   <div class="pod-list">
     <div class="page-header">
       <h1>Pod管理</h1>
+      <div class="header-actions">
+        <el-button type="success" @click="openYamlAdd">
+          <el-icon><Document /></el-icon>
+          YAML添加
+        </el-button>
+      </div>
     </div>
 
     <el-card class="search-card">
@@ -140,6 +146,31 @@
         />
       </div>
     </el-card>
+
+    <!-- YAML添加对话框 -->
+    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加Pod" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">YAML添加Pod</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">已内置示例，可直接修改后使用</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-editor-wrapper">
+            <YamlEditor v-model="yamlAddContent" :readonly="false" height="100%" filename="pod.yaml" />
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
+        </div>
+      </template>
+    </el-dialog>
 
     <!-- 查看YAML对话框 -->
     <el-dialog v-model="yamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
@@ -383,9 +414,51 @@ const yamlDialogVisible = ref(false)
 const yamlContent = ref('')
 const yamlLoading = ref(false)
 
+// YAML添加相关
+const yamlAddDialogVisible = ref(false)
+const yamlAddLoading = ref(false)
+const yamlAddContent = ref('')
+
 // 日志对话框相关
 const logDialogVisible = ref(false)
 const selectedPod = ref<PodVO | null>(null)
+
+const buildPodYamlExample = () => {
+  const namespace = searchForm.namespace || 'default'
+  return [
+    'apiVersion: v1',
+    'kind: Pod',
+    'metadata:',
+    '  name: example-pod',
+    `  namespace: ${namespace}`,
+    '  labels:',
+    '    app: example-pod',
+    'spec:',
+    '  containers:',
+    '    - name: nginx',
+    '      image: nginx:1.27',
+    '      ports:',
+    '        - containerPort: 80'
+  ].join('\n')
+}
+
+const openYamlAdd = () => {
+  yamlAddContent.value = buildPodYamlExample()
+  yamlAddDialogVisible.value = true
+}
+
+const confirmYamlAdd = async () => {
+  if (!yamlAddContent.value.trim()) {
+    ElMessage.warning('请输入YAML内容')
+    return
+  }
+  yamlAddLoading.value = true
+  try {
+    ElMessage.warning('当前版本后端暂未开放Pod YAML应用接口，请先复制示例使用kubectl apply执行')
+  } finally {
+    yamlAddLoading.value = false
+  }
+}
 
 // 更多操作
 const handleMoreAction = (command: string, row: PodVO) => {
@@ -593,6 +666,11 @@ onActivated(() => {
   font-size: 24px;
   font-weight: 600;
   color: #2c3e50;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
 .search-card {

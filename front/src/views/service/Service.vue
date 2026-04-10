@@ -3,6 +3,12 @@
     <el-card class="header-card">
       <div class="page-header">
         <h1>Service管理</h1>
+        <div class="header-actions">
+          <el-button type="success" @click="openYamlAdd">
+            <el-icon><Document /></el-icon>
+            YAML添加
+          </el-button>
+        </div>
       </div>
     </el-card>
 
@@ -124,6 +130,32 @@
       </div>
     </el-card>
 
+    <!-- YAML添加对话框 -->
+    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加Service" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+      <template #header>
+        <div class="dialog-header">
+          <div>
+            <h3 class="dialog-title">YAML添加Service</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">已内置示例，可直接修改后使用</div>
+          </div>
+        </div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <div class="yaml-editor-wrapper">
+            <YamlEditor v-model="yamlAddContent" :readonly="false" height="100%" filename="service.yaml" />
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 查看YAML对话框 -->
     <el-dialog v-model="viewYamlDialogVisible" title="查看YAML" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
       <template #header>
@@ -166,7 +198,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown } from '@element-plus/icons-vue'
+import { Search, Refresh, ArrowDown, Document } from '@element-plus/icons-vue'
 import { serviceApi, type ServiceVO, type ServiceQueryDTO, type ServiceBaseDTO } from '@/api/service'
 import { clusterApi } from '@/api/cluster'
 import { namespaceApi } from '@/api/namespace'
@@ -191,6 +223,9 @@ const serviceList = ref<ServiceVO[]>([])
 const viewYamlDialogVisible = ref(false)
 const currentService = ref<ServiceVO | null>(null)
 const applyLoading = ref(false)
+const yamlAddDialogVisible = ref(false)
+const yamlAddLoading = ref(false)
+const yamlAddContent = ref('')
 
 // 查看YAML表单
 const viewYamlForm = reactive({
@@ -301,6 +336,45 @@ const handleMoreAction = (command: string, row: ServiceVO) => {
     case 'detail':
       handleDetail(row)
       break
+  }
+}
+
+const buildServiceYamlExample = () => {
+  const namespace = searchForm.namespace || 'default'
+  return [
+    'apiVersion: v1',
+    'kind: Service',
+    'metadata:',
+    '  name: example-service',
+    `  namespace: ${namespace}`,
+    '  labels:',
+    '    app: example-app',
+    'spec:',
+    '  selector:',
+    '    app: example-app',
+    '  ports:',
+    '    - name: http',
+    '      port: 80',
+    '      targetPort: 80',
+    '  type: ClusterIP'
+  ].join('\n')
+}
+
+const openYamlAdd = () => {
+  yamlAddContent.value = buildServiceYamlExample()
+  yamlAddDialogVisible.value = true
+}
+
+const confirmYamlAdd = async () => {
+  if (!yamlAddContent.value.trim()) {
+    ElMessage.warning('请输入YAML内容')
+    return
+  }
+  yamlAddLoading.value = true
+  try {
+    ElMessage.warning('当前版本后端暂未开放Service YAML应用接口，请先复制示例使用kubectl apply执行')
+  } finally {
+    yamlAddLoading.value = false
   }
 }
 
