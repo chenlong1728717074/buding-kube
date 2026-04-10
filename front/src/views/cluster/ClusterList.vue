@@ -509,13 +509,26 @@ onMounted(() => {
 }
 
 .cluster-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  display: flex;
+  align-items: stretch;
   gap: 20px;
   min-height: 400px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 8px 10px;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+}
+
+.cluster-grid :deep(.el-empty) {
+  width: 100%;
 }
 
 .cluster-card {
+  flex: 0 0 340px;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border-radius: 12px;
   padding: 20px;
@@ -523,8 +536,8 @@ onMounted(() => {
   border: 1px solid rgba(59, 130, 246, 0.12);
   cursor: pointer;
   transition: all 0.3s ease;
+  scroll-snap-align: start;
 }
-
 .cluster-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(59, 130, 246, 0.12);
@@ -553,6 +566,9 @@ onMounted(() => {
 }
 
 .cluster-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   margin-bottom: 16px;
 }
 
@@ -586,7 +602,7 @@ onMounted(() => {
 }
 
 .cluster-info {
-  margin-bottom: 16px;
+  margin-bottom: auto;
 }
 
 .info-item {
@@ -637,6 +653,7 @@ onMounted(() => {
 .cluster-footer {
   display: flex;
   justify-content: flex-end;
+  margin-top: auto;
 }
 
 .pagination-container {
@@ -673,7 +690,15 @@ onMounted(() => {
   }
 
   .cluster-grid {
+    display: grid;
     grid-template-columns: 1fr;
+    overflow-x: visible;
+    overflow-y: visible;
+  }
+
+  .cluster-card {
+    flex: none;
+    max-width: none;
   }
 }
 </style>
