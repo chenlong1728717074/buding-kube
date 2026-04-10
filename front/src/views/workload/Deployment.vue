@@ -96,17 +96,17 @@
             <el-text v-else type="info">-</el-text>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right" header-align="center">
+        <el-table-column label="操作" width="200" fixed="right" header-align="center" align="center">
           <template #default="{ row }">
-            <div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: nowrap;">
-              <el-button size="small" @click="handleDetail(row)">
+            <div class="action-buttons">
+              <el-button size="small" type="primary" class="btn-main" @click="handleDetail(row)">
                 详情
               </el-button>
-              <el-button size="small" @click="handleEdit(row)">
+              <el-button size="small" class="btn-edit" plain @click="handleEdit(row)">
                 编辑
               </el-button>
               <el-dropdown @command="(command) => handleMoreAction(command, row)">
-                <el-button size="small">
+                <el-button size="small" class="btn-more" plain>
                   更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
                 <template #dropdown>
@@ -707,4 +707,36 @@ const handleApplyEditYaml = async () => {
 .yaml-editor-wrapper {
   flex: 1;
 }
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.btn-main,
+.btn-edit {
+  font-weight: 500;
+}
+
+.btn-more {
+  color: #475569;
+  border-color: #d5deea;
+  background: #fff;
+}
+
+.btn-more:hover,
+.btn-more:focus {
+  color: #334155;
+  border-color: #b8c4d5;
+  background: #f8fafc;
+}
+
+:deep(.action-buttons .el-button) {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
 </style>

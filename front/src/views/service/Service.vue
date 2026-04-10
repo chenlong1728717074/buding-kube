@@ -96,11 +96,11 @@
             {{ formatTime(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right" header-align="center">
+        <el-table-column label="操作" width="120" fixed="right" header-align="center" align="center">
           <template #default="{ row }">
-            <div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: nowrap;">
+            <div class="action-buttons">
               <el-dropdown @command="(command) => handleMoreAction(command, row)" trigger="click">
-                <el-button size="small">
+                <el-button size="small" class="btn-more" plain>
                   更多
                   <el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
@@ -523,4 +523,32 @@ onMounted(() => {
   flex: 1;
   min-height: 0;
 }
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.btn-more {
+  color: #475569;
+  font-weight: 500;
+  border-color: #d5deea;
+  background: #fff;
+}
+
+.btn-more:hover,
+.btn-more:focus {
+  color: #334155;
+  border-color: #b8c4d5;
+  background: #f8fafc;
+}
+
+:deep(.action-buttons .el-button) {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
 </style>

@@ -55,10 +55,10 @@
         </el-table-column>
         <el-table-column label="操作" width="300" fixed="right" header-align="center" align="center">
           <template #default="{ row }">
-            <div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: nowrap;">
-              <el-button size="small" @click="goDetail(row)">详情</el-button>
+            <div class="action-buttons">
+              <el-button size="small" type="primary" class="btn-main" @click="goDetail(row)">详情</el-button>
               <el-dropdown @command="(cmd) => handleRowAction(cmd, row)">
-                <el-button size="small">
+                <el-button size="small" class="btn-more" plain>
                   更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
                 <template #dropdown>
@@ -68,7 +68,7 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
-              <el-button size="small" type="danger" @click="openDelete(row)">删除</el-button>
+              <el-button size="small" type="danger" plain class="btn-danger" @click="openDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -797,4 +797,57 @@ onMounted(async () => {
 .config-dialog :deep(.el-dialog__footer) {
   padding: 0;
 }
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.btn-main,
+.btn-danger {
+  font-weight: 500;
+}
+
+.btn-more {
+  color: #475569;
+  border-color: #d5deea;
+  background: #fff;
+}
+
+.btn-more:hover,
+.btn-more:focus {
+  color: #334155;
+  border-color: #b8c4d5;
+  background: #f8fafc;
+}
+
+.btn-danger {
+  color: var(--el-color-danger-dark-2);
+  border-color: var(--el-color-danger-light-4);
+  background: var(--el-color-danger-light-9);
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.08);
+  transition: all 0.2s ease;
+}
+
+.btn-danger:hover,
+.btn-danger:focus {
+  color: #fff;
+  background: linear-gradient(135deg, var(--el-color-danger), var(--el-color-danger-dark-2));
+  border-color: var(--el-color-danger);
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.22);
+}
+
+.btn-danger:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.18);
+}
+
+:deep(.action-buttons .el-button) {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
 </style>
