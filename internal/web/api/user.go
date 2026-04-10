@@ -29,36 +29,14 @@ func NewUserApi(router *gin.RouterGroup) *UserApi {
 
 // Router 配置路由
 func (api *UserApi) Router() {
-	api.router.POST("", api.CreateUser)
-	api.router.PUT("", middleware.Blocker(), api.UpdateUser)
-	api.router.GET("/list", api.ListUsers)
+	api.router.POST("", BindJSON[dto.CreateUserDTO](api.CreateUser))
+	api.router.PUT("", middleware.Blocker(), BindJSON[dto.CreateUserDTO](api.UpdateUser))
+	api.router.GET("/list", BindQuery[dto.UserQueryDTO](api.ListUsers))
 	api.router.GET("/:name", api.GetUser)
 	api.router.DELETE("/:name", middleware.Blocker(), api.DeleteUser)
 }
 
-// @Summary 获取用户列表
-// @Description 根据查询条件获取用户列表，支持分页
-// @Tags 用户管理
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param page query int false "页码，默认1"
-// @Param pageSize query int false "每页数量，默认10"
-// @Param keyword query string false "搜索关键词"
-// @Param username query string false "用户名，精确匹配"
-// @Param role query int false "角色，1=超级管理员 2=管理员 3=普通用户"
-// @Param status query int false "状态，1=正常 0=禁用"
-// @Success 200 {object} vo.Response{data=vo.PageResponse{items=[]vo.UserVO}} "获取成功"
-// @Failure 400 {object} vo.Response "参数绑定错误"
-// @Failure 401 {object} vo.Response "未授权"
-// @Failure 500 {object} vo.Response "获取失败"
-// @Router /api/user [get]
-func (api *UserApi) ListUsers(ctx *gin.Context) {
-	var query dto.UserQueryDTO
-	if err := ctx.ShouldBindQuery(&query); err != nil {
-		api.ParamBindError(ctx, err)
-		return
-	}
+func (api *UserApi) ListUsers(ctx *gin.Context, query dto.UserQueryDTO) {
 	result, err := api.srv.ListUsers(query)
 	if err != nil {
 		api.InternalError(ctx, "获取用户列表失败", err)
@@ -89,68 +67,20 @@ func (api *UserApi) GetUser(ctx *gin.Context) {
 	api.SuccessWithData(ctx, user)
 }
 
-// @Summary 创建用户
-// @Description 创建新用户
-// @Tags 用户管理
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param user body dto.CreateUserDTO true "用户信息"
-// @Success 200 {object} vo.Response "创建成功"
-// @Failure 400 {object} vo.Response "参数绑定错误"
-// @Failure 401 {object} vo.Response "未授权"
-// @Failure 500 {object} vo.Response "权限不足"
-// @Failure 500 {object} vo.Response "用户已存在"
-// @Failure 500 {object} vo.Response "创建失败"
-// @Router /api/user [post]
-func (api *UserApi) CreateUser(ctx *gin.Context) {
-	var req dto.CreateUserDTO
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		api.ParamBindError(ctx, err)
+func (api *UserApi) CreateUser(ctx *gin.Context, req dto.CreateUserDTO) {
+	if err := api.srv.CreateUser(req); err != nil {
+		api.InternalError(ctx, "创建用户失败", err)
 		return
 	}
-
 	api.SuccessMsg(ctx, "创建用户成功")
 }
 
-// @Summary 更新用户
-// @Description 更新用户信息（不能修改用户名）
-// @Tags 用户管理
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param username path string true "用户名（不可修改）"
-// @Param user body dto.UpdateUserDTO true "用户信息"
-// @Success 200 {object} vo.Response "更新成功"
-// @Failure 400 {object} vo.Response "参数绑定错误"
-// @Failure 401 {object} vo.Response "未授权"
-// @Failure 500 {object} vo.Response "权限不足"
-// @Failure 500 {object} vo.Response "用户不存在"
-// @Failure 500 {object} vo.Response "更新失败"
-// @Router /api/user/{username} [put]
-func (api *UserApi) UpdateUser(ctx *gin.Context) {
-	var req dto.CreateUserDTO
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		api.ParamBindError(ctx, err)
-		return
-	}
+func (api *UserApi) UpdateUser(ctx *gin.Context, req dto.CreateUserDTO) {
 
 	api.SuccessMsg(ctx, "更新用户成功")
 }
 
-// @Summary 删除用户
-// @Description 删除用户（不能删除自己或超级管理员）
-// @Tags 用户管理
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param username path string true "用户名"
-// @Success 200 {object} vo.Response "删除成功"
-// @Failure 401 {object} vo.Response "未授权"
-// @Failure 500 {object} vo.Response "权限不足，不能删除自己或超级管理员"
-// @Failure 500 {object} vo.Response "用户不存在"
-// @Failure 500 {object} vo.Response "删除失败"
-// @Router /api/user/{username} [delete]
+// DeleteUser 删除用户
 func (api *UserApi) DeleteUser(ctx *gin.Context) {
 	name := api.GetParam(ctx, "name")
 

@@ -23,6 +23,40 @@ type HandlerFunc[T any] func(ctx *gin.Context, req T) (any, error)
 type BaseApi struct {
 }
 
+func BindJSON[T any](handler func(*gin.Context, T)) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req T
+		if err := c.ShouldBindJSON(&req); err != nil {
+			// 统一错误处理
+			c.JSON(400, gin.H{"msg": err.Error()})
+			return
+		}
+		handler(c, req)
+	}
+}
+
+func BindUri[T any](handler func(*gin.Context, T)) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req T
+		if err := c.ShouldBindUri(&req); err != nil {
+			c.JSON(400, gin.H{"msg": err.Error()})
+			return
+		}
+		handler(c, req)
+	}
+}
+
+func BindQuery[T any](handler func(*gin.Context, T)) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req T
+		if err := c.ShouldBindQuery(&req); err != nil {
+			c.JSON(400, gin.H{"msg": err.Error()})
+			return
+		}
+		handler(c, req)
+	}
+}
+
 func Execute[T any](api BaseApi, ctx *gin.Context, handler func(ctx *gin.Context, req T) (any, error)) {
 	var req T
 	if err := ctx.ShouldBindJSON(&req); err != nil {
