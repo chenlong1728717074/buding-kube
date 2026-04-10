@@ -57,3 +57,27 @@ func (s *AuthService) Login(login dto.LoginDTO) (*vo.LoginUserVO, error) {
 	}
 	return vo.ToLoginUserVO(user, token), nil
 }
+
+// ChangePassword 当前登录用户修改密码
+func (s *AuthService) ChangePassword(currentUser *kube.LoginUser, req dto.ChangePasswordDTO) error {
+	user, err := kube.GetUser(currentUser.Username)
+	if err != nil {
+		return err
+	}
+
+	match, err := argon2id.ComparePasswordAndHash(req.CurrentPassword, user.Spec.Password)
+	if err != nil {
+		return errors.New("当前密码校验失败")
+	}
+	if !match {
+		return errors.New("当前密码错误")
+	}
+
+	hashedPassword, err := argon2id.CreateHash(req.NewPassword, argon2id.DefaultParams)
+	if err != nil {
+		return err
+	}
+
+	user.Spec.Password = hashedPassword
+	return kube.UpdateUser(user)
+}

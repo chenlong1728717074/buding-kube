@@ -25,9 +25,12 @@
                 placeholder="选择角色" 
                 clearable
                 style="width: 140px;"
+                @change="handleSearch"
+                @clear="handleSearch"
               >
-                <el-option label="管理员" :value="2" />
-                <el-option label="普通用户" :value="3" />
+                <el-option label="超级管理员" value="super" />
+                <el-option label="管理员" value="admin" />
+                <el-option label="普通用户" value="normal" />
               </el-select>
             </el-form-item>
             <el-form-item label="状态">
@@ -36,9 +39,11 @@
                 placeholder="选择状态" 
                 clearable
                 style="width: 120px;"
+                @change="handleSearch"
+                @clear="handleSearch"
               >
-                <el-option label="正常" :value="1" />
-                <el-option label="禁用" :value="0" />
+                <el-option label="正常" value="active" />
+                <el-option label="禁用" value="inactive" />
               </el-select>
             </el-form-item>
           </el-form>
@@ -153,12 +158,12 @@
               </el-button>
               <el-button 
                 size="small" 
-                :type="row.status === 1 ? 'warning' : 'success'"
+                :type="isUserEnabled(row) ? 'warning' : 'success'"
                 plain
                 @click="handleToggleStatus(row)"
               >
                 <el-icon><Switch /></el-icon>
-                {{ row.status === 1 ? '禁用' : '启用' }}
+                {{ isUserEnabled(row) ? '禁用' : '启用' }}
               </el-button>
               <el-dropdown @command="(command) => handleMoreActions(command, row)">
                 <el-button size="small" plain>
@@ -244,16 +249,21 @@
           <el-col :span="12">
             <el-form-item label="角色" prop="role">
               <el-select v-model="userForm.role" placeholder="请选择角色" style="width: 100%;">
-                <el-option label="管理员" :value="2" />
-                <el-option label="普通用户" :value="3" />
+                <el-option
+                  v-if="isEdit && (userForm.username === 'admin' || userForm.role === 'super')"
+                  label="超级管理员"
+                  value="super"
+                />
+                <el-option label="管理员" value="admin" />
+                <el-option label="普通用户" value="normal" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="状态" prop="status">
               <el-radio-group v-model="userForm.status">
-                <el-radio :label="1">正常</el-radio>
-                <el-radio :label="0">禁用</el-radio>
+                <el-radio label="active">正常</el-radio>
+                <el-radio label="inactive">禁用</el-radio>
               </el-radio-group>
             </el-form-item>
           </el-col>
@@ -285,37 +295,6 @@
       </template>
     </el-dialog>
 
-    <!-- 重置密码对话框 -->
-    <el-dialog v-model="resetPasswordDialogVisible" title="重置密码" width="80%" :close-on-click-modal="false" class="config-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <h3 class="dialog-title">重置密码</h3>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <el-form ref="resetPasswordFormRef" :model="resetPasswordForm" :rules="resetPasswordRules" label-width="80px">
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input 
-            v-model="resetPasswordForm.newPassword" 
-            type="password" 
-            placeholder="请输入新密码" 
-            show-password
-          />
-        </el-form-item>
-          </el-form>
-        </div>
-      </div>
-      
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="resetPasswordDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleResetPasswordSubmit" :loading="resetPasswordLoading">
-            确定
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
 
     <!-- 删除确认对话框（单个用户） -->
     <DeleteConfirmDialog
@@ -353,25 +332,24 @@ import {
   Key,
   Lock
 } from '@element-plus/icons-vue'
-import { 
-  userApi, 
-  type UserVO, 
-  type UserQueryDTO, 
-  type CreateUserDTO, 
-  type UpdateUserDTO, 
-  type ResetPasswordDTO 
+import {
+  userApi,
+  type UserVO,
+  type UserQueryDTO,
+  type CreateUserDTO,
+  type UpdateUserDTO,
+  UserStatus
 } from '@/api/user'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import '@/assets/styles/config-editor.css'
 
 const loading = ref(false)
 const submitLoading = ref(false)
-const resetPasswordLoading = ref(false)
 
 // 搜索表单
 const searchForm = reactive({
-  role: undefined as number | undefined,
-  status: undefined as number | undefined
+  role: undefined as string | undefined,
+  status: undefined as string | undefined
 })
 
 // 用户列表
@@ -393,14 +371,14 @@ const formRef = ref()
 
 // 用户表单
 const userForm = reactive({
-  id: '',
   username: '',
+  realName: '',
   email: '',
   password: '',
-  role: 3,
+  role: 'normal',
   department: '',
   phone: '',
-  status: 1
+  status: 'active'
 })
 
 // 表单验证规则
@@ -410,7 +388,6 @@ const formRules = {
     { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' }
   ],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
   ],
   password: [
@@ -425,33 +402,31 @@ const formRules = {
   ]
 }
 
-// 重置密码对话框
-const resetPasswordDialogVisible = ref(false)
-const resetPasswordFormRef = ref()
-const currentUserId = ref('')
 
-// 重置密码表单
-const resetPasswordForm = reactive<ResetPasswordDTO>({
-  userId: '',
-  newPassword: ''
-})
-
-// 重置密码验证规则
-const resetPasswordRules = {
-  newPassword: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
-  ]
+const normalizeRole = (role: string) => {
+  switch (String(role)) {
+    case '1':
+    case 'super':
+      return 'super'
+    case '2':
+    case 'admin':
+      return 'admin'
+    case '3':
+    case 'normal':
+      return 'normal'
+    default:
+      return String(role || '')
+  }
 }
 
 // 获取角色类型
-const getRoleType = (role: number) => {
-  switch (role) {
-    case 1:
+const getRoleType = (role: string) => {
+  switch (normalizeRole(role)) {
+    case 'super':
       return 'danger'
-    case 2:
+    case 'admin':
       return 'warning'
-    case 3:
+    case 'normal':
       return 'success'
     default:
       return 'info'
@@ -459,27 +434,56 @@ const getRoleType = (role: number) => {
 }
 
 // 获取角色文本
-const getRoleText = (role: number) => {
-  switch (role) {
-    case 1:
+const getRoleText = (role: string) => {
+  switch (normalizeRole(role)) {
+    case 'super':
       return '超级管理员'
-    case 2:
+    case 'admin':
       return '管理员'
-    case 3:
+    case 'normal':
       return '普通用户'
     default:
-      return '未知'
+      return role || '未知'
   }
 }
 
 // 获取状态类型
-const getStatusType = (status: number) => {
-  return status === 1 ? 'success' : 'danger'
+const getStatusType = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'success'
+    case 'inactive':
+      return 'danger'
+    case 'suspended':
+      return 'warning'
+    case 'expired':
+      return 'info'
+    default:
+      return 'info'
+  }
 }
 
 // 获取状态文本
-const getStatusText = (status: number) => {
-  return status === 1 ? '正常' : '禁用'
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'active':
+      return '正常'
+    case 'inactive':
+      return '禁用'
+    case 'suspended':
+      return '暂停'
+    case 'expired':
+      return '过期'
+    default:
+      return status || '未知'
+  }
+}
+
+const isUserEnabled = (user: UserVO) => {
+  if (typeof user.enabled === 'boolean') {
+    return user.enabled
+  }
+  return user.status === UserStatus.ACTIVE
 }
 
 // 获取用户列表
@@ -557,14 +561,14 @@ const handleAdd = () => {
   isEdit.value = false
   dialogTitle.value = '新增用户'
   Object.assign(userForm, {
-    id: '',
     username: '',
+    realName: '',
     email: '',
     password: '',
-    role: 3,
+    role: 'normal',
     department: '',
     phone: '',
-    status: 1
+    status: 'active'
   })
   dialogVisible.value = true
 }
@@ -574,11 +578,11 @@ const handleEdit = (row: UserVO) => {
   isEdit.value = true
   dialogTitle.value = '编辑用户'
   Object.assign(userForm, {
-    id: row.id,
     username: row.username,
+    realName: row.username,
     email: row.email || '',
     password: '',
-    role: row.role,
+    role: normalizeRole(String(row.role)),
     department: row.department || '',
     phone: row.phone || '',
     status: row.status
@@ -588,9 +592,9 @@ const handleEdit = (row: UserVO) => {
 
 // 切换用户状态
 const handleToggleStatus = async (row: UserVO) => {
-  const newStatus = row.status === 1 ? 0 : 1
-  const action = newStatus === 1 ? '启用' : '禁用'
-  
+  const enable = !isUserEnabled(row)
+  const action = enable ? '启用' : '禁用'
+
   try {
     await ElMessageBox.confirm(
       `确定要${action}用户 "${row.username}" 吗？`,
@@ -601,8 +605,8 @@ const handleToggleStatus = async (row: UserVO) => {
         type: 'warning'
       }
     )
-    
-    await userApi.toggleUserStatus(row.id, newStatus)
+
+    await userApi.toggleUserEnable({ username: row.username, enable })
     ElMessage.success(`${action}成功`)
     fetchUserList()
   } catch (error: any) {
@@ -627,12 +631,26 @@ const handleMoreActions = (command: string, row: UserVO) => {
   }
 }
 
-// 重置密码
-const handleResetPassword = (row: UserVO) => {
-  currentUserId.value = row.id
-  resetPasswordForm.userId = row.id
-  resetPasswordForm.newPassword = ''
-  resetPasswordDialogVisible.value = true
+// 重置密码（默认重置为 123456）
+const handleResetPassword = async (row: UserVO) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要将用户 "${row.username}" 的密码重置为默认值 123456 吗？`,
+      '确认操作',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    await userApi.resetPassword({ username: row.username })
+    ElMessage.success('密码已重置为 123456')
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error('重置密码失败')
+    }
+  }
 }
 
 // 删除用户
@@ -643,7 +661,7 @@ const deleteUserId = ref('')
 
 const handleDelete = (row: UserVO) => {
   deleteItemName.value = row.username
-  deleteUserId.value = row.id
+  deleteUserId.value = row.username
   deleteDialogVisible.value = true
 }
 
@@ -686,7 +704,7 @@ const confirmBatchDeleteUsers = async () => {
   if (selectedUsers.value.length === 0) return
   batchDeleteLoading.value = true
   try {
-    const ids = selectedUsers.value.map(user => user.id)
+    const ids = selectedUsers.value.map(user => user.username)
     await userApi.batchDeleteUsers(ids)
     ElMessage.success('批量删除成功')
     selectedUsers.value = []
@@ -713,8 +731,8 @@ const handleSubmit = async () => {
     
     if (isEdit.value) {
       const updateData: UpdateUserDTO = {
-        id: userForm.id,
         username: userForm.username,
+        realName: userForm.realName || userForm.username,
         email: userForm.email,
         role: userForm.role,
         department: userForm.department,
@@ -726,6 +744,7 @@ const handleSubmit = async () => {
     } else {
       const createData: CreateUserDTO = {
         username: userForm.username,
+        realName: userForm.realName || userForm.username,
         password: userForm.password,
         email: userForm.email,
         role: userForm.role,
@@ -746,23 +765,6 @@ const handleSubmit = async () => {
   }
 }
 
-// 重置密码提交
-const handleResetPasswordSubmit = async () => {
-  if (!resetPasswordFormRef.value) return
-  
-  try {
-    await resetPasswordFormRef.value.validate()
-    resetPasswordLoading.value = true
-    
-    await userApi.resetPassword(resetPasswordForm)
-    ElMessage.success('密码重置成功')
-    resetPasswordDialogVisible.value = false
-  } catch (error: any) {
-    ElMessage.error('密码重置失败')
-  } finally {
-    resetPasswordLoading.value = false
-  }
-}
 
 // 关闭对话框
 const handleDialogClose = () => {

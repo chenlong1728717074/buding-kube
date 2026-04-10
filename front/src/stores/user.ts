@@ -18,11 +18,13 @@ export const useUserStore = defineStore('user', () => {
   })
 
   const isSuperAdmin = computed(() => {
-    return userInfo.value?.role === UserRole.SUPER_ADMIN
+    const role = userInfo.value?.role as any
+    return role === UserRole.SUPER_ADMIN || role === 1
   })
 
   const isAdmin = computed(() => {
-    return userInfo.value?.role === UserRole.ADMIN || isSuperAdmin.value
+    const role = userInfo.value?.role as any
+    return role === UserRole.ADMIN || role === 2 || isSuperAdmin.value
   })
 
   const canManageUser = computed(() => {

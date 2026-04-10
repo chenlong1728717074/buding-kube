@@ -1,10 +1,12 @@
 package middleware
 
 import (
+	"buding-kube/internal/kube"
 	"buding-kube/pkg/utils/jwt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 // JWTAuth JWT认证中间件
@@ -45,6 +47,10 @@ func JWTAuth() gin.HandlerFunc {
 
 		// 将用户信息存储到上下文中
 		c.Set("claims", claims)
+		c.Set("currentUser", &kube.LoginUser{
+			Username: claims.Username,
+			Role:     claims.Role,
+		})
 		c.Next()
 	}
 }

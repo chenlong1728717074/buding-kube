@@ -3,6 +3,7 @@ package api
 import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,6 +29,7 @@ func NewAuthApi(router *gin.RouterGroup) *AuthApi {
 func (api *AuthApi) Router() {
 	api.router.POST("/login", api.Login)
 	api.router.POST("/logout", api.Logout)
+	api.router.PUT("/changePassword", middleware.JWTAuth(), BindJSON[dto.ChangePasswordDTO](api.ChangePassword))
 }
 
 // Login
@@ -51,4 +53,12 @@ func (api *AuthApi) Login(ctx *gin.Context) {
 
 func (api *AuthApi) Logout(ctx *gin.Context) {
 	api.SuccessMsg(ctx, "登出成功")
+}
+
+func (api *AuthApi) ChangePassword(ctx *gin.Context, req dto.ChangePasswordDTO) {
+	if err := api.srv.ChangePassword(api.CurrentUser(ctx), req); err != nil {
+		api.InternalError(ctx, "修改密码失败", err)
+		return
+	}
+	api.SuccessMsg(ctx, "修改密码成功")
 }

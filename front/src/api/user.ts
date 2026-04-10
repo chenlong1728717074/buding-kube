@@ -2,66 +2,75 @@ import request, { type ApiResponse, type PageResponse } from '@/utils/request'
 
 // 用户角色枚举
 export enum UserRole {
-  SUPER_ADMIN = 1,
-  ADMIN = 2,
-  USER = 3
+  SUPER_ADMIN = 'super',
+  ADMIN = 'admin',
+  USER = 'normal'
 }
 
 // 用户状态枚举
 export enum UserStatus {
-  DISABLED = 0,
-  ENABLED = 1
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  SUSPENDED = 'suspended',
+  EXPIRED = 'expired'
 }
 
 // 用户信息VO
 export interface UserVO {
-  id: string
   username: string
   email?: string
-  role: number
-  status: number
+  role: UserRole | string
+  status: UserStatus | string
+  enabled?: boolean
   department?: string
   phone?: string
   createdAt?: string
   updatedAt?: string
+  lastLogin?: string
 }
 
 // 创建用户DTO
 export interface CreateUserDTO {
   username: string
+  realName?: string
   password: string
   email?: string
-  role: number
+  role: UserRole | string
   department?: string
   phone?: string
-  status?: number
+  status?: UserStatus | string
 }
 
 // 更新用户DTO
 export interface UpdateUserDTO {
-  id: string
-  username?: string
+  username: string
+  realName?: string
   email?: string
-  role?: number
+  role?: UserRole | string
   department?: string
   phone?: string
-  status?: number
+  status?: UserStatus | string
 }
 
 // 用户查询DTO
 export interface UserQueryDTO {
   username?: string
   email?: string
-  role?: number
-  status?: number
+  role?: UserRole | string
+  status?: UserStatus | string
   page?: number
   pageSize?: number
 }
 
+// 启用/禁用DTO
+export interface UpdateUserEnableDTO {
+  username: string
+  enable: boolean
+}
+
 // 重置密码DTO
 export interface ResetPasswordDTO {
-  userId: string
-  newPassword: string
+  username: string
 }
 
 // 修改密码DTO
@@ -94,9 +103,9 @@ export const userApi = {
     return request.get('/user/list', { params })
   },
 
-  // 根据ID获取用户
-  getUserById: (id: string): Promise<ApiResponse<UserVO>> => {
-    return request.get(`/user/${id}`)
+  // 根据用户名获取用户
+  getUserById: (username: string): Promise<ApiResponse<UserVO>> => {
+    return request.get(`/user/${username}`)
   },
 
   // 获取当前用户信息
@@ -115,24 +124,23 @@ export const userApi = {
   },
 
   // 删除用户
-  deleteUser: (id: string): Promise<ApiResponse<null>> => {
-    return request.delete(`/user/${id}`)
+  deleteUser: (username: string): Promise<ApiResponse<null>> => {
+    return request.delete(`/user/${username}`)
   },
 
   // 批量删除用户
-  batchDeleteUsers: (ids: string[]): Promise<ApiResponse<null>> => {
-    return request.post('/user/batch-delete', { ids })
+  batchDeleteUsers: (usernames: string[]): Promise<ApiResponse<null>> => {
+    return request.post('/user/batchDelete', { usernames })
   },
 
-  // 切换用户状态
-  toggleUserStatus: (id: string, status: number): Promise<ApiResponse<null>> => {
-    return request.put(`/user/${id}/status`, { status })
+  // 启用/禁用用户
+  toggleUserEnable: (data: UpdateUserEnableDTO): Promise<ApiResponse<null>> => {
+    return request.put('/user/enable', data)
   },
 
   // 重置用户密码
   resetPassword: (data: ResetPasswordDTO): Promise<ApiResponse<null>> => {
-    const { userId, newPassword } = data
-    return request.post(`/user/${userId}/reset-password`, { password: newPassword })
+    return request.post(`/user/resetPassword/${data.username}`)
   },
 
   // 更新用户资料
@@ -142,7 +150,7 @@ export const userApi = {
 
   // 修改密码
   changePassword: (data: ChangePasswordDTO): Promise<ApiResponse<null>> => {
-    return request.put('/user/password', data)
+    return request.put('/auth/changePassword', data)
   },
 
   // 发送邮箱验证

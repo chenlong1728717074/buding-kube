@@ -4,10 +4,10 @@ import (
 	"buding-kube/internal/kube"
 	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
-	"buding-kube/pkg/utils/jwt"
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -58,13 +58,11 @@ func BindQuery[T any](handler func(*gin.Context, T)) gin.HandlerFunc {
 }
 func BindStringParam(name string, handler func(*gin.Context, string)) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req string
 		param := c.Param(name)
 		if param == "" {
-			c.JSON(400, gin.H{"msg": "param is required"})
-			return
+			c.JSON(400, gin.H{"msg": fmt.Sprintf("param %s is required", name)})
 		}
-		handler(c, req)
+		handler(c, param)
 	}
 }
 
@@ -254,21 +252,8 @@ func BuildPageResponse[T any](data []T, page, pageSize int) vo.PageResponse {
 	}
 }
 
-func (api *BaseApi) CurrentUser(ctx *gin.Context) (*kube.LoginUser, error) {
-	claims, exists := ctx.Get("claims")
-	if !exists {
-		api.Unauthorized(ctx, "未认证")
-		return nil, errors.New("未认证")
-	}
-	jwtClaims, ok := claims.(*jwt.Claims)
-	if !ok {
-		api.InternalError(ctx, "无效的JWT声明", nil)
-		return nil, errors.New("无效的JWT声明")
-	}
-	return &kube.LoginUser{
-		Username: jwtClaims.Username,
-		Role:     jwtClaims.Role,
-	}, nil
+func (api *BaseApi) CurrentUser(ctx *gin.Context) *kube.LoginUser {
+	return ctx.MustGet("currentUser").(*kube.LoginUser)
 }
 
 func (api *BaseApi) keepAliveSSE(ctx *gin.Context) {

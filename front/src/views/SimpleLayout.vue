@@ -24,7 +24,9 @@
             <el-dropdown-menu>
               <el-dropdown-item command="profile">个人信息</el-dropdown-item>
               <el-dropdown-item command="userManagement" v-if="isAdmin">用户管理</el-dropdown-item>
+
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -67,6 +69,8 @@ const handleCommand = (command: string) => {
       router.push('/user/management')
       break
     case 'logout':
+
+
       ElMessageBox.confirm('确定要退出登录吗？', '提示', {
         type: 'warning',
         confirmButtonText: '确认',

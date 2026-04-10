@@ -21,9 +21,9 @@ const (
 
 	// UserStateActive 用户状态
 	UserStateActive    = "active"
-	UserStateLocked    = "locked"
+	UserStateInactive  = "inactive"
 	UserStateSuspended = "suspended"
-	UserStateDeleted   = "deleted"
+	UserStateExpired   = "expired"
 
 	// PermissionClusterCreate 权限定义
 	PermissionClusterCreate = "cluster:create"
@@ -86,6 +86,20 @@ func (u *LoginUser) CanManageUser(user *User) bool {
 
 	// 权限高（数值小）才能管理权限低（数值大）
 	return myLevel < targetLevel
+}
+
+func (u *LoginUser) CanDeleteUser(target *User) bool {
+	if u == nil || target == nil {
+		return false
+	}
+
+	// ❌ 禁止删除自己
+	if u.Username == target.Name {
+		return false
+	}
+
+	// 其他规则复用管理逻辑
+	return u.CanManageUser(target)
 }
 
 // UserSpec 用户规格定义
