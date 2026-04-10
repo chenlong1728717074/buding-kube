@@ -91,12 +91,7 @@
       >
         <el-table-column type="selection" width="50" />
         
-        <el-table-column prop="id" label="用户ID" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">
-            <el-text class="user-id" type="info">{{ row.id }}</el-text>
-          </template>
-        </el-table-column>
-        
+
         <el-table-column prop="username" label="用户名" min-width="150">
           <template #default="{ row }">
             <div class="user-info">
@@ -840,6 +835,8 @@ onMounted(() => {
 .filter-card {
   margin-bottom: 20px;
   border: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
 .filter-content {
@@ -859,6 +856,8 @@ onMounted(() => {
 
 .table-card {
   border: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
 .table-toolbar {
@@ -868,6 +867,20 @@ onMounted(() => {
   margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid #ebeef5;
+}
+
+:deep(.filter-card .el-card__body),
+:deep(.table-card .el-card__body) {
+  padding: 18px 20px;
+}
+
+:deep(.user-table .el-table__header th) {
+  background: #f8fafc;
+  color: #334155;
+}
+
+:deep(.user-table .el-table__row:hover > td) {
+  background-color: #f8fbff;
 }
 
 .toolbar-left {
@@ -898,11 +911,6 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.user-id {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-}
-
 .user-info {
   display: flex;
   align-items: center;
@@ -917,7 +925,7 @@ onMounted(() => {
 .action-buttons {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .pagination-wrapper {

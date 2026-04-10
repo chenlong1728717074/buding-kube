@@ -56,6 +56,17 @@ func BindQuery[T any](handler func(*gin.Context, T)) gin.HandlerFunc {
 		handler(c, req)
 	}
 }
+func BindStringParam(name string, handler func(*gin.Context, string)) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req string
+		param := c.Param(name)
+		if param == "" {
+			c.JSON(400, gin.H{"msg": "param is required"})
+			return
+		}
+		handler(c, req)
+	}
+}
 
 func Execute[T any](api BaseApi, ctx *gin.Context, handler func(ctx *gin.Context, req T) (any, error)) {
 	var req T

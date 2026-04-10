@@ -32,8 +32,8 @@ func (api *UserApi) Router() {
 	api.router.POST("", BindJSON[dto.CreateUserDTO](api.CreateUser))
 	api.router.PUT("", middleware.Blocker(), BindJSON[dto.CreateUserDTO](api.UpdateUser))
 	api.router.GET("/list", BindQuery[dto.UserQueryDTO](api.ListUsers))
-	api.router.GET("/:name", api.GetUser)
-	api.router.DELETE("/:name", middleware.Blocker(), api.DeleteUser)
+	api.router.GET("/:name", BindStringParam("name", api.GetUser))
+	api.router.DELETE("/:name", middleware.Blocker(), BindStringParam("name", api.DeleteUser))
 }
 
 func (api *UserApi) ListUsers(ctx *gin.Context, query dto.UserQueryDTO) {
@@ -45,8 +45,7 @@ func (api *UserApi) ListUsers(ctx *gin.Context, query dto.UserQueryDTO) {
 	api.SuccessWithData(ctx, BuildPageResponse(result, query.Page, query.PageSize))
 }
 
-func (api *UserApi) GetUser(ctx *gin.Context) {
-	name := api.GetParam(ctx, "name")
+func (api *UserApi) GetUser(ctx *gin.Context, name string) {
 	// 获取当前用户
 	var currentUser *kube.LoginUser
 	var err error
@@ -81,9 +80,7 @@ func (api *UserApi) UpdateUser(ctx *gin.Context, req dto.CreateUserDTO) {
 }
 
 // DeleteUser 删除用户
-func (api *UserApi) DeleteUser(ctx *gin.Context) {
-	name := api.GetParam(ctx, "name")
-
+func (api *UserApi) DeleteUser(ctx *gin.Context, name string) {
 	// 获取当前用户
 	currentUser, err := api.CurrentUser(ctx)
 	if err != nil {
