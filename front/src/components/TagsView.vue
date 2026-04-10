@@ -121,7 +121,17 @@ const refreshTag = (tag: TagItem) => {
 const closeAll = () => {
   tags.value = []
   persist()
-  router.push('/dashboard')
+  const clusterId = String(route.params.clusterId || '')
+  if (clusterId) {
+    router.push(`/cluster/${clusterId}/overview`)
+    return
+  }
+  const matched = route.path.match(/^\/cluster\/([^/]+)/)
+  if (matched?.[1]) {
+    router.push(`/cluster/${matched[1]}/overview`)
+    return
+  }
+  router.push('/home')
 }
 
 const closeLeft = (tag?: TagItem) => {
