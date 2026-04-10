@@ -418,6 +418,7 @@ const handleViewYaml = async (row: EndpointVO) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   width: 100%;
   gap: 12px;
 }
@@ -428,7 +429,6 @@ const handleViewYaml = async (row: EndpointVO) => {
   font-weight: 600;
   text-decoration: line-through;
   color: #909399;
-  width: 100%;
   text-align: left;
 }
 
@@ -444,6 +444,7 @@ const handleViewYaml = async (row: EndpointVO) => {
 .header-actions {
   display: flex;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .search-card {
@@ -468,6 +469,9 @@ const handleViewYaml = async (row: EndpointVO) => {
 
 .yaml-info {
   margin-bottom: 16px;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
 }
 
 .yaml-editor-wrapper {
