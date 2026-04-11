@@ -68,11 +68,6 @@ func (s *UserService) ListUsers(query dto.UserQueryDTO) ([]*vo.UserVO, error) {
 			continue
 		}
 
-		//if query.Role != "" &&
-		//	voUser.Role != query.Role {
-		//	continue
-		//}
-
 		if query.Status != "" &&
 			voUser.Status != query.Status {
 			continue
@@ -172,10 +167,6 @@ func UpdateUserFromDTO(req dto.CreateUserDTO, user *kube.User) {
 		user.Status.State = req.Status
 		user.Spec.Enabled = req.Status == "active"
 	}
-}
-
-func (s *UserService) updateBasic(req dto.CreateUserDTO, targetUser *kube.User) {
-
 }
 
 // UpdateUserStatus 更新用户状态（active/inactive/suspended/expired）

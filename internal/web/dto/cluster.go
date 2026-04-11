@@ -10,7 +10,6 @@ type ClusterCreateDTO struct {
 
 // 集群修改参数
 type ClusterUpdateDTO struct {
-	Id       string `json:"id"`
 	Name     string `json:"name" binding:"required"`
 	Alias    string `json:"alias"`
 	Describe string `json:"describe"`
@@ -19,18 +18,28 @@ type ClusterUpdateDTO struct {
 
 // 集群详情返回值
 type ClusterDetailDTO struct {
-	Id       string `json:"id"`
 	Name     string `json:"name" binding:"required"`
 	Alias    string `json:"alias"`
 	Describe string `json:"describe"`
 	Config   string `json:"config" binding:"required"`
 }
 
-// 节点创建参数（保持原有结构）
+// 集群创建参数
 type NodeCreateDTO struct {
-	Id       string `json:"id"`
 	Name     string `json:"name" binding:"required"`
 	Alias    string `json:"alias"`
 	Describe string `json:"describe"`
-	Config   string `json:"config" binding:"required"`
+	Config   string `json:"config"`
+	Uri      string `json:"uri"`
+	Token    string `json:"token"`
+}
+
+// 集群更新参数（配置可选，留空表示不更新 kubeconfig）
+type NodeUpdateDTO struct {
+	Name     string `json:"name"`
+	Alias    string `json:"alias"`
+	Describe string `json:"describe"`
+	Config   string `json:"config"`
+	Uri      string `json:"uri"`
+	Token    string `json:"token"`
 }

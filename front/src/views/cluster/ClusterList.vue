@@ -167,18 +167,37 @@
         <el-form-item label="集群描述">
           <el-input v-model="clusterForm.describe" type="textarea" :rows="2" placeholder="请输入集群描述" />
         </el-form-item>
-        <el-form-item label="Kubeconfig 配置" prop="config">
-          <el-input 
-            v-model="clusterForm.config" 
-            type="textarea" 
-            :rows="18" 
-            placeholder="请粘贴完整的 kubeconfig 配置文件内容"
-            style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 13px;"
-          />
-          <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">
-            提示：请确保 kubeconfig 配置文件格式正确，包含完整的集群、用户和上下文信息
-          </div>
+        <el-form-item label="连接方式">
+          <el-radio-group v-model="clusterForm.authType">
+            <el-radio-button label="config">KubeConfig</el-radio-button>
+            <el-radio-button label="token">URI + Token</el-radio-button>
+          </el-radio-group>
         </el-form-item>
+        <template v-if="clusterForm.authType === 'config'">
+          <el-form-item label="Kubeconfig 配置" prop="config">
+            <el-input 
+              v-model="clusterForm.config" 
+              type="textarea" 
+              :rows="18" 
+              placeholder="请粘贴完整的 kubeconfig 配置文件内容"
+              style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 13px;"
+            />
+          </el-form-item>
+        </template>
+        <template v-else>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="API Server URI">
+                <el-input v-model="clusterForm.uri" placeholder="例如：https://10.0.0.1:6443" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="Bearer Token">
+                <el-input v-model="clusterForm.token" type="password" show-password placeholder="请输入 token" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="showAddDialog = false" size="large">取消</el-button>
@@ -209,18 +228,37 @@
         <el-form-item label="集群描述">
           <el-input v-model="editClusterForm.describe" type="textarea" :rows="2" placeholder="请输入集群描述" />
         </el-form-item>
-        <el-form-item label="Kubeconfig 配置" prop="config">
-          <el-input 
-            v-model="editClusterForm.config" 
-            type="textarea" 
-            :rows="18" 
-            placeholder="如需更新配置，请粘贴完整的 kubeconfig 配置文件内容"
-            style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 13px;"
-          />
-          <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">
-            提示：留空则不更新配置，仅更新别名和描述
-          </div>
+        <el-form-item label="连接方式">
+          <el-radio-group v-model="editClusterForm.authType">
+            <el-radio-button label="config">KubeConfig</el-radio-button>
+            <el-radio-button label="token">URI + Token</el-radio-button>
+          </el-radio-group>
         </el-form-item>
+        <template v-if="editClusterForm.authType === 'config'">
+          <el-form-item label="Kubeconfig 配置" prop="config">
+            <el-input 
+              v-model="editClusterForm.config" 
+              type="textarea" 
+              :rows="18" 
+              placeholder="如需更新配置，请粘贴完整的 kubeconfig 配置文件内容"
+              style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 13px;"
+            />
+          </el-form-item>
+        </template>
+        <template v-else>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="API Server URI">
+                <el-input v-model="editClusterForm.uri" placeholder="例如：https://10.0.0.1:6443" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="Bearer Token">
+                <el-input v-model="editClusterForm.token" type="password" show-password placeholder="请输入 token" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false" size="large">取消</el-button>
@@ -262,19 +300,24 @@ const clusterForm = ref({
   name: '',
   alias: '',
   describe: '',
-  config: ''
+  authType: 'config',
+  config: '',
+  uri: '',
+  token: ''
 })
 
 const editClusterForm = ref({
   name: '',
   alias: '',
   describe: '',
-  config: ''
+  authType: 'config',
+  config: '',
+  uri: '',
+  token: ''
 })
 
 const addRules = {
-  name: [{ required: true, message: '请输入集群名称', trigger: 'blur' }],
-  config: [{ required: true, message: '请输入集群配置', trigger: 'blur' }]
+  name: [{ required: true, message: '请输入集群名称', trigger: 'blur' }]
 }
 const editRules = {
   name: [{ required: true, message: '集群名称为空', trigger: 'blur' }]
@@ -302,7 +345,7 @@ const loadClusters = async () => {
         name: cluster.name,
         alias: cluster.alias,
         describe: cluster.describe,
-        apiServer: cluster.endpoint || '-',
+        apiServer: cluster.apiServer || cluster.endpoint || '-',
         status: cluster.status,
         version: cluster.version,
         nodeCount: cluster.nodeCount || 0,
@@ -380,12 +423,12 @@ const getStatusText = (status: string) => {
 // 进入集群
 const enterCluster = (cluster: any) => {
   clusterStore.setCurrentCluster({
-    id: cluster.id,
+    id: cluster.name,
     name: cluster.name,
     apiServer: cluster.apiServer,
     status: cluster.status
   })
-  router.push(`/cluster/${cluster.id}/overview`)
+  router.push(`/cluster/${cluster.name}/overview`)
 }
 
 // 处理命令
@@ -396,7 +439,10 @@ const handleCommand = (command: string, cluster: any) => {
       name: cluster.name,
       alias: cluster.alias || '',
       describe: cluster.describe || '',
-      config: ''
+      authType: 'config',
+      config: '',
+      uri: '',
+      token: ''
     }
     showEditDialog.value = true
   } else if (command === 'delete') {
@@ -424,15 +470,28 @@ const handleAddCluster = async () => {
     if (!valid) return
     submitting.value = true
     try {
+      if (clusterForm.value.authType === 'config') {
+        if (!clusterForm.value.config.trim()) {
+          ElMessage.error('请输入集群配置')
+          return
+        }
+      } else {
+        if (!clusterForm.value.uri.trim() || !clusterForm.value.token.trim()) {
+          ElMessage.error('请输入 URI 和 Token')
+          return
+        }
+      }
       await clusterApi.createCluster({
         name: clusterForm.value.name,
         alias: clusterForm.value.alias,
         describe: clusterForm.value.describe,
-        config: clusterForm.value.config
+        config: clusterForm.value.authType === 'config' ? clusterForm.value.config : undefined,
+        uri: clusterForm.value.authType === 'token' ? clusterForm.value.uri : undefined,
+        token: clusterForm.value.authType === 'token' ? clusterForm.value.token : undefined
       })
       ElMessage.success('添加成功')
       showAddDialog.value = false
-      clusterForm.value = { name: '', alias: '', describe: '', config: '' }
+      clusterForm.value = { name: '', alias: '', describe: '', authType: 'config', config: '', uri: '', token: '' }
       loadClusters()
     } catch (error) {
       console.error('Failed to add cluster:', error)
@@ -454,7 +513,9 @@ const handleEditCluster = async () => {
         name: editClusterForm.value.name,
         alias: editClusterForm.value.alias,
         describe: editClusterForm.value.describe,
-        config: editClusterForm.value.config
+        config: editClusterForm.value.authType === 'config' ? editClusterForm.value.config : undefined,
+        uri: editClusterForm.value.authType === 'token' ? editClusterForm.value.uri : undefined,
+        token: editClusterForm.value.authType === 'token' ? editClusterForm.value.token : undefined
       })
       ElMessage.success('更新成功')
       showEditDialog.value = false
@@ -510,14 +571,12 @@ onMounted(() => {
 
 .cluster-grid {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
   align-items: stretch;
   gap: 20px;
   min-height: 400px;
-  overflow-x: auto;
-  overflow-y: hidden;
   padding: 2px 8px 10px;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
 }
 
 .cluster-grid :deep(.el-empty) {
@@ -536,7 +595,6 @@ onMounted(() => {
   border: 1px solid rgba(59, 130, 246, 0.12);
   cursor: pointer;
   transition: all 0.3s ease;
-  scroll-snap-align: start;
 }
 .cluster-card:hover {
   transform: translateY(-2px);

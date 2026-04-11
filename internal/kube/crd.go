@@ -89,6 +89,10 @@ func buildClusterCRD() *apiextensionsv1.CustomResourceDefinition {
 											Type:        "string",
 											Description: "Cluster description",
 										},
+										"kubeConfig": {
+											Type:        "string",
+											Description: "Kubeconfig content for connecting target cluster",
+										},
 										// 认证信息
 										"auth": {
 											Type: "object",
@@ -100,20 +104,6 @@ func buildClusterCRD() *apiextensionsv1.CustomResourceDefinition {
 														{Raw: []byte(`"token"`)},
 														{Raw: []byte(`"certificate"`)},
 														{Raw: []byte(`"kubeconfig"`)},
-													},
-												},
-												// Secret 引用,存储敏感认证信息
-												"secretRef": {
-													Type: "object",
-													Properties: map[string]apiextensionsv1.JSONSchemaProps{
-														"name": {
-															Type:        "string",
-															Description: "Secret name containing auth credentials",
-														},
-														"namespace": {
-															Type:        "string",
-															Description: "Secret namespace",
-														},
 													},
 												},
 											},
@@ -154,6 +144,12 @@ func buildClusterCRD() *apiextensionsv1.CustomResourceDefinition {
 										},
 										// 状态消息
 										"message": {
+											Type: "string",
+										},
+										"state": {
+											Type: "string",
+										},
+										"version": {
 											Type: "string",
 										},
 									},

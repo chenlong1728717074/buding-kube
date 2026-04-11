@@ -5,14 +5,16 @@ export interface ClusterVO {
   id?: string
   name: string
   alias?: string
-  endpoint: string
-  version: string
-  status: string
-  nodeCount: number
-  namespaceCount: number
-  podCount: number
-  createTime: string
-  updateTime: string
+  describe?: string
+  apiServer?: string
+  endpoint?: string
+  version?: string
+  status?: string
+  nodeCount?: number
+  namespaceCount?: number
+  podCount?: number
+  createTime?: string
+  updateTime?: string
   description?: string
   config?: string
 }
@@ -31,21 +33,23 @@ export interface CreateClusterDTO {
   name: string
   alias?: string
   describe?: string
-  config: string
+  config?: string
+  uri?: string
+  token?: string
 }
 
 // 更新集群参数
 export interface UpdateClusterDTO {
-  id?: string
   name: string
   alias?: string
   describe?: string
-  config: string
+  config?: string
+  uri?: string
+  token?: string
 }
 
 // 集群详情返回值
 export interface ClusterDetailDTO {
-  id?: string
   name: string
   alias?: string
   describe?: string
@@ -60,8 +64,8 @@ export const clusterApi = {
   },
 
   // 获取单个集群
-  getCluster: (id: string) => {
-    return request.get<ClusterVO>(`/cluster/${id}`)
+  getCluster: (name: string) => {
+    return request.get<ClusterVO>(`/cluster/${name}`)
   },
 
   // 创建集群

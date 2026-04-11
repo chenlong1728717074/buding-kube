@@ -6,38 +6,36 @@ import (
 	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
 	"buding-kube/pkg/utils"
-	"context"
 	"errors"
-	"github.com/google/uuid"
-	"github.com/jinzhu/copier"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
-	clusterSrv                    *ClusterService
-	clusterOnce                   sync.Once
-	ClusterMap                           = NewClusterCacheMap()
-	ClusterConfigSecretLabelKey   string = "buding-kube.com/cluster.metadata"
-	ClusterConfigSecretLabelValue string = "true"
+	clusterSrv  *ClusterService
+	clusterOnce sync.Once
+	ClusterMap  = NewClusterCacheMap()
 )
 
 type ClusterService struct {
 }
 
 type ClusterStatus struct {
-	Name     string `json:"name"`
-	Alias    string `json:"alias"`
-	Describe string `json:"describe"`
-	Version  string `json:"version"`
-	Status   string `json:"status"`
+	Name      string `json:"name"`
+	Alias     string `json:"alias"`
+	Describe  string `json:"describe"`
+	Version   string `json:"version"`
+	Status    string `json:"status"`
+	ApiServer string `json:"apiServer"`
 }
 
 type ClusterCache struct {
@@ -95,11 +93,9 @@ func (m *ClusterCacheMap) GetClientSet(clusterId string) (*kubernetes.Clientset,
 }
 
 func (m *ClusterCacheMap) Get(key string) (*kubernetes.Clientset, error) {
-	// 先尝试获取现有缓存
 	if cache, ok := m.caches.Load(key); ok {
 		return cache.(*ClusterCache).clientSet, nil
 	}
-	// 如果不存在，初始化缓存
 	cli, _, err := m.InitCache(key)
 	return cli, err
 }
@@ -108,8 +104,6 @@ func (m *ClusterCacheMap) GetConfig(key string) (*rest.Config, error) {
 	if cache, ok := m.caches.Load(key); ok {
 		return cache.(*ClusterCache).config, nil
 	}
-
-	// 如果不存在，初始化缓存
 	_, config, err := m.InitCache(key)
 	return config, err
 }
@@ -119,13 +113,11 @@ func (m *ClusterCacheMap) GetCache(key string) (*ClusterCache, error) {
 		return cache.(*ClusterCache), nil
 	}
 
-	// 如果不存在，初始化缓存
 	_, _, err := m.InitCache(key)
 	if err != nil {
 		return nil, err
 	}
 
-	// 重新获取，因为现在应该存在了
 	cache, ok := m.caches.Load(key)
 	if !ok {
 		return nil, errors.New("初始化缓存后仍未找到")
@@ -134,26 +126,31 @@ func (m *ClusterCacheMap) GetCache(key string) (*ClusterCache, error) {
 }
 
 func (m *ClusterCacheMap) InitCache(key string) (*kubernetes.Clientset, *rest.Config, error) {
-	// 这里需要加载时双重检查，避免并发初始化
 	if cache, ok := m.caches.Load(key); ok {
 		c := cache.(*ClusterCache)
 		return c.clientSet, c.config, nil
 	}
 
-	item, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
-		Get(context.TODO(), key, metav1.GetOptions{})
+	cluster, err := kube.GetCluster(key)
 	if err != nil {
 		logs.Error("获取集群资源失败:%v", err)
 		return nil, nil, err
 	}
+	kubeConfig, err := utils.DecryptSensitive(cluster.Spec.KubeConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+	kubeConfig = strings.TrimSpace(kubeConfig)
+	if kubeConfig == "" {
+		return nil, nil, errors.New("集群 kubeConfig 为空")
+	}
 
-	set, restConfig, err := buildClientSet(string(item.Data["kubeconfig"]))
+	set, restConfig, err := buildClientSet(kubeConfig)
 	if err != nil {
 		logs.Error("连接到集群资源失败:%v", err)
 		return nil, nil, err
 	}
 
-	// 使用LoadOrStore来确保并发安全
 	cache := &ClusterCache{
 		clientSet: set,
 		config:    restConfig,
@@ -161,7 +158,6 @@ func (m *ClusterCacheMap) InitCache(key string) (*kubernetes.Clientset, *rest.Co
 
 	actual, loaded := m.caches.LoadOrStore(key, cache)
 	if loaded {
-		// 如果另一个goroutine已经初始化了，使用已存在的
 		actualCache := actual.(*ClusterCache)
 		return actualCache.clientSet, actualCache.config, nil
 	}
@@ -180,45 +176,122 @@ func NewClusterService() *ClusterService {
 	return &ClusterService{}
 }
 
-func (s *ClusterService) SaveOrUpdate(create dto.NodeCreateDTO) error {
-	status, clientSet, restConfig, err := s.getClusterStatus(create)
-	if err != nil {
-		logs.Info("获取集群状态失败")
-		return errors.New("获取集群状态失败," + err.Error())
+func (s *ClusterService) SaveOrUpdate(create dto.NodeUpdateDTO) error {
+	name := strings.TrimSpace(create.Name)
+	if name == "" {
+		return errors.New("集群名称不能为空")
 	}
-	var clusterConfigSecret corev1.Secret
-	clusterConfigSecret.Name = create.Id
-	//Labels
-	clusterConfigSecret.Labels = make(map[string]string)
-	clusterConfigSecret.Labels[ClusterConfigSecretLabelKey] = ClusterConfigSecretLabelValue
-	//Annotations
-	clusterConfigSecret.Annotations = make(map[string]string)
-	clusterConfigSecret.Annotations = utils.Struct2Map(status)
-	//StringData
-	clusterConfigSecret.StringData = make(map[string]string)
-	clusterConfigSecret.StringData["kubeconfig"] = create.Config
 
-	if clusterConfigSecret.Name == "" {
-		clusterConfigSecret.Name = uuid.New().String()
-		if _, err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
-			Create(context.TODO(), &clusterConfigSecret, metav1.CreateOptions{}); err != nil {
-			logs.Error("添加集群失败%v", err)
-			return err
-		}
-		return nil
-	}
-	if _, err = kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
-		Update(context.TODO(), &clusterConfigSecret, metav1.UpdateOptions{}); err != nil {
-		logs.Info("更新集群失败%s", err)
+	existing, err := kube.GetCluster(name)
+	if err != nil && !apierrors.IsNotFound(err) {
+		logs.Error("查询集群失败: %v", err)
 		return err
 	}
-	//全局clientSet
-	ClusterMap.Put(create.Id, clientSet, restConfig)
+	if err != nil && apierrors.IsNotFound(err) {
+		existing = nil
+	}
+
+	kubeConfig, authType, err := s.resolveClusterCredential(create, existing)
+	if err != nil {
+		return err
+	}
+
+	status, clientSet, restCfg, err := s.getClusterStatus(name, create.Alias, create.Describe, kubeConfig)
+	if err != nil {
+		return err
+	}
+
+	encryptedConfig, err := utils.EncryptSensitive(kubeConfig)
+	if err != nil {
+		return err
+	}
+
+	obj := kube.BuildCluster(
+		name,
+		create.Alias,
+		create.Describe,
+		encryptedConfig,
+		authType,
+		status.ApiServer,
+		status.Version,
+		status.Status,
+	)
+
+	if existing == nil {
+		if err = kube.CreateCluster(obj, kube.GlobalClient.DynamicClient); err != nil {
+			logs.Error("创建集群失败: %v", err)
+			return err
+		}
+	} else {
+		obj.ResourceVersion = existing.ResourceVersion
+		if err = kube.UpdateCluster(obj); err != nil {
+			logs.Error("更新集群失败: %v", err)
+			return err
+		}
+	}
+
+	ClusterMap.Put(name, clientSet, restCfg)
 	return nil
 }
 
-func (s *ClusterService) getClusterStatus(create dto.NodeCreateDTO) (*ClusterStatus, *kubernetes.Clientset, *rest.Config, error) {
-	clientset, restConfig, err := buildClientSet(create.Config)
+func (s *ClusterService) resolveClusterCredential(create dto.NodeUpdateDTO, existing *kube.Cluster) (string, string, error) {
+	config := strings.TrimSpace(create.Config)
+	uri := strings.TrimSpace(create.Uri)
+	token := strings.TrimSpace(create.Token)
+
+	if config != "" {
+		return config, "kubeconfig", nil
+	}
+	if uri != "" || token != "" {
+		if uri == "" || token == "" {
+			return "", "", errors.New("uri和token必须同时提供")
+		}
+		return buildKubeConfigFromToken(uri, token), "token", nil
+	}
+	if existing == nil {
+		return "", "", errors.New("请提供kubeconfig或uri+token")
+	}
+
+	existingConfig, err := utils.DecryptSensitive(existing.Spec.KubeConfig)
+	if err != nil {
+		return "", "", err
+	}
+	authType := strings.TrimSpace(existing.Spec.Auth.Type)
+	if authType == "" {
+		authType = "kubeconfig"
+	}
+	if strings.TrimSpace(existingConfig) == "" {
+		return "", "", errors.New("kubeconfig不能为空")
+	}
+	return existingConfig, authType, nil
+}
+
+func buildKubeConfigFromToken(uri, token string) string {
+	if !strings.HasPrefix(uri, "http://") && !strings.HasPrefix(uri, "https://") {
+		uri = "https://" + uri
+	}
+	return fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- name: cluster
+  cluster:
+    server: %s
+    insecure-skip-tls-verify: true
+users:
+- name: user
+  user:
+    token: %s
+contexts:
+- name: ctx
+  context:
+    cluster: cluster
+    user: user
+current-context: ctx
+`, uri, token)
+}
+
+func (s *ClusterService) getClusterStatus(name, alias, describe, kubeConfig string) (*ClusterStatus, *kubernetes.Clientset, *rest.Config, error) {
+	clientset, restConfig, err := buildClientSet(kubeConfig)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -227,11 +300,15 @@ func (s *ClusterService) getClusterStatus(create dto.NodeCreateDTO) (*ClusterSta
 		return nil, nil, nil, err
 	}
 	clusterVersion := serverVersion.String()
-	var result ClusterStatus
-	copier.Copy(&result, &create)
-	result.Status = "Active"
-	result.Version = clusterVersion
-	return &result, clientset, restConfig, nil
+	result := &ClusterStatus{
+		Name:      name,
+		Alias:     alias,
+		Describe:  describe,
+		Version:   clusterVersion,
+		Status:    "Active",
+		ApiServer: restConfig.Host,
+	}
+	return result, clientset, restConfig, nil
 }
 
 func buildClientSet(config string) (*kubernetes.Clientset, *rest.Config, error) {
@@ -253,56 +330,93 @@ func buildClientSet(config string) (*kubernetes.Clientset, *rest.Config, error) 
 	return clientSet, restConfig, nil
 }
 
-func (s *ClusterService) Delete(id string) error {
-	err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).Delete(context.TODO(), id,
-		metav1.DeleteOptions{})
+func (s *ClusterService) DeleteByName(name string) error {
+	err := kube.DeleteCluster(name)
 	if err != nil {
-		logs.Error("删除集群失败%s %v", id, err)
+		logs.Error("删除集群失败%s %v", name, err)
 		return err
 	}
-	ClusterMap.Delete(id)
+	ClusterMap.Delete(name)
 	return nil
 }
 
 func (s *ClusterService) List(query dto.PageQueryDTO) ([]vo.ClusterQueryVO, error) {
-	listOptions := metav1.ListOptions{
-		LabelSelector: ClusterConfigSecretLabelKey + "=" + ClusterConfigSecretLabelValue,
-	}
-	secretList, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
-		List(context.TODO(), listOptions)
+	clusters, err := kube.ListClusters(metav1.ListOptions{})
 	if err != nil {
 		logs.Error("获取集群资源失败%v", err)
 		return nil, err
 	}
-	items := secretList.Items
 	result := make([]vo.ClusterQueryVO, 0)
-	for _, item := range items {
-		var cqv vo.ClusterQueryVO
-		if err := utils.Map2Struct(item.Annotations, &cqv); err != nil {
-			logs.Error("集群列表转换失败:%v", err)
-			return nil, err
+	keyword := strings.TrimSpace(query.Keyword)
+	for _, item := range clusters {
+		status := item.Status.State
+		if status == "" {
+			switch strings.ToLower(item.Status.Health) {
+			case "healthy":
+				status = "Active"
+			case "unhealthy":
+				status = "Error"
+			default:
+				status = "Unknown"
+			}
 		}
-		if query.Keyword == "" || strings.Contains(cqv.Name, query.Keyword) {
-			cqv.Id = item.Name
-			result = append(result, cqv)
+		version := item.Status.Version
+		if version == "" {
+			version = "-"
 		}
+		name := item.Name
+		alias := item.Spec.Alias
+		if keyword != "" && !strings.Contains(name, keyword) && !strings.Contains(alias, keyword) {
+			continue
+		}
+		result = append(result, vo.ClusterQueryVO{
+			Id:        name,
+			Name:      name,
+			Alias:     alias,
+			Describe:  item.Spec.Description,
+			Status:    status,
+			Version:   version,
+			ApiServer: item.Spec.ApiServer,
+			Endpoint:  item.Spec.ApiServer,
+		})
 	}
 	return result, nil
 }
 
-func (s *ClusterService) GetById(id string) (*vo.ClusterVO, error) {
-	item, err := kube.InClusterClientSet.CoreV1().Secrets(kube.ServerNamespace).
-		Get(context.TODO(), id, metav1.GetOptions{})
+func (s *ClusterService) GetByName(name string) (*vo.ClusterVO, error) {
+	item, err := kube.GetCluster(name)
 	if err != nil {
 		logs.Error("获取集群:%v", err)
 		return nil, err
 	}
-	var cqv vo.ClusterVO
-	if err := utils.Map2Struct(item.Annotations, &cqv); err != nil {
-		logs.Error("集群信息转换失败:%v", err)
+	status := item.Status.State
+	if status == "" {
+		switch strings.ToLower(item.Status.Health) {
+		case "healthy":
+			status = "Active"
+		case "unhealthy":
+			status = "Error"
+		default:
+			status = "Unknown"
+		}
+	}
+	version := item.Status.Version
+	if version == "" {
+		version = "-"
+	}
+	decryptedConfig, err := utils.DecryptSensitive(item.Spec.KubeConfig)
+	if err != nil {
 		return nil, err
 	}
-	cqv.Id = item.Name
-	cqv.Config = string(item.Data["kubeconfig"])
-	return &cqv, nil
+	return &vo.ClusterVO{
+		Id:        item.Name,
+		Name:      item.Name,
+		Alias:     item.Spec.Alias,
+		Describe:  item.Spec.Description,
+		Status:    status,
+		Version:   version,
+		Config:    decryptedConfig,
+		ApiServer: item.Spec.ApiServer,
+		Endpoint:  item.Spec.ApiServer,
+	}, nil
 }
