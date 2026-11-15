@@ -33,7 +33,7 @@ body {
   border-radius: 10px !important;
 }
 
-.el-button--primary {
+.el-button--primary:not(.is-plain):not(.is-text):not(.is-link) {
   background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%) !important;
   border: none !important;
 }
@@ -297,14 +297,42 @@ body {
   margin-left: 0 !important;
 }
 
-/* "更多"图标按钮(下拉触发器) */
+/* "更多"图标按钮(下拉触发器): 白底浅边框圆按钮, 保证在表格中清晰可见 */
 .action-buttons .more-btn {
   width: 28px;
   padding: 0 !important;
   color: var(--el-text-color-regular);
 }
 
-.action-buttons .more-btn:hover {
+.action-buttons .more-btn.is-text {
+  background-color: var(--el-fill-color-blank);
+  border-color: var(--el-border-color-lighter);
+}
+
+.action-buttons .more-btn .el-icon {
+  font-size: 16px;
+}
+
+.action-buttons .more-btn:hover,
+.action-buttons .more-btn:focus {
   color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
+  background-color: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-5);
+}
+
+/* 操作栏删除按钮: 浅红底深红字, hover 变实心红(与 ConfigMap 等页面的既有风格一致) */
+.action-buttons .btn-danger {
+  color: var(--el-color-danger-dark-2);
+  border-color: var(--el-color-danger-light-4);
+  background: var(--el-color-danger-light-9);
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.action-buttons .btn-danger:hover,
+.action-buttons .btn-danger:focus {
+  color: #fff;
+  background: linear-gradient(135deg, var(--el-color-danger), var(--el-color-danger-dark-2));
+  border-color: var(--el-color-danger);
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.22);
 }

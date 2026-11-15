@@ -1,4 +1,4 @@
-.el-button--primary {
+.el-button--primary:not(.is-plain):not(.is-text):not(.is-link) {
   border-radius: 999px;
   background: linear-gradient(135deg, var(--brand-500), var(--brand-400));
   border: none;
@@ -42,7 +42,7 @@
 .el-button--primary {
   box-shadow: 0 8px 20px rgba(59,130,246,0.25);
 }
-.el-button--danger {
+.el-button--danger:not(.is-plain):not(.is-text):not(.is-link) {
   background: linear-gradient(135deg, #ef4444, #f87171);
   border: none;
   box-shadow: 0 8px 20px rgba(239,68,68,0.25);
