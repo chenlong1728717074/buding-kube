@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -e
+
+# 生成 vendor 目录
+go mod vendor
+
+# 构建二进制文件(排除不支持的存储驱动与 OpenPGP,精简符号表)
+go build \
+  -tags "containers_image_openpgp exclude_graphdriver_devicemapper exclude_graphdriver_btrfs" \
+  -ldflags "-s -w" \
+  -o kube .
