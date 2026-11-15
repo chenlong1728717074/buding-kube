@@ -14,7 +14,7 @@
         </div>
         <div class="info-item">
           <span class="label">API Server</span>
-          <span class="value">{{ clusterStore.currentCluster?.apiServer }}</span>
+          <span class="value">{{ detail?.apiServer || clusterStore.currentCluster?.apiServer }}</span>
         </div>
         <div class="info-item">
           <span class="label">状态</span>
@@ -24,7 +24,7 @@
         </div>
         <div class="info-item">
           <span class="label">版本</span>
-          <span class="value">v1.28.0</span>
+          <span class="value">{{ detail?.version || '-' }}</span>
         </div>
       </div>
     </el-card>
@@ -112,11 +112,15 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useClusterStore } from '@/stores/cluster'
+import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { Monitor, Box, FolderOpened, Grid, Connection, Setting } from '@element-plus/icons-vue'
 
 const clusterStore = useClusterStore()
 
-const currentStatus = computed(() => clusterStore.currentCluster?.status || 'Active')
+const currentStatus = computed(() => detail.value?.status || clusterStore.currentCluster?.status || 'Active')
+
+// 集群详情(含实时资源统计)
+const detail = ref<ClusterVO | null>(null)
 
 const getStatusType = (status: string) => {
   const statusMap: Record<string, any> = {
@@ -150,16 +154,19 @@ const stats = ref({
 })
 
 const loadStats = async () => {
+  const clusterName = clusterStore.currentClusterId
+  if (!clusterName) return
   try {
-    // TODO: 调用 API 获取集群统计数据
+    const response = await clusterApi.getCluster(clusterName)
+    detail.value = response.data
     stats.value = {
-      nodeCount: 5,
-      podCount: 32,
-      namespaceCount: 8,
-      deploymentCount: 12
+      nodeCount: response.data?.nodeCount || 0,
+      podCount: response.data?.podCount || 0,
+      namespaceCount: response.data?.namespaceCount || 0,
+      deploymentCount: response.data?.deploymentCount || 0
     }
   } catch (error) {
-    console.error('Failed to load stats:', error)
+    console.error('Failed to load cluster stats:', error)
   }
 }
 

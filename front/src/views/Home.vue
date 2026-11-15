@@ -66,6 +66,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { Monitor, User, Document, Link } from '@element-plus/icons-vue'
 import { clusterApi } from '@/api/cluster'
+import { userApi } from '@/api/user'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -76,11 +77,19 @@ const userCount = ref(0)
 
 const loadStats = async () => {
   try {
-    const response = await clusterApi.getClusters({ page: 1, pageSize: 100 })
-    clusterCount.value = response.data.total
-    userCount.value = 8 // TODO: 从用户 API 获取
+    // total 为全量集群数, 与 pageSize 无关
+    const response = await clusterApi.getClusters({ page: 1, pageSize: 1 })
+    clusterCount.value = response.data?.total || 0
   } catch (error) {
-    console.error('Failed to load stats:', error)
+    console.error('Failed to load cluster count:', error)
+  }
+  if (isAdmin.value) {
+    try {
+      const userResponse = await userApi.getUsers({ page: 1, pageSize: 1 })
+      userCount.value = userResponse.data?.total || 0
+    } catch (error) {
+      console.error('Failed to load user count:', error)
+    }
   }
 }
 

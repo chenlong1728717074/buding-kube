@@ -6,6 +6,7 @@ import (
 	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
 	"buding-kube/pkg/utils"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -386,6 +387,73 @@ func displayVersion(version string) string {
 	return version
 }
 
+// ClusterResourceCount 集群实时资源统计
+type ClusterResourceCount struct {
+	NodeCount       int64
+	PodCount        int64
+	NamespaceCount  int64
+	DeploymentCount int64
+}
+
+// countClusterResources 并发统计目标集群的节点/Pod/命名空间/Deployment 数量
+func countClusterResources(clientset *kubernetes.Clientset) ClusterResourceCount {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var count ClusterResourceCount
+	var wg sync.WaitGroup
+	wg.Add(4)
+
+	go func() {
+		defer wg.Done()
+		if nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{}); err == nil {
+			count.NodeCount = int64(len(nodes.Items))
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		// Limit:1 + RemainingItemCount 避免拉取全量 Pod
+		if pods, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{Limit: 1}); err == nil {
+			count.PodCount = int64(len(pods.Items))
+			if pods.RemainingItemCount != nil {
+				count.PodCount += *pods.RemainingItemCount
+			}
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if namespaces, err := clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{}); err == nil {
+			count.NamespaceCount = int64(len(namespaces.Items))
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		// Limit:1 + RemainingItemCount 避免拉取全量 Deployment
+		if deployments, err := clientset.AppsV1().Deployments("").List(ctx, metav1.ListOptions{Limit: 1}); err == nil {
+			count.DeploymentCount = int64(len(deployments.Items))
+			if deployments.RemainingItemCount != nil {
+				count.DeploymentCount += *deployments.RemainingItemCount
+			}
+		}
+	}()
+
+	wg.Wait()
+	return count
+}
+
+// countForCluster 获取集群 clientset 并统计资源数量, 失败时返回零值不阻塞列表
+func (s *ClusterService) countForCluster(name string) ClusterResourceCount {
+	clientset, err := ClusterMap.Get(name)
+	if err != nil {
+		logs.Error("获取集群客户端失败, 资源统计跳过: %s %v", name, err)
+		return ClusterResourceCount{}
+	}
+	return countClusterResources(clientset)
+}
+
 func (s *ClusterService) List(query dto.ClusterPageQueryDTO) ([]vo.ClusterQueryVO, error) {
 	clusters, err := kube.ListClusters(metav1.ListOptions{})
 	if err != nil {
@@ -405,15 +473,19 @@ func (s *ClusterService) List(query dto.ClusterPageQueryDTO) ([]vo.ClusterQueryV
 		if keyword != "" && !strings.Contains(name, keyword) && !strings.Contains(alias, keyword) {
 			continue
 		}
+		counts := s.countForCluster(name)
 		result = append(result, vo.ClusterQueryVO{
-			Id:         name,
-			Name:       name,
-			Alias:      alias,
-			Describe:   item.Spec.Description,
-			Status:     status,
-			Version:    displayVersion(item.Status.Version),
-			ApiServer:  item.Spec.ApiServer,
-			CreateTime: item.CreationTimestamp.Format("2006-01-02 15:04:05"),
+			Id:             name,
+			Name:           name,
+			Alias:          alias,
+			Describe:       item.Spec.Description,
+			Status:         status,
+			Version:        displayVersion(item.Status.Version),
+			ApiServer:      item.Spec.ApiServer,
+			CreateTime:     item.CreationTimestamp.Format("2006-01-02 15:04:05"),
+			NodeCount:      counts.NodeCount,
+			PodCount:       counts.PodCount,
+			NamespaceCount: counts.NamespaceCount,
 		})
 	}
 	return result, nil
@@ -425,15 +497,20 @@ func (s *ClusterService) GetByName(name string) (*vo.ClusterVO, error) {
 		logs.Error("获取集群:%v", err)
 		return nil, err
 	}
+	counts := s.countForCluster(name)
 	// 注意:不在响应中返回解密后的 kubeconfig,避免任何登录用户拿到目标集群凭证
 	return &vo.ClusterVO{
-		Id:         item.Name,
-		Name:       item.Name,
-		Alias:      item.Spec.Alias,
-		Describe:   item.Spec.Description,
-		Status:     displayStatus(item.Status.State, item.Status.Health),
-		Version:    displayVersion(item.Status.Version),
-		ApiServer:  item.Spec.ApiServer,
-		CreateTime: item.CreationTimestamp.Format("2006-01-02 15:04:05"),
+		Id:              item.Name,
+		Name:            item.Name,
+		Alias:           item.Spec.Alias,
+		Describe:        item.Spec.Description,
+		Status:          displayStatus(item.Status.State, item.Status.Health),
+		Version:         displayVersion(item.Status.Version),
+		ApiServer:       item.Spec.ApiServer,
+		CreateTime:      item.CreationTimestamp.Format("2006-01-02 15:04:05"),
+		NodeCount:       counts.NodeCount,
+		PodCount:        counts.PodCount,
+		NamespaceCount:  counts.NamespaceCount,
+		DeploymentCount: counts.DeploymentCount,
 	}, nil
 }

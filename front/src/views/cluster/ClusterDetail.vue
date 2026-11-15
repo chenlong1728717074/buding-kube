@@ -228,7 +228,11 @@ const fetchClusterDetail = async () => {
     const clusterName = route.params.id as string
     const response = await clusterApi.getCluster(clusterName)
     clusterInfo.value = response.data
-    
+    // 填充后端返回的实时统计(serviceCount 暂无接口, 保持 0)
+    clusterStats.nodeCount = response.data?.nodeCount || 0
+    clusterStats.podCount = response.data?.podCount || 0
+    clusterStats.namespaceCount = response.data?.namespaceCount || 0
+
     ElMessage.success('集群详情加载成功')
   } catch (error) {
     console.error('加载集群详情失败:', error)

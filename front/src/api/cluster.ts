@@ -12,6 +12,7 @@ export interface ClusterVO {
   nodeCount?: number
   namespaceCount?: number
   podCount?: number
+  deploymentCount?: number
   createTime?: string
   updateTime?: string
 }
