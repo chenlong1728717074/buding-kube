@@ -100,6 +100,10 @@ func SetupRouter(engine *gin.RouterGroup) {
 	apply := engine.Group("/apply", middleware.JWTAuth())
 	api.NewApplyApi(apply)
 
+	//crd
+	crd := engine.Group("/crd", middleware.JWTAuth())
+	api.NewCrdApi(crd)
+
 	//tool
 	tool := engine.Group("/tool", middleware.JWTAuth())
 	api.NewToolApi(tool)
