@@ -155,7 +155,7 @@
         </el-table-column>
         <el-table-column prop="age" label="运行时间" width="120" />
         <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right" align="center" header-align="center">
+        <el-table-column label="操作" width="250" fixed="right" align="center" header-align="center">
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-main" @click="handleViewDetail(row)">
@@ -164,9 +164,9 @@
               <el-button size="small" class="btn-edit" plain @click="handleViewLogs(row)">
                 日志
               </el-button>
-              <el-dropdown @command="(command) => handleMoreActions(command, row)">
-                <el-button size="small" class="btn-more" plain>
-                  更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              <el-dropdown trigger="click" @command="(command) => handleMoreActions(command, row)">
+                <el-button size="small" text circle class="more-btn">
+                  <el-icon><MoreFilled /></el-icon>
                 </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
@@ -179,12 +179,10 @@
                   <el-dropdown-item command="exec">
                     进入容器
                   </el-dropdown-item>
-                  <el-dropdown-item command="delete" divided>
-                    删除Pod
-                  </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
+              <el-button size="small" type="danger" plain class="btn-danger" @click="handleDeletePod(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -411,13 +409,13 @@
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  ArrowLeft, 
-  Refresh, 
+import {
+  ArrowLeft,
+  Refresh,
   RefreshLeft,
-  Search, 
-  Box, 
-  ArrowDown,
+  Search,
+  Box,
+  MoreFilled,
   Download
 } from '@element-plus/icons-vue'
 import { clusterApi } from '@/api/cluster'

@@ -10,9 +10,9 @@
       </div>
       <div class="header-right">
         <el-button size="small" @click="scrollToDetail">详情</el-button>
-        <el-dropdown @command="handleMore">
-          <el-button size="small">
-            更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+        <el-dropdown @command="handleMore" trigger="click">
+          <el-button size="small" text circle class="more-btn">
+            <el-icon><MoreFilled /></el-icon>
           </el-button>
           <template #dropdown>
             <el-dropdown-menu>
@@ -181,7 +181,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, ArrowDown } from '@element-plus/icons-vue'
+import { ArrowLeft, MoreFilled } from '@element-plus/icons-vue'
 import { configMapApi, type ConfigMapVO } from '@/api/configmap'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'

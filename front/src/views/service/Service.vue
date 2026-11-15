@@ -96,18 +96,17 @@
             {{ formatTime(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right" header-align="center" align="center">
+        <el-table-column label="操作" width="200" fixed="right" header-align="center" align="center">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-dropdown @command="(command) => handleMoreAction(command, row)" trigger="click">
-                <el-button size="small" class="btn-more" plain>
-                  更多
-                  <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              <el-button size="small" type="primary" class="btn-main" @click="handleDetail(row)">详情</el-button>
+              <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
+                <el-button size="small" text circle class="more-btn">
+                  <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
-                    <el-dropdown-item command="detail">详情</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -198,7 +197,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown, Document } from '@element-plus/icons-vue'
+import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
 import { serviceApi, type ServiceVO, type ServiceQueryDTO, type ServiceBaseDTO } from '@/api/service'
 import { clusterApi } from '@/api/cluster'
 import { namespaceApi } from '@/api/namespace'

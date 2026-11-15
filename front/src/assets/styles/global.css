@@ -280,3 +280,31 @@ body {
 .el-dialog {
   border-radius: 12px !important;
 }
+
+/* ===== 表格操作列统一风格(所有列表页共用) ===== */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.action-buttons .el-button {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  margin-left: 0 !important;
+}
+
+/* "更多"图标按钮(下拉触发器) */
+.action-buttons .more-btn {
+  width: 28px;
+  padding: 0 !important;
+  color: var(--el-text-color-regular);
+}
+
+.action-buttons .more-btn:hover {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}

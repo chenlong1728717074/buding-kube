@@ -78,12 +78,12 @@
             {{ formatTime(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right" header-align="center">
+        <el-table-column label="操作" width="100" fixed="right" header-align="center">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-dropdown @command="(command) => handleMoreAction(command, row)">
-                <el-button size="small" class="btn-more" plain>
-                  更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
+                <el-button size="small" text circle class="more-btn">
+                  <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
@@ -183,7 +183,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown, Document } from '@element-plus/icons-vue'
+import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
 import { endpointApi, type EndpointVO, type EndpointQueryDTO } from '@/api/endpoint'
 import { clusterApi } from '@/api/cluster'
 import { namespaceApi } from '@/api/namespace'

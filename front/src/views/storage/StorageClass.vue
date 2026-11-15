@@ -36,10 +36,10 @@
         <el-table-column prop="createTime" label="创建时间" min-width="180">
           <template #default="{ row }">{{ formatDate(row.createTime || row.creationTimestamp) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="140" align="center" header-align="center" fixed="right">
+        <el-table-column label="操作" width="100" align="center" header-align="center" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" class="btn-main" @click="openYaml(row)">YAML</el-button>
+              <el-button size="small" type="primary" class="btn-main" @click="openYaml(row)">详情</el-button>
             </div>
           </template>
         </el-table-column>

@@ -204,9 +204,9 @@
                 <el-icon><Switch /></el-icon>
                 {{ isUserEnabled(row) ? '禁用' : '启用' }}
               </el-button>
-              <el-dropdown @command="(command) => handleMoreActions(command, row)">
-                <el-button size="small" class="btn-more" plain>
-                  更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              <el-dropdown trigger="click" @command="(command) => handleMoreActions(command, row)">
+                <el-button size="small" text circle class="more-btn">
+                  <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
@@ -218,13 +218,13 @@
                       <el-icon><Lock /></el-icon>
                       权限管理
                     </el-dropdown-item>
-                    <el-dropdown-item command="delete" divided>
-                      <el-icon><Delete /></el-icon>
-                      删除用户
-                    </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
+              <el-button size="small" type="danger" plain class="btn-danger" @click="handleDelete(row)">
+                <el-icon><Delete /></el-icon>
+                删除
+              </el-button>
             </div>
           </template>
         </el-table-column>
@@ -365,7 +365,7 @@ import {
   Search,
   Refresh,
   Delete,
-  ArrowDown,
+  MoreFilled,
   Edit,
   Switch,
   Key,

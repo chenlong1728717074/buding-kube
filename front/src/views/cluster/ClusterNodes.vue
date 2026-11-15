@@ -154,9 +154,9 @@
               <el-button size="small" class="btn-edit" plain @click="handleViewPods(row)">
                 Pod
               </el-button>
-              <el-dropdown @command="(command) => handleMoreActions(command, row)">
-                <el-button size="small" class="btn-more" plain>
-                  更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              <el-dropdown trigger="click" @command="(command) => handleMoreActions(command, row)">
+                <el-button size="small" text circle class="more-btn">
+                  <el-icon><MoreFilled /></el-icon>
                 </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
@@ -274,12 +274,12 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  ArrowLeft, 
-  Refresh, 
-  Search, 
-  Monitor, 
-  ArrowDown
+import {
+  ArrowLeft,
+  Refresh,
+  Search,
+  Monitor,
+  MoreFilled
 } from '@element-plus/icons-vue'
 import { clusterApi } from '@/api/cluster'
 import '@/assets/styles/config-editor.css'

@@ -51,13 +51,13 @@
         <el-table-column prop="creationTimestamp" label="创建时间" min-width="160" :show-overflow-tooltip="true" header-align="center" align="center">
           <template #default="{ row }">{{ formatDate(row.creationTimestamp) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="320" fixed="right" header-align="center" align="center">
+        <el-table-column label="操作" width="200" fixed="right" header-align="center" align="center">
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-main" @click="goDetail(row)">详情</el-button>
-              <el-dropdown @command="(cmd) => handleRowAction(cmd, row)">
-                <el-button size="small" class="btn-more" plain>
-                  更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              <el-dropdown trigger="click" @command="(cmd) => handleRowAction(cmd, row)">
+                <el-button size="small" text circle class="more-btn">
+                  <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
@@ -380,7 +380,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, ArrowDown, Plus, Document, View, Key, Upload, Delete, Edit, PriceTag, Memo, InfoFilled, Check, Box, RefreshLeft } from '@element-plus/icons-vue'
+import { Search, Refresh, MoreFilled, Plus, Document, View, Key, Upload, Delete, Edit, PriceTag, Memo, InfoFilled, Check, Box, RefreshLeft } from '@element-plus/icons-vue'
 import { configMapApi, type ConfigMapVO, type ConfigMapPageQueryDTO } from '@/api/configmap'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
