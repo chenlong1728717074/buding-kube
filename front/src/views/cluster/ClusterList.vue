@@ -37,9 +37,8 @@
       >
         <el-option label="全部状态" value="" />
         <el-option label="活跃" value="Active" />
-        <el-option label="运行中" value="Running" />
         <el-option label="异常" value="Error" />
-        <el-option label="失败" value="Failed" />
+        <el-option label="未知" value="Unknown" />
       </el-select>
       <el-button type="primary" @click="handleSearch" style="margin-left: 12px">
         <el-icon><Search /></el-icon>
@@ -167,37 +166,12 @@
         <el-form-item label="集群描述">
           <el-input v-model="clusterForm.describe" type="textarea" :rows="2" placeholder="请输入集群描述" />
         </el-form-item>
-        <el-form-item label="连接方式">
-          <el-radio-group v-model="clusterForm.authType">
-            <el-radio-button label="config">KubeConfig</el-radio-button>
-            <el-radio-button label="token">URI + Token</el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <template v-if="clusterForm.authType === 'config'">
-          <el-form-item label="Kubeconfig 配置" prop="config">
-            <el-input 
-              v-model="clusterForm.config" 
-              type="textarea" 
-              :rows="18" 
-              placeholder="请粘贴完整的 kubeconfig 配置文件内容"
-              style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 13px;"
-            />
-          </el-form-item>
-        </template>
-        <template v-else>
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="API Server URI">
-                <el-input v-model="clusterForm.uri" placeholder="例如：https://10.0.0.1:6443" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="Bearer Token">
-                <el-input v-model="clusterForm.token" type="password" show-password placeholder="请输入 token" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-        </template>
+        <ClusterConnectionForm
+          v-model:auth-type="clusterForm.authType"
+          v-model:config="clusterForm.config"
+          v-model:uri="clusterForm.uri"
+          v-model:token="clusterForm.token"
+        />
       </el-form>
       <template #footer>
         <el-button @click="showAddDialog = false" size="large">取消</el-button>
@@ -228,37 +202,14 @@
         <el-form-item label="集群描述">
           <el-input v-model="editClusterForm.describe" type="textarea" :rows="2" placeholder="请输入集群描述" />
         </el-form-item>
-        <el-form-item label="连接方式">
-          <el-radio-group v-model="editClusterForm.authType">
-            <el-radio-button label="config">KubeConfig</el-radio-button>
-            <el-radio-button label="token">URI + Token</el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <template v-if="editClusterForm.authType === 'config'">
-          <el-form-item label="Kubeconfig 配置" prop="config">
-            <el-input 
-              v-model="editClusterForm.config" 
-              type="textarea" 
-              :rows="18" 
-              placeholder="如需更新配置，请粘贴完整的 kubeconfig 配置文件内容"
-              style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 13px;"
-            />
-          </el-form-item>
-        </template>
-        <template v-else>
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="API Server URI">
-                <el-input v-model="editClusterForm.uri" placeholder="例如：https://10.0.0.1:6443" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="Bearer Token">
-                <el-input v-model="editClusterForm.token" type="password" show-password placeholder="请输入 token" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-        </template>
+        <ClusterConnectionForm
+          v-model:auth-type="editClusterForm.authType"
+          v-model:config="editClusterForm.config"
+          v-model:uri="editClusterForm.uri"
+          v-model:token="editClusterForm.token"
+          :required-config="false"
+          config-placeholder="如需更新配置，请粘贴完整的 kubeconfig 配置文件内容"
+        />
       </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false" size="large">取消</el-button>
@@ -275,6 +226,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Monitor, Plus, Edit, Delete, MoreFilled, ArrowRight, Search, Refresh } from '@element-plus/icons-vue'
 import { useClusterStore } from '@/stores/cluster'
 import { clusterApi } from '@/api/cluster'
+import ClusterConnectionForm from '@/components/ClusterConnectionForm.vue'
 
 const router = useRouter()
 const clusterStore = useClusterStore()
@@ -317,7 +269,18 @@ const editClusterForm = ref({
 })
 
 const addRules = {
-  name: [{ required: true, message: '请输入集群名称', trigger: 'blur' }]
+  name: [
+    { required: true, message: '请输入集群名称', trigger: 'blur' },
+    {
+      pattern: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/,
+      message: '仅支持小写字母、数字、\'-\' 和 \'.\'，以字母或数字开头结尾',
+      trigger: 'blur'
+    }
+  ],
+  // 连接字段按 authType 条件渲染(v-if),隐藏的字段不会参与校验
+  config: [{ required: true, message: '请输入集群配置', trigger: 'blur' }],
+  uri: [{ required: true, message: '请输入 API Server URI', trigger: 'blur' }],
+  token: [{ required: true, message: '请输入 Token', trigger: 'blur' }]
 }
 const editRules = {
   name: [{ required: true, message: '集群名称为空', trigger: 'blur' }]
@@ -345,7 +308,7 @@ const loadClusters = async () => {
         name: cluster.name,
         alias: cluster.alias,
         describe: cluster.describe,
-        apiServer: cluster.apiServer || cluster.endpoint || '-',
+        apiServer: cluster.apiServer || '-',
         status: cluster.status,
         version: cluster.version,
         nodeCount: cluster.nodeCount || 0,
@@ -470,17 +433,6 @@ const handleAddCluster = async () => {
     if (!valid) return
     submitting.value = true
     try {
-      if (clusterForm.value.authType === 'config') {
-        if (!clusterForm.value.config.trim()) {
-          ElMessage.error('请输入集群配置')
-          return
-        }
-      } else {
-        if (!clusterForm.value.uri.trim() || !clusterForm.value.token.trim()) {
-          ElMessage.error('请输入 URI 和 Token')
-          return
-        }
-      }
       await clusterApi.createCluster({
         name: clusterForm.value.name,
         alias: clusterForm.value.alias,

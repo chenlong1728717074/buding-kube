@@ -97,7 +97,7 @@ func DecryptSensitive(cipherValue string) (string, error) {
 	ciphertext := payload[gcm.NonceSize():]
 	plain, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return "", fmt.Errorf("解密失败: %w", err)
+		return "", fmt.Errorf("解密失败: %w (请检查加密密钥 KUBE_SECRET_KEY/JWT_SECRET_KEY 是否与加密时一致)", err)
 	}
 	return string(plain), nil
 }

@@ -1,4 +1,4 @@
-import request, { type ApiResponse, type PageResponse } from '@/utils/request'
+import request, { type PageResponse } from '@/utils/request'
 
 // 集群信息
 export interface ClusterVO {
@@ -7,7 +7,6 @@ export interface ClusterVO {
   alias?: string
   describe?: string
   apiServer?: string
-  endpoint?: string
   version?: string
   status?: string
   nodeCount?: number
@@ -15,8 +14,6 @@ export interface ClusterVO {
   podCount?: number
   createTime?: string
   updateTime?: string
-  description?: string
-  config?: string
 }
 
 // 集群查询参数
@@ -28,32 +25,14 @@ export interface ClusterQueryDTO {
   version?: string
 }
 
-// 创建集群参数
-export interface CreateClusterDTO {
+// 集群创建/更新参数(config 与 uri+token 二选一,更新时留空表示沿用原配置)
+export interface ClusterSaveDTO {
   name: string
   alias?: string
   describe?: string
   config?: string
   uri?: string
   token?: string
-}
-
-// 更新集群参数
-export interface UpdateClusterDTO {
-  name: string
-  alias?: string
-  describe?: string
-  config?: string
-  uri?: string
-  token?: string
-}
-
-// 集群详情返回值
-export interface ClusterDetailDTO {
-  name: string
-  alias?: string
-  describe?: string
-  config: string
 }
 
 // 集群管理API
@@ -69,33 +48,18 @@ export const clusterApi = {
   },
 
   // 创建集群
-  createCluster: (data: CreateClusterDTO) => {
+  createCluster: (data: ClusterSaveDTO) => {
     return request.post<ClusterVO>('/cluster', data)
   },
 
   // 更新集群
-  updateCluster: (name: string, data: UpdateClusterDTO) => {
+  updateCluster: (name: string, data: ClusterSaveDTO) => {
     return request.put<ClusterVO>(`/cluster/${name}`, data)
   },
 
   // 删除集群
   deleteCluster: (name: string) => {
     return request.delete(`/cluster/${name}`)
-  },
-
-  // 测试集群连接
-  testConnection: (name: string) => {
-    return request.post<{ connected: boolean; message: string }>(`/cluster/${name}/test`, {})
-  },
-
-  // 获取集群统计信息
-  getStats: (name: string) => {
-    return request.get(`/cluster/${name}/stats`)
-  },
-
-  // 获取集群事件
-  getEvents: (name: string, params?: any) => {
-    return request.get(`/cluster/${name}/events`, { params })
   },
 
   // 获取节点列表

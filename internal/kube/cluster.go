@@ -110,9 +110,16 @@ func UpdateCluster(cluster *Cluster) error {
 
 func DeleteCluster(name string) error {
 	ctx := context.Background()
-	if err := GlobalClient.DynamicClient.Resource(ClusterGVR).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
-		return err
+	err := GlobalClient.DynamicClient.Resource(ClusterGVR).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		// 不存在视为删除成功,保证幂等
+		if apierrors.IsNotFound(err) {
+			logs.Info("集群不存在,视为删除成功: %s", name)
+			return nil
+		}
+		return fmt.Errorf("删除集群失败: %w", err)
 	}
+	logs.Info("✅ 删除集群: %s", name)
 	return nil
 }
 

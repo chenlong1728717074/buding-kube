@@ -27,27 +27,19 @@ func NewClusterApi(router *gin.RouterGroup) *ClusterApi {
 func (api *ClusterApi) Router() {
 	api.router.GET("/:name", middleware.Blocker(), api.Info)
 	api.router.DELETE("/:name", middleware.Blocker(), api.Delete)
-	api.router.PUT("/:name", middleware.Blocker(), BindJSON[dto.NodeUpdateDTO](api.Update))
+	api.router.PUT("/:name", middleware.Blocker(), BindJSON[dto.ClusterSaveDTO](api.Update))
 	api.router.GET("/list", api.List)
-	api.router.POST("", middleware.Blocker(), BindJSON[dto.NodeCreateDTO](api.Add))
+	api.router.POST("", middleware.Blocker(), BindJSON[dto.ClusterSaveDTO](api.Add))
 }
-func (api *ClusterApi) Add(ctx *gin.Context, create dto.NodeCreateDTO) {
-	err := api.srv.SaveOrUpdate(dto.NodeUpdateDTO{
-		Name:     create.Name,
-		Alias:    create.Alias,
-		Describe: create.Describe,
-		Config:   create.Config,
-		Uri:      create.Uri,
-		Token:    create.Token,
-	})
-	if err != nil {
+func (api *ClusterApi) Add(ctx *gin.Context, create dto.ClusterSaveDTO) {
+	if err := api.srv.SaveOrUpdate(create); err != nil {
 		api.InternalError(ctx, "添加失败:", err)
 		return
 	}
 	api.SuccessMsg(ctx, "添加成功")
 }
 
-func (api *ClusterApi) Update(ctx *gin.Context, update dto.NodeUpdateDTO) {
+func (api *ClusterApi) Update(ctx *gin.Context, update dto.ClusterSaveDTO) {
 	name := api.GetParam(ctx, "name")
 	if name == "" {
 		api.ParamError(ctx, "获取name失败")
@@ -68,7 +60,7 @@ func (api *ClusterApi) Update(ctx *gin.Context, update dto.NodeUpdateDTO) {
 }
 
 func (api *ClusterApi) List(ctx *gin.Context) {
-	var query dto.PageQueryDTO
+	var query dto.ClusterPageQueryDTO
 	if err := api.BindQuery(ctx, &query); err != nil {
 		api.ParamBindError(ctx, err)
 		return

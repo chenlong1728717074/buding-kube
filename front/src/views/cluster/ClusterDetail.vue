@@ -35,7 +35,7 @@
           </div>
           <div class="info-item">
             <label>API地址：</label>
-            <span>{{ clusterInfo?.endpoint }}</span>
+            <span>{{ clusterInfo?.apiServer }}</span>
           </div>
           <div class="info-item">
             <label>版本：</label>
@@ -53,7 +53,7 @@
           </div>
           <div class="info-item">
             <label>描述：</label>
-            <span>{{ clusterInfo?.description || '暂无描述' }}</span>
+            <span>{{ clusterInfo?.describe || '暂无描述' }}</span>
           </div>
         </div>
       </el-card>
@@ -238,32 +238,6 @@ const fetchClusterDetail = async () => {
   }
 }
 
-// 获取集群统计
-const fetchClusterStats = async () => {
-  try {
-    const clusterName = route.params.id as string
-    const response = await clusterApi.getStats(clusterName)
-    Object.assign(clusterStats, response.data)
-  } catch (error) {
-    console.error('获取集群统计失败:', error)
-  }
-}
-
-// 获取最近事件
-const fetchRecentEvents = async () => {
-  try {
-    const clusterName = route.params.id as string
-    const response = await clusterApi.getEvents(clusterName, {
-      limit: 10,
-      sort: 'createTime',
-      order: 'desc'
-    })
-    recentEvents.value = response.data.list || []
-  } catch (error) {
-    console.error('获取最近事件失败:', error)
-  }
-}
-
 // 返回
 const handleBack = () => {
   router.back()
@@ -272,8 +246,6 @@ const handleBack = () => {
 // 刷新
 const handleRefresh = () => {
   fetchClusterDetail()
-  fetchClusterStats()
-  fetchRecentEvents()
 }
 
 // 编辑
@@ -336,8 +308,6 @@ const getEventType = (type: string) => {
 // 初始化
 onMounted(() => {
   fetchClusterDetail()
-  fetchClusterStats()
-  fetchRecentEvents()
 })
 </script>
 

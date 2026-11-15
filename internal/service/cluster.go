@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var (
@@ -176,19 +178,32 @@ func NewClusterService() *ClusterService {
 	return &ClusterService{}
 }
 
-func (s *ClusterService) SaveOrUpdate(create dto.NodeUpdateDTO) error {
+// clusterNameRegexp k8s 对象名的 DNS-1123 子域格式校验
+var clusterNameRegexp = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
+
+func validateClusterName(name string) error {
+	if len(name) > 253 {
+		return errors.New("集群名称过长(最多253个字符)")
+	}
+	if !clusterNameRegexp.MatchString(name) {
+		return errors.New("集群名称只能包含小写字母、数字、'-' 和 '.', 且以字母或数字开头结尾")
+	}
+	return nil
+}
+
+func (s *ClusterService) SaveOrUpdate(create dto.ClusterSaveDTO) error {
 	name := strings.TrimSpace(create.Name)
 	if name == "" {
 		return errors.New("集群名称不能为空")
+	}
+	if err := validateClusterName(name); err != nil {
+		return err
 	}
 
 	existing, err := kube.GetCluster(name)
 	if err != nil && !apierrors.IsNotFound(err) {
 		logs.Error("查询集群失败: %v", err)
 		return err
-	}
-	if err != nil && apierrors.IsNotFound(err) {
-		existing = nil
 	}
 
 	kubeConfig, authType, err := s.resolveClusterCredential(create, existing)
@@ -223,7 +238,11 @@ func (s *ClusterService) SaveOrUpdate(create dto.NodeUpdateDTO) error {
 			return err
 		}
 	} else {
-		obj.ResourceVersion = existing.ResourceVersion
+		// 保留不由本接口管理的字段,避免一次普通更新抹掉真实状态
+		obj.Status.NodeCount = existing.Status.NodeCount
+		obj.Spec.Region = existing.Spec.Region
+		obj.Spec.Labels = existing.Spec.Labels
+		// ResourceVersion 由 UpdateCluster 内部获取并设置
 		if err = kube.UpdateCluster(obj); err != nil {
 			logs.Error("更新集群失败: %v", err)
 			return err
@@ -234,7 +253,7 @@ func (s *ClusterService) SaveOrUpdate(create dto.NodeUpdateDTO) error {
 	return nil
 }
 
-func (s *ClusterService) resolveClusterCredential(create dto.NodeUpdateDTO, existing *kube.Cluster) (string, string, error) {
+func (s *ClusterService) resolveClusterCredential(create dto.ClusterSaveDTO, existing *kube.Cluster) (string, string, error) {
 	config := strings.TrimSpace(create.Config)
 	uri := strings.TrimSpace(create.Uri)
 	token := strings.TrimSpace(create.Token)
@@ -246,7 +265,11 @@ func (s *ClusterService) resolveClusterCredential(create dto.NodeUpdateDTO, exis
 		if uri == "" || token == "" {
 			return "", "", errors.New("uri和token必须同时提供")
 		}
-		return buildKubeConfigFromToken(uri, token), "token", nil
+		config, err := buildKubeConfigFromToken(uri, token)
+		if err != nil {
+			return "", "", err
+		}
+		return config, "token", nil
 	}
 	if existing == nil {
 		return "", "", errors.New("请提供kubeconfig或uri+token")
@@ -266,28 +289,29 @@ func (s *ClusterService) resolveClusterCredential(create dto.NodeUpdateDTO, exis
 	return existingConfig, authType, nil
 }
 
-func buildKubeConfigFromToken(uri, token string) string {
+func buildKubeConfigFromToken(uri, token string) (string, error) {
 	if !strings.HasPrefix(uri, "http://") && !strings.HasPrefix(uri, "https://") {
 		uri = "https://" + uri
 	}
-	return fmt.Sprintf(`apiVersion: v1
-kind: Config
-clusters:
-- name: cluster
-  cluster:
-    server: %s
-    insecure-skip-tls-verify: true
-users:
-- name: user
-  user:
-    token: %s
-contexts:
-- name: ctx
-  context:
-    cluster: cluster
-    user: user
-current-context: ctx
-`, uri, token)
+	// 结构化构造避免 token 含特殊字符破坏 YAML
+	config := clientcmdapi.NewConfig()
+	config.Clusters["cluster"] = &clientcmdapi.Cluster{
+		Server:                uri,
+		InsecureSkipTLSVerify: true,
+	}
+	config.AuthInfos["user"] = &clientcmdapi.AuthInfo{
+		Token: token,
+	}
+	config.Contexts["ctx"] = &clientcmdapi.Context{
+		Cluster:  "cluster",
+		AuthInfo: "user",
+	}
+	config.CurrentContext = "ctx"
+	data, err := clientcmd.Write(*config)
+	if err != nil {
+		return "", fmt.Errorf("生成 kubeconfig 失败: %w", err)
+	}
+	return string(data), nil
 }
 
 func (s *ClusterService) getClusterStatus(name, alias, describe, kubeConfig string) (*ClusterStatus, *kubernetes.Clientset, *rest.Config, error) {
@@ -340,7 +364,29 @@ func (s *ClusterService) DeleteByName(name string) error {
 	return nil
 }
 
-func (s *ClusterService) List(query dto.PageQueryDTO) ([]vo.ClusterQueryVO, error) {
+// displayStatus 集群展示状态:优先取 status.state,旧数据回退到 status.health
+func displayStatus(state, health string) string {
+	if state != "" {
+		return state
+	}
+	switch strings.ToLower(health) {
+	case "healthy":
+		return "Active"
+	case "unhealthy":
+		return "Error"
+	default:
+		return "Unknown"
+	}
+}
+
+func displayVersion(version string) string {
+	if version == "" {
+		return "-"
+	}
+	return version
+}
+
+func (s *ClusterService) List(query dto.ClusterPageQueryDTO) ([]vo.ClusterQueryVO, error) {
 	clusters, err := kube.ListClusters(metav1.ListOptions{})
 	if err != nil {
 		logs.Error("获取集群资源失败%v", err)
@@ -348,21 +394,11 @@ func (s *ClusterService) List(query dto.PageQueryDTO) ([]vo.ClusterQueryVO, erro
 	}
 	result := make([]vo.ClusterQueryVO, 0)
 	keyword := strings.TrimSpace(query.Keyword)
+	statusFilter := strings.TrimSpace(query.Status)
 	for _, item := range clusters {
-		status := item.Status.State
-		if status == "" {
-			switch strings.ToLower(item.Status.Health) {
-			case "healthy":
-				status = "Active"
-			case "unhealthy":
-				status = "Error"
-			default:
-				status = "Unknown"
-			}
-		}
-		version := item.Status.Version
-		if version == "" {
-			version = "-"
+		status := displayStatus(item.Status.State, item.Status.Health)
+		if statusFilter != "" && !strings.EqualFold(status, statusFilter) {
+			continue
 		}
 		name := item.Name
 		alias := item.Spec.Alias
@@ -370,14 +406,14 @@ func (s *ClusterService) List(query dto.PageQueryDTO) ([]vo.ClusterQueryVO, erro
 			continue
 		}
 		result = append(result, vo.ClusterQueryVO{
-			Id:        name,
-			Name:      name,
-			Alias:     alias,
-			Describe:  item.Spec.Description,
-			Status:    status,
-			Version:   version,
-			ApiServer: item.Spec.ApiServer,
-			Endpoint:  item.Spec.ApiServer,
+			Id:         name,
+			Name:       name,
+			Alias:      alias,
+			Describe:   item.Spec.Description,
+			Status:     status,
+			Version:    displayVersion(item.Status.Version),
+			ApiServer:  item.Spec.ApiServer,
+			CreateTime: item.CreationTimestamp.Format("2006-01-02 15:04:05"),
 		})
 	}
 	return result, nil
@@ -389,34 +425,15 @@ func (s *ClusterService) GetByName(name string) (*vo.ClusterVO, error) {
 		logs.Error("获取集群:%v", err)
 		return nil, err
 	}
-	status := item.Status.State
-	if status == "" {
-		switch strings.ToLower(item.Status.Health) {
-		case "healthy":
-			status = "Active"
-		case "unhealthy":
-			status = "Error"
-		default:
-			status = "Unknown"
-		}
-	}
-	version := item.Status.Version
-	if version == "" {
-		version = "-"
-	}
-	decryptedConfig, err := utils.DecryptSensitive(item.Spec.KubeConfig)
-	if err != nil {
-		return nil, err
-	}
+	// 注意:不在响应中返回解密后的 kubeconfig,避免任何登录用户拿到目标集群凭证
 	return &vo.ClusterVO{
-		Id:        item.Name,
-		Name:      item.Name,
-		Alias:     item.Spec.Alias,
-		Describe:  item.Spec.Description,
-		Status:    status,
-		Version:   version,
-		Config:    decryptedConfig,
-		ApiServer: item.Spec.ApiServer,
-		Endpoint:  item.Spec.ApiServer,
+		Id:         item.Name,
+		Name:       item.Name,
+		Alias:      item.Spec.Alias,
+		Describe:   item.Spec.Description,
+		Status:     displayStatus(item.Status.State, item.Status.Health),
+		Version:    displayVersion(item.Status.Version),
+		ApiServer:  item.Spec.ApiServer,
+		CreateTime: item.CreationTimestamp.Format("2006-01-02 15:04:05"),
 	}, nil
 }
