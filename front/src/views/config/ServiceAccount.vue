@@ -310,54 +310,50 @@
       @cancel="() => deleteDialogVisible = false"
     />
 
-    <!-- ServiceAccount 详情弹窗 -->
-    <el-dialog v-model="detailVisible" :title="`ServiceAccount详情 - ${detailRow?.name || ''}`" width="820px" top="6vh">
-      <div class="detail-wrapper">
-        <div class="detail-grid">
-          <div class="detail-item"><span class="label">名称</span><span class="value">{{ detailRow?.name || '-' }}</span></div>
-          <div class="detail-item"><span class="label">命名空间</span><span class="value">{{ detailRow?.namespace || '-' }}</span></div>
-          <div class="detail-item"><span class="label">自动挂载令牌</span><span class="value">{{ detailRow?.automountServiceAccountToken === false ? '否' : '是' }}</span></div>
-          <div class="detail-item"><span class="label">创建时间</span><span class="value">{{ formatDate(detailRow?.creationTimestamp) }}</span></div>
-        </div>
-
-        <div class="detail-section">
-          <div class="detail-section-title">挂载的 Secrets ({{ detailSecrets.length }})</div>
-          <el-table v-if="detailSecrets.length" :data="detailSecrets" size="small" style="width: 100%">
-            <el-table-column prop="name" label="名称" />
-          </el-table>
+    <!-- ServiceAccount 详情抽屉(KubeSphere 风格) -->
+    <DetailDrawer v-model="detailVisible" kind="ServiceAccount" :name="detailRow?.name" :meta="detailMeta">
+      <el-tabs v-model="detailTab" class="ks-tabs">
+        <el-tab-pane label="基本信息" name="info">
+          <div class="ks-info-row"><span class="ks-info-label">名称</span><span class="ks-info-value">{{ detailRow?.name || '-' }}</span></div>
+          <div class="ks-info-row"><span class="ks-info-label">命名空间</span><span class="ks-info-value">{{ detailRow?.namespace || '-' }}</span></div>
+          <div class="ks-info-row"><span class="ks-info-label">自动挂载令牌</span><span class="ks-info-value">{{ detailRow?.automountServiceAccountToken === false ? '否' : '是' }}</span></div>
+          <div class="ks-info-row"><span class="ks-info-label">创建时间</span><span class="ks-info-value">{{ formatDate(detailRow?.creationTimestamp) }}</span></div>
+        </el-tab-pane>
+        <el-tab-pane name="secrets" :label="`挂载 Secrets (${detailSecrets.length})`">
+          <div v-if="detailSecrets.length" class="ks-chips">
+            <span v-for="item in detailSecrets" :key="item.name" class="ks-chip">{{ item.name }}</span>
+          </div>
           <el-empty v-else description="暂无" :image-size="60" />
-        </div>
-
-        <div class="detail-section">
-          <div class="detail-section-title">镜像拉取 Secrets ({{ detailPullSecrets.length }})</div>
-          <el-table v-if="detailPullSecrets.length" :data="detailPullSecrets" size="small" style="width: 100%">
-            <el-table-column prop="name" label="名称" />
-          </el-table>
+        </el-tab-pane>
+        <el-tab-pane name="pullSecrets" :label="`镜像拉取 (${detailPullSecrets.length})`">
+          <div v-if="detailPullSecrets.length" class="ks-chips">
+            <span v-for="item in detailPullSecrets" :key="item.name" class="ks-chip">{{ item.name }}</span>
+          </div>
           <el-empty v-else description="暂无" :image-size="60" />
-        </div>
-
-        <div class="detail-section">
-          <div class="detail-section-title">标签 ({{ detailLabels.length }})</div>
-          <el-table v-if="detailLabels.length" :data="detailLabels" size="small" style="width: 100%">
-            <el-table-column prop="key" label="键" width="240" />
-            <el-table-column prop="value" label="值" show-overflow-tooltip />
-          </el-table>
+        </el-tab-pane>
+        <el-tab-pane name="labels" :label="`标签 (${detailLabels.length})`">
+          <div v-if="detailLabels.length" class="ks-chips">
+            <span v-for="item in detailLabels" :key="item.key" class="ks-chip">
+              <span class="ks-chip-key">{{ item.key }}</span>
+              <span class="ks-chip-value">= {{ item.value }}</span>
+            </span>
+          </div>
           <el-empty v-else description="暂无标签" :image-size="60" />
-        </div>
-
-        <div class="detail-section">
-          <div class="detail-section-title">注解 ({{ detailAnnotations.length }})</div>
-          <el-table v-if="detailAnnotations.length" :data="detailAnnotations" size="small" style="width: 100%">
-            <el-table-column prop="key" label="键" width="240" />
-            <el-table-column prop="value" label="值" show-overflow-tooltip />
-          </el-table>
+        </el-tab-pane>
+        <el-tab-pane name="annotations" :label="`注解 (${detailAnnotations.length})`">
+          <div v-if="detailAnnotations.length" class="ks-chips">
+            <span v-for="item in detailAnnotations" :key="item.key" class="ks-chip">
+              <span class="ks-chip-key">{{ item.key }}</span>
+              <span class="ks-chip-value">= {{ item.value }}</span>
+            </span>
+          </div>
           <el-empty v-else description="暂无注解" :image-size="60" />
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+        </el-tab-pane>
+        <el-tab-pane label="YAML" name="yaml">
+          <YamlEditor :model-value="detailRow?.yaml" :readonly="true" height="calc(100vh - 300px)" />
+        </el-tab-pane>
+      </el-tabs>
+    </DetailDrawer>
   </div>
 </template>
 
@@ -370,6 +366,7 @@ import { secretApi, type SecretVO } from '@/api/secret'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import DetailDrawer from '@/components/DetailDrawer.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import '@/assets/styles/config-editor.css'
 
@@ -400,16 +397,22 @@ const pagination = reactive({
   total: 0
 })
 
-// 详情弹窗(列表数据已包含全部字段, 无需二次请求)
+// 详情抽屉(列表数据已包含全部字段, 无需二次请求)
 const detailVisible = ref(false)
+const detailTab = ref('info')
 const detailRow = ref<ServiceAccountVO | null>(null)
 const detailLabels = computed(() => Object.entries(detailRow.value?.labels || {}).map(([key, value]) => ({ key, value })))
 const detailAnnotations = computed(() => Object.entries(detailRow.value?.annotations || {}).map(([key, value]) => ({ key, value })))
 const detailSecrets = computed(() => (detailRow.value?.secrets || []).map(s => ({ name: s.name })))
 const detailPullSecrets = computed(() => (detailRow.value?.imagePullSecrets || []).map(s => ({ name: s.name })))
+const detailMeta = computed(() => [
+  { label: '命名空间', value: detailRow.value?.namespace || '-' },
+  { label: '创建时间', value: formatDate(detailRow.value?.creationTimestamp) || '-' }
+])
 
 const openDetail = (row: ServiceAccountVO) => {
   detailRow.value = row
+  detailTab.value = 'info'
   detailVisible.value = true
 }
 
@@ -906,45 +909,8 @@ onMounted(async () => {
   border-radius: 8px;
 }
 
-.detail-wrapper {
-  max-height: 65vh;
-  overflow: auto;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px 24px;
-  margin-bottom: 20px;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.detail-item .label,
-.detail-section-title {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.detail-item .value {
+:deep(.ks-tabs .el-tabs__item) {
   font-size: 14px;
-  color: #1f2937;
-  word-break: break-all;
-}
-
-.detail-section {
-  margin-top: 18px;
-}
-
-.detail-section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 10px;
 }
 
 </style>

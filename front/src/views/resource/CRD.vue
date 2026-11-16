@@ -92,33 +92,34 @@
       </div>
     </el-card>
 
-    <!-- CRD 详情对话框(结构化信息) -->
-    <el-dialog v-model="detailVisible" :title="`CRD详情 - ${currentCrd?.name || ''}`" width="720px" top="8vh">
-      <div v-loading="detailLoading" class="detail-wrapper">
-        <div class="detail-grid">
-          <div class="detail-item"><span class="label">名称</span><span class="value">{{ detailData.name }}</span></div>
-          <div class="detail-item"><span class="label">组</span><span class="value">{{ detailData.group }}</span></div>
-          <div class="detail-item"><span class="label">Kind</span><span class="value">{{ detailData.kind }}</span></div>
-          <div class="detail-item"><span class="label">List Kind</span><span class="value">{{ detailData.listKind }}</span></div>
-          <div class="detail-item"><span class="label">存储版本</span><span class="value">{{ detailData.version }}</span></div>
-          <div class="detail-item"><span class="label">作用域</span><span class="value">{{ detailData.scope === 'Cluster' ? '集群级' : '命名空间级' }}</span></div>
-          <div class="detail-item"><span class="label">复数名</span><span class="value">{{ detailData.plural }}</span></div>
-          <div class="detail-item"><span class="label">单数名</span><span class="value">{{ detailData.singular }}</span></div>
-          <div class="detail-item"><span class="label">短名</span><span class="value">{{ detailData.shortNames?.length ? detailData.shortNames.join(', ') : '-' }}</span></div>
-          <div class="detail-item"><span class="label">创建时间</span><span class="value">{{ detailData.createTime }}</span></div>
-        </div>
-        <div v-if="detailData.versions?.length" class="verbs-section">
-          <span class="label">全部版本</span>
-          <div class="verb-tags">
-            <el-tag v-for="ver in detailData.versions" :key="ver" size="small" type="info">{{ ver }}</el-tag>
-          </div>
-        </div>
+    <!-- CRD 详情抽屉(KubeSphere 风格) -->
+    <DetailDrawer v-model="detailVisible" kind="CRD" :name="detailData.name" :meta="detailMeta">
+      <div v-loading="detailLoading">
+        <el-tabs v-model="detailTab" class="ks-tabs">
+          <el-tab-pane label="基本信息" name="info">
+            <div class="ks-info-row"><span class="ks-info-label">名称</span><span class="ks-info-value">{{ detailData.name }}</span></div>
+            <div class="ks-info-row"><span class="ks-info-label">组</span><span class="ks-info-value">{{ detailData.group }}</span></div>
+            <div class="ks-info-row"><span class="ks-info-label">Kind</span><span class="ks-info-value">{{ detailData.kind }}</span></div>
+            <div class="ks-info-row"><span class="ks-info-label">List Kind</span><span class="ks-info-value">{{ detailData.listKind }}</span></div>
+            <div class="ks-info-row"><span class="ks-info-label">存储版本</span><span class="ks-info-value">{{ detailData.version }}</span></div>
+            <div class="ks-info-row"><span class="ks-info-label">作用域</span><span class="ks-info-value">{{ detailData.scope === 'Cluster' ? '集群级' : '命名空间级' }}</span></div>
+            <div class="ks-info-row"><span class="ks-info-label">复数名</span><span class="ks-info-value">{{ detailData.plural }}</span></div>
+            <div class="ks-info-row"><span class="ks-info-label">单数名</span><span class="ks-info-value">{{ detailData.singular }}</span></div>
+            <div class="ks-info-row"><span class="ks-info-label">短名</span><span class="ks-info-value">{{ detailData.shortNames?.length ? detailData.shortNames.join(', ') : '-' }}</span></div>
+            <div class="ks-info-row"><span class="ks-info-label">创建时间</span><span class="ks-info-value">{{ detailData.createTime }}</span></div>
+          </el-tab-pane>
+          <el-tab-pane name="versions" :label="`全部版本 (${detailData.versions?.length || 0})`">
+            <div v-if="detailData.versions?.length" class="ks-chips">
+              <span v-for="ver in detailData.versions" :key="ver" class="ks-chip">{{ ver }}</span>
+            </div>
+            <el-empty v-else description="暂无版本信息" :image-size="60" />
+          </el-tab-pane>
+          <el-tab-pane label="YAML" name="yaml">
+            <YamlEditor :model-value="detailYaml" :readonly="true" height="calc(100vh - 300px)" />
+          </el-tab-pane>
+        </el-tabs>
       </div>
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-        <el-button v-if="currentCrd" type="primary" @click="openYaml(currentCrd)">查看YAML</el-button>
-      </template>
-    </el-dialog>
+    </DetailDrawer>
 
     <!-- CRD YAML 对话框 -->
     <el-dialog v-model="yamlVisible" :title="`YAML - ${currentCrd?.name || ''}`" width="70%" top="5vh">
@@ -133,13 +134,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled } from '@element-plus/icons-vue'
 import { useClusterStore } from '@/stores/cluster'
 import { crdApi, type CrdVO } from '@/api/crd'
 import { jsonToYaml } from '@/utils/yaml'
 import YamlEditor from '@/components/YamlEditor.vue'
+import DetailDrawer from '@/components/DetailDrawer.vue'
 import '@/assets/styles/config-editor.css'
 
 const clusterStore = useClusterStore()
@@ -161,8 +163,16 @@ const currentCrd = ref<CrdVO | null>(null)
 
 // 结构化详情
 const detailVisible = ref(false)
+const detailTab = ref('info')
 const detailLoading = ref(false)
+const detailYaml = ref('')
 const detailData = ref<Partial<CrdVO> & { listKind?: string; plural?: string; singular?: string; shortNames?: string[]; versions?: string[] }>({})
+const detailMeta = computed(() => [
+  { label: '组', value: detailData.value.group || '-' },
+  { label: '存储版本', value: detailData.value.version || '-' },
+  { label: '作用域', value: detailData.value.scope === 'Cluster' ? '集群级' : '命名空间级' },
+  { label: '创建时间', value: detailData.value.createTime || '-' }
+])
 
 // 行操作分发
 const handleRowAction = (command: string, row: CrdVO) => {
@@ -176,6 +186,8 @@ const openDetail = async (row: CrdVO) => {
   const clusterId = clusterStore.currentClusterId
   if (!clusterId) return
   currentCrd.value = row
+  detailTab.value = 'info'
+  detailYaml.value = ''
   detailVisible.value = true
   detailLoading.value = true
   detailData.value = {
@@ -190,6 +202,8 @@ const openDetail = async (row: CrdVO) => {
     const response = await crdApi.getCrd(clusterId, row.name)
     const data = response.data as any
     const meta = data.metadata || {}
+    if (meta.managedFields) delete meta.managedFields
+    detailYaml.value = jsonToYaml(data)
     detailData.value = {
       ...detailData.value,
       plural: data.spec?.names?.plural || '-',
@@ -324,46 +338,5 @@ onMounted(() => {
 
 .yaml-editor {
   height: 100%;
-}
-
-.detail-wrapper {
-  min-height: 200px;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px 24px;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.detail-item .label,
-.verbs-section .label {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.detail-item .value {
-  font-size: 14px;
-  color: #1f2937;
-  word-break: break-all;
-}
-
-.verbs-section {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.verb-tags {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 </style>
