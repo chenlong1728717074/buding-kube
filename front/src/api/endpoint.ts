@@ -24,5 +24,10 @@ export const endpointApi = {
   // 获取Endpoint列表
   getEndpointList: (params: EndpointQueryDTO): Promise<ApiResponse<PageResponse<EndpointVO>>> => {
     return request.get('/endpoint/list', { params })
+  },
+
+  // 删除Endpoint(注意: 由控制器管理, 删除后可能被自动重建)
+  deleteEndpoint: (params: { clusterId: string; namespace: string; name: string }) => {
+    return request.delete('/endpoint', { params })
   }
 }

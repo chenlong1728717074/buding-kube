@@ -97,6 +97,11 @@ export const clusterApi = {
     })
   },
 
+  // 删除Node对象(节点重新注册后会再次出现)
+  deleteNode: (clusterId: string, name: string) => {
+    return request.delete('/node', { params: { clusterId, name } })
+  },
+
   // 获取Pod列表
   getPods: (name: string, params?: any) => {
     return request.get(`/cluster/${name}/pods`, { params })

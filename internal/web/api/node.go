@@ -26,6 +26,21 @@ func (api *NodeApi) Router() {
 	api.router.GET("/list", api.List)
 	api.router.GET("", api.Info)
 	api.router.PUT("/unSchedule", middleware.Blocker(), api.UnSchedule)
+	api.router.DELETE("", middleware.Blocker(), api.Delete)
+}
+
+// Delete 删除Node对象(节点重新注册后会再次出现)
+func (api *NodeApi) Delete(ctx *gin.Context) {
+	var base dto.BaseDTO
+	if err := api.BindQuery(ctx, &base); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	if err := api.srv.Delete(base); err != nil {
+		api.InternalError(ctx, "删除失败:%v", err)
+		return
+	}
+	api.SuccessMsg(ctx, "删除成功")
 }
 
 func (api *NodeApi) List(ctx *gin.Context) {

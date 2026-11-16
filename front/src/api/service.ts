@@ -47,5 +47,8 @@ export const serviceApi = {
     return request.get('/service', { params })
   },
 
-
+  // 删除Service
+  deleteService: (params: { clusterId: string; namespace: string; name: string }) => {
+    return request.delete('/service', { params })
+  }
 }

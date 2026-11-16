@@ -3,6 +3,7 @@ package api
 import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,6 +26,21 @@ func (api *KubeSrvApi) Router() {
 	api.router.GET("/list", api.List)
 	api.router.GET("", api.GetInfo)
 	api.router.GET("/yaml", api.GetYaml)
+	api.router.DELETE("", middleware.Blocker(), api.Delete)
+}
+
+// Delete 删除Service
+func (api *KubeSrvApi) Delete(ctx *gin.Context) {
+	var base dto.BaseDTO
+	if err := api.BindQuery(ctx, &base); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	if err := api.srv.Delete(base); err != nil {
+		api.InternalError(ctx, "删除失败:%v", err)
+		return
+	}
+	api.SuccessMsg(ctx, "删除成功")
 }
 
 func (api *KubeSrvApi) List(ctx *gin.Context) {

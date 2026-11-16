@@ -145,7 +145,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right" align="center" header-align="center">
+        <el-table-column label="操作" width="250" fixed="right" align="center" header-align="center">
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-main" @click="handleViewDetail(row)">
@@ -175,6 +175,7 @@
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
+              <el-button size="small" type="danger" plain class="btn-danger" @click="handleDeleteNode(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -403,6 +404,29 @@ const handleViewDetail = (node: any) => {
 // 查看Pod
 const handleViewPods = (node: any) => {
   router.push(`/cluster/pods/${clusterName}?node=${node.name}`)
+}
+
+// 删除Node对象(节点重新注册后会再次出现)
+const handleDeleteNode = (node: any) => {
+  ElMessageBox.confirm(
+    `确定要删除节点对象 "${node.name}" 吗？节点重新注册后会再次出现。`,
+    '确认删除',
+    {
+      type: 'warning',
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      confirmButtonClass: 'el-button--danger'
+    }
+  ).then(async () => {
+    try {
+      await clusterApi.deleteNode(clusterName, node.name)
+      ElMessage.success('删除成功')
+      fetchNodeList()
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }).catch(() => {})
 }
 
 // 更多操作

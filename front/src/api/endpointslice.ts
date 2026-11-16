@@ -25,5 +25,10 @@ export const endpointSliceApi = {
   // 获取EndpointSlice列表
   getEndpointSliceList: (params: EndpointSliceQueryDTO): Promise<ApiResponse<PageResponse<EndpointSliceVO>>> => {
     return request.get('/endpointslice/list', { params })
+  },
+
+  // 删除EndpointSlice(注意: 由控制器管理, 删除后可能被自动重建)
+  deleteEndpointSlice: (params: { clusterId: string; namespace: string; name: string }) => {
+    return request.delete('/endpointslice', { params })
   }
 }

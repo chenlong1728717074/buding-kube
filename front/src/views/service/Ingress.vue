@@ -103,6 +103,7 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
+              <el-button size="small" type="danger" plain class="btn-danger" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -194,7 +195,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
 import { ingressApi, type IngressVO, type IngressQueryDTO } from '@/api/ingress'
 import { clusterApi } from '@/api/cluster'
@@ -362,6 +363,33 @@ const handleMoreAction = (command: string, row: IngressVO) => {
       handleViewYaml(row)
       break
   }
+}
+
+// 删除Ingress
+const handleDelete = (row: IngressVO) => {
+  ElMessageBox.confirm(
+    `确定要删除 Ingress "${row.name}" 吗？此操作不可恢复。`,
+    '确认删除',
+    {
+      type: 'warning',
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      confirmButtonClass: 'el-button--danger'
+    }
+  ).then(async () => {
+    try {
+      await ingressApi.deleteIngress({
+        clusterId: clusterId.value,
+        namespace: row.namespace,
+        name: row.name
+      })
+      ElMessage.success('删除成功')
+      fetchIngressList()
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }).catch(() => {})
 }
 
 const buildIngressYamlExample = () => {

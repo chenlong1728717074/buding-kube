@@ -78,12 +78,13 @@
             />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" align="center" header-align="center" fixed="right">
+        <el-table-column label="操作" width="160" align="center" header-align="center" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-main" @click="handleViewDetail(row)">
                 详情
               </el-button>
+              <el-button size="small" type="danger" plain class="btn-danger" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -108,7 +109,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import { clusterApi } from '@/api/cluster'
 import { useClusterStore } from '@/stores/cluster'
@@ -189,6 +190,30 @@ const handleViewDetail = (row: any) => {
       hostname: row.hostname || row.name
     }
   })
+}
+
+// 删除Node对象(节点重新注册后会再次出现)
+const handleDelete = (row: any) => {
+  const name = row.hostname || row.name
+  ElMessageBox.confirm(
+    `确定要删除节点对象 "${name}" 吗？节点重新注册后会再次出现。`,
+    '确认删除',
+    {
+      type: 'warning',
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      confirmButtonClass: 'el-button--danger'
+    }
+  ).then(async () => {
+    try {
+      await clusterApi.deleteNode(clusterId.value, name)
+      ElMessage.success('删除成功')
+      fetchNodeList()
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }).catch(() => {})
 }
 
 // 处理调度状态切换

@@ -61,3 +61,17 @@ func (s *StorageClassService) List(query dto.StorageClassPageQueryBaseDTO) ([]vo
 	})
 	return result, nil
 }
+
+// Delete 删除StorageClass
+func (s *StorageClassService) Delete(base dto.BaseDTO) error {
+	clientSet, err := ClusterMap.Get(base.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
+		return errors.New("获取集群失败")
+	}
+	if err := clientSet.StorageV1().StorageClasses().Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+		logs.Error("删除storageclass失败: %v", err)
+		return fmt.Errorf("删除storageclass失败: %v", err)
+	}
+	return nil
+}

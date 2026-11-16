@@ -78,7 +78,7 @@
             {{ formatTime(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right" header-align="center">
+        <el-table-column label="操作" width="160" fixed="right" header-align="center">
           <template #default="{ row }">
             <div class="action-buttons">
               <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
@@ -91,6 +91,7 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
+              <el-button size="small" type="danger" plain class="btn-danger" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -182,7 +183,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
 import { endpointApi, type EndpointVO, type EndpointQueryDTO } from '@/api/endpoint'
 import { clusterApi } from '@/api/cluster'
@@ -345,6 +346,33 @@ const handleMoreAction = (command: string, row: EndpointVO) => {
       handleViewYaml(row)
       break
   }
+}
+
+// 删除Endpoint(Endpoint 由控制器管理, 删除后可能被自动重建)
+const handleDelete = (row: EndpointVO) => {
+  ElMessageBox.confirm(
+    `确定要删除 Endpoint "${row.name}" 吗？该对象通常由控制器自动管理，删除后可能被重建。`,
+    '确认删除',
+    {
+      type: 'warning',
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      confirmButtonClass: 'el-button--danger'
+    }
+  ).then(async () => {
+    try {
+      await endpointApi.deleteEndpoint({
+        clusterId: clusterId.value,
+        namespace: row.namespace,
+        name: row.name
+      })
+      ElMessage.success('删除成功')
+      fetchEndpointList()
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }).catch(() => {})
 }
 
 const buildEndpointYamlExample = () => {

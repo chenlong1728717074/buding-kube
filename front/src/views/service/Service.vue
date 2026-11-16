@@ -110,6 +110,7 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
+              <el-button size="small" type="danger" plain class="btn-danger" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -196,7 +197,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
 import { serviceApi, type ServiceVO, type ServiceQueryDTO, type ServiceBaseDTO } from '@/api/service'
 import { clusterApi } from '@/api/cluster'
@@ -399,6 +400,33 @@ const handleYamlChange = (newYaml: string) => {
 // 查看详情
 const handleDetail = (row: ServiceVO) => {
   ElMessage.info('详情功能开发中')
+}
+
+// 删除Service
+const handleDelete = (row: ServiceVO) => {
+  ElMessageBox.confirm(
+    `确定要删除 Service "${row.name}" 吗？此操作不可恢复。`,
+    '确认删除',
+    {
+      type: 'warning',
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      confirmButtonClass: 'el-button--danger'
+    }
+  ).then(async () => {
+    try {
+      await serviceApi.deleteService({
+        clusterId: clusterId.value,
+        namespace: row.namespace,
+        name: row.name
+      })
+      ElMessage.success('删除成功')
+      fetchServiceList()
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }).catch(() => {})
 }
 
 // 跳转到命名空间详情

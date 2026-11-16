@@ -65,3 +65,17 @@ func (s *EndpointSliceService) List(query dto.EndpointSlicePageQueryBaseDTO) ([]
 	})
 	return result, nil
 }
+
+// Delete 删除EndpointSlice(注意: 由控制器管理, 删除后可能被自动重建)
+func (s *EndpointSliceService) Delete(base dto.BaseDTO) error {
+	clientSet, err := ClusterMap.Get(base.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
+		return errors.New("获取集群失败")
+	}
+	if err := clientSet.DiscoveryV1().EndpointSlices(base.Namespace).Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+		logs.Error("删除endpointslice失败: %v", err)
+		return fmt.Errorf("删除endpointslice失败: %v", err)
+	}
+	return nil
+}

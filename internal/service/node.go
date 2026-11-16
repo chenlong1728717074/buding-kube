@@ -102,3 +102,17 @@ func (s *NodeService) GetNodeInfo(query dto.NodeInfoQueryDTO) (*vo.NodeInfoVO, e
 	//metrics-server相关暂时不获取
 	return vo.Node2InfoVO(node, events, pods), nil
 }
+
+// Delete 删除Node对象(节点重新注册后会再次出现)
+func (s *NodeService) Delete(base dto.BaseDTO) error {
+	clientSet, err := ClusterMap.Get(base.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
+		return err
+	}
+	if err := clientSet.CoreV1().Nodes().Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+		logs.Error("删除node失败: %v", err)
+		return err
+	}
+	return nil
+}

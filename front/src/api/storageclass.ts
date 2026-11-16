@@ -24,6 +24,11 @@ export interface StorageClassVO {
 export const storageClassApi = {
   getList(params: StorageClassPageQueryDTO): Promise<ApiResponse<PageResponse<StorageClassVO>>> {
     return request.get('/storageClass/list', { params })
+  },
+
+  // 删除StorageClass
+  deleteStorageClass: (params: { clusterId: string; name: string }) => {
+    return request.delete('/storageClass', { params })
   }
 }
 

@@ -67,3 +67,17 @@ func (s *PVService) List(query dto.PVPageQueryBaseDTO) ([]vo.PVVO, error) {
 	})
 	return result, nil
 }
+
+// Delete 删除PersistentVolume
+func (s *PVService) Delete(base dto.BaseDTO) error {
+	clientSet, err := ClusterMap.Get(base.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
+		return errors.New("获取集群失败")
+	}
+	if err := clientSet.CoreV1().PersistentVolumes().Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+		logs.Error("删除pv失败: %v", err)
+		return fmt.Errorf("删除pv失败: %v", err)
+	}
+	return nil
+}

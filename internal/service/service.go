@@ -113,3 +113,17 @@ func (s *KubeSrvService) GetYaml(query dto.ServiceBaseDTO) (string, error) {
 	}
 	return string(yamlData), nil
 }
+
+// Delete 删除Service
+func (s *KubeSrvService) Delete(base dto.BaseDTO) error {
+	clientSet, err := ClusterMap.Get(base.ClusterId)
+	if err != nil {
+		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
+		return errors.New("获取集群失败")
+	}
+	if err := clientSet.CoreV1().Services(base.Namespace).Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+		logs.Error("删除service失败: %v", err)
+		return fmt.Errorf("删除service失败: %v", err)
+	}
+	return nil
+}

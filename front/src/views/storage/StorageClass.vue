@@ -36,10 +36,11 @@
         <el-table-column prop="createTime" label="创建时间" min-width="180">
           <template #default="{ row }">{{ formatDate(row.createTime || row.creationTimestamp) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="100" align="center" header-align="center" fixed="right">
+        <el-table-column label="操作" width="160" align="center" header-align="center" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-main" @click="openYaml(row)">详情</el-button>
+              <el-button size="small" type="danger" plain class="btn-danger" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -85,7 +86,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { storageClassApi, type StorageClassVO, type StorageClassPageQueryDTO } from '@/api/storageclass'
@@ -164,6 +165,29 @@ const fetchList = async () => {
 const handleSearch = () => {
   pagination.page = 1
   fetchList()
+}
+
+// 删除StorageClass
+const handleDelete = (row: StorageClassVO) => {
+  ElMessageBox.confirm(
+    `确定要删除 StorageClass "${row.name}" 吗？此操作不可恢复。`,
+    '确认删除',
+    {
+      type: 'warning',
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      confirmButtonClass: 'el-button--danger'
+    }
+  ).then(async () => {
+    try {
+      await storageClassApi.deleteStorageClass({ clusterId: clusterId.value, name: row.name })
+      ElMessage.success('删除成功')
+      fetchList()
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }).catch(() => {})
 }
 
 const handleReset = async () => {
