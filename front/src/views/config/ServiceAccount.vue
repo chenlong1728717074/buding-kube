@@ -248,28 +248,28 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="900px" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="80%" :close-on-click-modal="false" class="config-dialog">
       <template #header>
         <div class="dialog-header">
-          <h3 class="dialog-title">编辑信息</h3>
+          <div>
+            <h3 class="dialog-title">编辑信息</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">ServiceAccount 基础信息</div>
+          </div>
         </div>
       </template>
       <div class="config-editor">
         <div class="config-content">
-          <div class="group-box" style="margin-bottom: 12px;">
-            <div class="group-title">基本信息</div>
-            <el-form :model="editInfoForm" label-width="100px">
-              <el-form-item label="名称">
-                <el-input :model-value="currentRow?.name || ''" disabled />
-              </el-form-item>
-              <el-form-item label="标签(JSON)">
-                <el-input v-model="editInfoForm.labelsJson" type="textarea" :rows="3" />
-              </el-form-item>
-              <el-form-item label="注解(JSON)">
-                <el-input v-model="editInfoForm.annotationsJson" type="textarea" :rows="3" />
-              </el-form-item>
-            </el-form>
-          </div>
+          <el-form :model="editInfoForm" label-width="100px" class="serviceaccount-form">
+            <el-form-item label="名称">
+              <el-input :model-value="currentRow?.name || ''" disabled />
+            </el-form-item>
+            <el-form-item label="标签(JSON)" prop="labelsJson">
+              <el-input v-model="editInfoForm.labelsJson" type="textarea" :rows="3" placeholder='{"key": "value"}' />
+            </el-form-item>
+            <el-form-item label="注解(JSON)" prop="annotationsJson">
+              <el-input v-model="editInfoForm.annotationsJson" type="textarea" :rows="3" placeholder='{"key": "value"}' />
+            </el-form-item>
+          </el-form>
         </div>
       </div>
       <template #footer>
