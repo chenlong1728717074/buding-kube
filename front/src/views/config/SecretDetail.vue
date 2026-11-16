@@ -1,87 +1,119 @@
 <template>
-  <div class="detail-page">
-    <!-- 头部卡片 -->
-    <el-card class="ks-header-card" shadow="never">
-      <div class="ks-breadcrumb-row">
-        <el-link :underline="false" class="ks-back" @click="handleBack">
+  <div class="secret-detail">
+    <div class="page-header">
+      <div class="header-left">
+        <el-button @click="handleBack">
           <el-icon><ArrowLeft /></el-icon>
-          <span>Secret</span>
-        </el-link>
-        <el-dropdown trigger="click" popper-class="ks-dark-menu" @command="handleMore">
-          <el-button class="ks-action-btn">
-            操作
-            <el-icon class="el-icon--right"><ArrowUp /></el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="editInfo"><el-icon><EditPen /></el-icon>编辑信息</el-dropdown-item>
-              <el-dropdown-item command="yaml"><el-icon><Document /></el-icon>查看/编辑YAML</el-dropdown-item>
-              <el-dropdown-item command="editData"><el-icon><Setting /></el-icon>编辑设置</el-dropdown-item>
-              <el-dropdown-item command="delete" divided><el-icon><Delete /></el-icon>删除</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+          返回
+        </el-button>
+        <h1>{{ secret?.name || name }}</h1>
       </div>
-      <div class="ks-title-row">
-        <div class="ks-icon-block"><el-icon :size="24"><Key /></el-icon></div>
-        <div class="ks-title-main">
-          <div class="ks-name">{{ secret?.name || name }}</div>
-          <div class="ks-desc">{{ secret?.describe || '-' }}</div>
-        </div>
+      <div class="header-right">
+        <el-button @click="handleMore('editInfo')">
+          <el-icon><EditPen /></el-icon>
+          编辑
+        </el-button>
+        <el-button @click="handleMore('editData')">
+          <el-icon><Setting /></el-icon>
+          编辑设置
+        </el-button>
+        <el-button @click="handleMore('yaml')">
+          <el-icon><Document /></el-icon>
+          查看YAML
+        </el-button>
+        <el-button type="danger" @click="openDelete">
+          <el-icon><Delete /></el-icon>
+          删除
+        </el-button>
       </div>
-    </el-card>
+    </div>
 
     <div v-if="loading" class="loading-container">
       <el-skeleton :rows="8" animated />
     </div>
 
-    <template v-else-if="secret">
-      <!-- 属性 -->
-      <el-card class="ks-card" shadow="never">
+    <div v-else-if="secret" class="detail-content">
+      <el-card class="info-card">
         <template #header>
-          <div class="ks-card-header"><span>属性</span></div>
+          <div class="card-header"><span>基本信息</span></div>
         </template>
-        <div class="props-grid">
-          <div class="prop-item"><div class="prop-label">集群</div><div class="prop-value">{{ clusterId }}</div></div>
-          <div class="prop-item"><div class="prop-label">命名空间</div><div class="prop-value">{{ secret.namespace }}</div></div>
-          <div class="prop-item"><div class="prop-label">类型</div><div class="prop-value">{{ secret.type || '-' }}</div></div>
-          <div class="prop-item"><div class="prop-label">别名</div><div class="prop-value">{{ secret.alias || '-' }}</div></div>
-          <div class="prop-item"><div class="prop-label">创建时间</div><div class="prop-value">{{ formatDate(secret.creationTimestamp) }}</div></div>
-          <div class="prop-item"><div class="prop-label">备注</div><div class="prop-value">{{ secret.describe || '-' }}</div></div>
+        <div class="info-grid">
+          <div class="info-item"><label>名称：</label><span>{{ secret.name }}</span></div>
+          <div class="info-item"><label>命名空间：</label><span>{{ secret.namespace }}</span></div>
+          <div class="info-item"><label>类型：</label><span>{{ secret.type || '-' }}</span></div>
+          <div class="info-item"><label>别名：</label><span>{{ secret.alias || '-' }}</span></div>
+          <div class="info-item"><label>备注：</label><span>{{ secret.describe || '-' }}</span></div>
+          <div class="info-item"><label>创建时间：</label><span>{{ formatDate(secret.creationTimestamp) }}</span></div>
         </div>
       </el-card>
 
-      <!-- 数据 -->
-      <el-card class="ks-card" shadow="never">
-        <template #header><div class="ks-card-header"><span>数据 ({{ dataRows.length }})</span></div></template>
-        <div class="ks-data-hint">以下值已自动解码显示，点击行可展开/收起完整内容</div>
-        <div v-if="dataRows.length" class="ks-data-list">
-          <div v-for="row in dataRows" :key="row.key" class="ks-data-row" @click="toggleExpand(row.key)">
-            <span class="ks-data-key">{{ row.key }}</span>
-            <span class="ks-data-value" :class="{ expanded: !!expandedKeys[row.key] }">{{ expandedKeys[row.key] ? row.value : truncateValue(row.value) }}</span>
-          </div>
-        </div>
-        <el-empty v-else description="暂无数据" :image-size="60" />
-      </el-card>
+      <el-row :gutter="20" style="margin-top: 20px;">
+        <el-col :span="12">
+          <el-card class="info-card">
+            <template #header>
+              <div class="card-header">
+                <span>标签</span>
+                <el-tag size="small" type="info">{{ labelRows.length }}</el-tag>
+              </div>
+            </template>
+            <div class="labels-content">
+              <div v-if="labelRows.length === 0" class="empty-state">
+                <el-empty description="暂无标签" :image-size="60" />
+              </div>
+              <div v-else class="labels-list">
+                <div v-for="row in labelRows" :key="row.key" class="label-item">
+                  <div class="label-key">{{ row.key }}</div>
+                  <div class="label-value">{{ row.value }}</div>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+        <el-col :span="12">
+          <el-card class="info-card">
+            <template #header>
+              <div class="card-header">
+                <span>注解</span>
+                <el-tag size="small" type="info">{{ annotationRows.length }}</el-tag>
+              </div>
+            </template>
+            <div class="annotations-content">
+              <div v-if="annotationRows.length === 0" class="empty-state">
+                <el-empty description="暂无注解" :image-size="60" />
+              </div>
+              <div v-else class="annotations-list">
+                <div v-for="row in annotationRows" :key="row.key" class="annotation-item">
+                  <div class="annotation-key">{{ row.key }}</div>
+                  <div class="annotation-value">{{ row.value }}</div>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
 
-      <!-- 标签 -->
-      <el-card class="ks-card" shadow="never">
-        <template #header><div class="ks-card-header"><span>标签 ({{ labelRows.length }})</span></div></template>
-        <div v-if="labelRows.length" class="ks-chips">
-          <span v-for="row in labelRows" :key="row.key" class="ks-chip"><span class="ks-chip-key">{{ row.key }}</span><span class="ks-chip-value">= {{ row.value }}</span></span>
-        </div>
-        <el-empty v-else description="暂无标签" :image-size="60" />
-      </el-card>
-
-      <!-- 注解 -->
-      <el-card class="ks-card" shadow="never">
-        <template #header><div class="ks-card-header"><span>注解 ({{ annotationRows.length }})</span></div></template>
-        <div v-if="annotationRows.length" class="ks-chips">
-          <span v-for="row in annotationRows" :key="row.key" class="ks-chip"><span class="ks-chip-key">{{ row.key }}</span><span class="ks-chip-value">= {{ row.value }}</span></span>
-        </div>
-        <el-empty v-else description="暂无注解" :image-size="60" />
-      </el-card>
-    </template>
+      <el-row style="margin-top: 20px;">
+        <el-col :span="24">
+          <el-card class="info-card">
+            <template #header>
+              <div class="card-header"><span>数据 ({{ dataRows.length }})</span></div>
+            </template>
+            <div class="data-hint">以下值已自动解码显示</div>
+            <div class="data-content">
+              <div v-if="dataRows.length === 0" class="empty-state">
+                <el-empty description="暂无数据" :image-size="60" />
+              </div>
+              <div v-else class="data-list">
+                <div v-for="row in dataRows" :key="row.key" class="data-item">
+                  <div class="data-key">{{ row.key }}</div>
+                  <div class="data-value">{{ row.value }}</div>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+    </div>
 
     <div v-else class="empty-container">
       <el-empty description="未找到Secret" />
@@ -98,16 +130,16 @@
         <div class="config-content">
           <div class="group-box" style="margin-bottom: 12px;">
             <div class="group-title">基本信息</div>
-            <el-form :model="editInfoForm" label-width="100px">
+            <el-form :model="editInfoForm" label-width="120px">
               <el-form-item label="名称">
                 <el-input :model-value="secret?.name || ''" disabled />
               </el-form-item>
               <el-form-item label="别名">
-                <el-input v-model="editInfoForm.alias" placeholder="请输入别名" />
+                <el-input v-model="editInfoForm.alias" placeholder="请输入别名" maxlength="63" show-word-limit />
                 <div class="helper">别名只能包含中文、字母、数字和连字符（-），不得以连字符（-）开头或结尾，最长 63 个字符。</div>
               </el-form-item>
               <el-form-item label="备注">
-                <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" placeholder="请输入备注" />
+                <el-input v-model="editInfoForm.describe" type="textarea" :rows="4" placeholder="请输入备注" maxlength="200" show-word-limit />
                 <div class="helper">描述可包含任意字符，最长 256 个字符。</div>
               </el-form-item>
             </el-form>
@@ -209,7 +241,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, ArrowUp, EditPen, Document, Setting, Delete, Key } from '@element-plus/icons-vue'
+import { ArrowLeft, EditPen, Document, Setting, Delete, Key } from '@element-plus/icons-vue'
 import { secretApi, type SecretVO } from '@/api/secret'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -240,16 +272,6 @@ const secret = ref<SecretVO | null>(null)
 const labelRows = ref<{ key: string; value: string }[]>([])
 const annotationRows = ref<{ key: string; value: string }[]>([])
 const dataRows = ref<{ key: string; value: string }[]>([])
-
-// 数据值展开/收起
-const expandedKeys = ref<Record<string, boolean>>({})
-const toggleExpand = (key: string) => {
-  expandedKeys.value[key] = !expandedKeys.value[key]
-}
-const truncateValue = (value: string) => {
-  const flat = String(value ?? '').replace(/\s+/g, ' ').trim()
-  return flat.length > 120 ? flat.slice(0, 120) + '…' : flat
-}
 
 const handleBack = () => router.back()
 
@@ -506,183 +528,126 @@ onMounted(() => {
 })
 </script>
 
+
 <style scoped>
-.detail-page {
+.secret-detail {
   padding: 20px;
+}
+
+.page-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
   gap: 16px;
+}
+
+.header-left h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+  word-break: break-all;
+}
+
+.header-right {
+  display: flex;
+  gap: 8px;
 }
 
 .loading-container {
   padding: 20px;
-  background: #fff;
-  border-radius: 8px;
 }
 
-.ks-breadcrumb-row {
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.ks-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  color: #1f2937;
-}
-
-.ks-back:hover {
-  color: var(--el-color-primary);
-}
-
-.ks-title-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  margin-top: 16px;
-}
-
-.ks-icon-block {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #10b981, #34d399);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.ks-title-main {
-  min-width: 0;
-}
-
-.ks-name {
-  font-size: 22px;
-  font-weight: 600;
-  color: #1f2937;
-  word-break: break-all;
-  line-height: 1.3;
-}
-
-.ks-desc {
-  margin-top: 4px;
-  color: #9ca3af;
-  font-size: 13px;
-}
-
-.ks-card {
-  border-radius: 8px;
-}
-
-.ks-card-header {
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.props-grid {
+.info-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px 32px;
-}
-
-.prop-label {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-bottom: 6px;
-}
-
-.prop-value {
-  font-size: 14px;
-  color: #1f2937;
-  font-weight: 500;
-  word-break: break-all;
-}
-
-.ks-data-hint {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-bottom: 12px;
-}
-
-.ks-data-row {
-  display: flex;
-  align-items: center;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
-  background: #f7f8fa;
-  border-radius: 24px;
-  padding: 12px 24px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  transition: background 0.2s ease;
 }
 
-.ks-data-row:hover {
-  background: #f0f2f5;
-}
-
-.ks-data-key {
-  width: 220px;
-  flex-shrink: 0;
-  color: #6b7280;
-  font-size: 13px;
-  font-family: 'SF Mono', Monaco, Consolas, monospace;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ks-data-value {
-  flex: 1;
-  min-width: 0;
-  color: #1f2937;
-  font-size: 13px;
-  font-family: 'SF Mono', Monaco, Consolas, monospace;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: right;
-}
-
-.ks-data-value.expanded {
-  white-space: pre-wrap;
-  overflow: auto;
-  max-height: 300px;
-  text-align: left;
-}
-
-.ks-chips {
+.info-item {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.ks-chip {
-  display: inline-flex;
   align-items: center;
-  max-width: 100%;
-  padding: 4px 10px;
-  background: #f5f7fa;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
+}
+
+.info-item label {
+  font-weight: 500;
+  color: #606266;
+  min-width: 120px;
+}
+
+.data-hint {
   font-size: 12px;
-  color: #475569;
+  color: #9ca3af;
+  margin-bottom: 12px;
 }
 
-.ks-chip-key {
-  color: #1f2937;
-  margin-right: 4px;
+.labels-content,
+.annotations-content,
+.data-content {
+  max-height: 320px;
+  overflow-y: auto;
 }
 
-.ks-chip-value {
-  color: #6b7280;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.empty-state {
+  text-align: center;
+  padding: 20px;
+}
+
+.labels-list,
+.annotations-list,
+.data-list {
+  padding: 0;
+}
+
+.label-item,
+.annotation-item,
+.data-item {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background-color: #fafafa;
+}
+
+.label-key,
+.annotation-key,
+.data-key {
+  font-weight: 500;
+  color: #409eff;
+  font-size: 12px;
+  margin-bottom: 4px;
+  word-break: break-all;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+}
+
+.label-value,
+.annotation-value,
+.data-value {
+  color: #606266;
+  font-size: 13px;
+  word-break: break-all;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  white-space: pre-wrap;
 }
 
 .config-dialog :deep(.el-dialog__header) {
@@ -697,33 +662,19 @@ onMounted(() => {
 .config-dialog :deep(.el-dialog__footer) {
   padding: 0;
 }
-</style>
 
-<!-- 操作下拉深色菜单(KubeSphere 风格), popper 挂在 body 上需全局样式 -->
-<style>
-.ks-dark-menu.el-popper {
-  background: #1f2937;
-  border: 1px solid #1f2937;
+:deep(.el-card__header) {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #ebeef5;
 }
 
-.ks-dark-menu .el-dropdown-menu {
-  background: #1f2937;
-  padding: 6px;
+:deep(.el-card__body) {
+  padding: 20px;
 }
 
-.ks-dark-menu .el-dropdown-menu__item {
-  color: #e5e7eb;
-  padding: 9px 16px;
-  border-radius: 4px;
-}
-
-.ks-dark-menu .el-dropdown-menu__item:hover {
-  background: #374151;
-  color: #fff;
-}
-
-.ks-dark-menu .el-popper__arrow::before {
-  background: #1f2937;
-  border: 1px solid #1f2937;
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

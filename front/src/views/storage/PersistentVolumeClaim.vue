@@ -114,6 +114,7 @@ import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled } from '@element-plus/icons-vue'
 import { clusterApi } from '@/api/cluster'
+import { namespaceApi } from '@/api/namespace'
 import { pvcApi, type PVCVO, type PVCQueryDTO } from '@/api/pvc'
 import { useClusterStore } from '@/stores/cluster'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -183,11 +184,15 @@ const formatDate = (dateString?: string) => {
 
 // 获取命名空间列表(用于筛选)
 const fetchNamespaces = async () => {
-  if (!clusterId.value) return
+  if (!clusterId.value) {
+    namespaceList.value = []
+    return
+  }
   try {
-    const resp = await clusterApi.getNamespaces(clusterId.value)
-    const data = (resp.data as any)?.items || (resp.data as any)?.list || (resp.data as any) || []
-    namespaceList.value = Array.isArray(data) ? data : []
+    const resp = await namespaceApi.getList({ clusterId: clusterId.value, page: 1, pageSize: 10000 })
+    if (resp.code === 200) {
+      namespaceList.value = resp.data.items || []
+    }
   } catch {
     namespaceList.value = []
   }
