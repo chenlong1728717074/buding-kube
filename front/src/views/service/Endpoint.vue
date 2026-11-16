@@ -78,9 +78,10 @@
             {{ formatTime(row.createTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right" header-align="center">
+        <el-table-column label="操作" width="200" fixed="right" header-align="center">
           <template #default="{ row }">
             <div class="action-buttons">
+              <el-button size="small" type="primary" class="btn-main" @click="handleViewDetail(row)">详情</el-button>
               <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
@@ -346,6 +347,11 @@ const handleMoreAction = (command: string, row: EndpointVO) => {
       handleViewYaml(row)
       break
   }
+}
+
+// 详情(暂未实现, 与全站统一)
+const handleViewDetail = (row: EndpointVO) => {
+  ElMessage.info('详情功能暂未实现')
 }
 
 // 删除Endpoint(Endpoint 由控制器管理, 删除后可能被自动重建)

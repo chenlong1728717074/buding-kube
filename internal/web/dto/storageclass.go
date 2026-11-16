@@ -23,6 +23,8 @@ type StorageClassBaseDTO struct {
 type StorageClassPageQueryBaseDTO struct {
 	PageQueryDTO
 	StorageClassBaseDTO
+	// StorageType 存储类型过滤: 块存储/对象存储/文件存储/未分类
+	StorageType string `json:"storageType" form:"storageType"`
 }
 
 type StorageClassApplyDTO struct {

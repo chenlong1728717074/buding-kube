@@ -51,10 +51,20 @@
         <el-table-column prop="createTime" label="创建时间" min-width="170" align="center" header-align="center">
           <template #default="{ row }">{{ formatDate(row.createTime || row.creationTimestamp) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160" align="center" header-align="center" fixed="right">
+        <el-table-column label="操作" width="200" align="center" header-align="center" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" class="btn-main" @click="openYaml(row)">详情</el-button>
+              <el-button size="small" type="primary" class="btn-main" @click="handleViewDetail(row)">详情</el-button>
+              <el-dropdown trigger="click" @command="(cmd: string) => handleRowAction(cmd, row)">
+                <el-button size="small" text circle class="more-btn">
+                  <el-icon><MoreFilled /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
               <el-button size="small" type="danger" plain class="btn-danger" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
@@ -102,7 +112,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh } from '@element-plus/icons-vue'
+import { Search, Refresh, MoreFilled } from '@element-plus/icons-vue'
 import { clusterApi } from '@/api/cluster'
 import { pvcApi, type PVCVO, type PVCQueryDTO } from '@/api/pvc'
 import { useClusterStore } from '@/stores/cluster'
@@ -243,6 +253,18 @@ const openYaml = (row: PVCVO) => {
   currentName.value = row.name
   yamlContent.value = row.yaml || ''
   yamlDialogVisible.value = true
+}
+
+// 详情(暂未实现, 与全站统一)
+const handleViewDetail = (row: PVCVO) => {
+  ElMessage.info('详情功能暂未实现')
+}
+
+// 行操作分发
+const handleRowAction = (cmd: string, row: PVCVO) => {
+  if (cmd === 'yaml') {
+    openYaml(row)
+  }
 }
 
 // 删除PersistentVolumeClaim

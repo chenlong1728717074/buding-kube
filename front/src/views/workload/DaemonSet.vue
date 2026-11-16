@@ -444,7 +444,7 @@ const getStatusType = (status: string) => {
 
 // 查看详情
 const handleViewDetail = (row: DaemonSetVO) => {
-  ElMessage.info('查看详情功能开发中')
+  ElMessage.info('详情功能暂未实现')
 }
 
 // 跳转到命名空间详情
@@ -465,7 +465,7 @@ const formatTime = (time: string) => {
 
 // 查看详情
 const handleDetail = (row: DaemonSetVO) => {
-  ElMessage.info('详情功能暂未开放')
+  ElMessage.info('详情功能暂未实现')
 }
 
 // 编辑DaemonSet

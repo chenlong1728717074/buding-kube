@@ -338,7 +338,7 @@ const handleNamespaceChange = (namespace: string) => {
 
 // 详情处理
 const handleDetail = (row: CronJobVO) => {
-  ElMessage.info('详情功能开发中')
+  ElMessage.info('详情功能暂未实现')
 }
 
 // 更多操作处理

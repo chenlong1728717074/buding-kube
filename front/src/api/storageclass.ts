@@ -5,11 +5,15 @@ export interface StorageClassPageQueryDTO {
   page?: number
   pageSize?: number
   keyword?: string
+  storageType?: string
 }
 
 export interface StorageClassVO {
   name: string
   provisioner?: string
+  storageType?: string
+  pvcCount?: number
+  allowVolumeClone?: boolean
   parameters?: Record<string, string>
   reclaimPolicy?: string
   volumeBindingMode?: string

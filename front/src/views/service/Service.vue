@@ -399,7 +399,7 @@ const handleYamlChange = (newYaml: string) => {
 
 // 查看详情
 const handleDetail = (row: ServiceVO) => {
-  ElMessage.info('详情功能开发中')
+  ElMessage.info('详情功能暂未实现')
 }
 
 // 删除Service

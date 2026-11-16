@@ -300,7 +300,7 @@ const handleCurrentChange = (page: number) => {
 
 // 查看详情
 const handleViewDetail = (row: JobVO) => {
-  ElMessage.info('查看详情功能开发中')
+  ElMessage.info('详情功能暂未实现')
 }
 
 // 跳转到命名空间详情
@@ -330,7 +330,7 @@ const handleNamespaceChange = (namespace: string) => {
 
 // 详情处理
 const handleDetail = (row: JobVO) => {
-  ElMessage.info('详情功能开发中')
+  ElMessage.info('详情功能暂未实现')
 }
 
 // 更多操作处理

@@ -90,7 +90,7 @@
         <el-table-column label="操作" width="200" fixed="right" header-align="center">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" class="btn-main" @click="handleDetail(row)" disabled>
+              <el-button size="small" type="primary" class="btn-main" @click="handleDetail(row)">
                 详情
               </el-button>
               <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">

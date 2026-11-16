@@ -10,6 +10,9 @@ import (
 type StorageClassVO struct {
 	BaseVO
 	Provisioner          string                            `json:"provisioner"`
+	StorageType          string                            `json:"storageType"`
+	PVCCount             int64                             `json:"pvcCount"`
+	AllowVolumeClone     bool                              `json:"allowVolumeClone"`
 	Parameters           map[string]string                 `json:"parameters"`
 	ReclaimPolicy        *v1.PersistentVolumeReclaimPolicy `json:"reclaimPolicy"`
 	VolumeBindingMode    *storagev1.VolumeBindingMode      `json:"volumeBindingMode"`

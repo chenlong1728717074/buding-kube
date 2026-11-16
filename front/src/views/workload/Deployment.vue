@@ -416,7 +416,7 @@ const getStatusType = (status: string) => {
 // 查看详情
 const handleViewDetail = (row: DeploymentVO) => {
   // TODO: 实现查看详情功能
-  ElMessage.info('查看详情功能开发中')
+  ElMessage.info('详情功能暂未实现')
 }
 
 // 跳转到命名空间详情
@@ -471,7 +471,7 @@ const handleEdit = async (row: DeploymentVO) => {
 
 // 查看详情
 const handleDetail = (row: DeploymentVO) => {
-  ElMessage.info('详情功能暂未开放')
+  ElMessage.info('详情功能暂未实现')
 }
 
 // 更多操作处理
