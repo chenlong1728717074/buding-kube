@@ -238,6 +238,15 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
+        path: 'config/configmap/detail',
+        name: 'ConfigMapDetail',
+        component: () => import('@/views/config/ConfigMapDetail.vue'),
+        meta: {
+          title: 'ConfigMap详情',
+          requiresAuth: true
+        }
+      },
+      {
         path: 'config/secret',
         name: 'Secret',
         component: () => import('@/views/config/Secret.vue'),
@@ -247,11 +256,29 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
+        path: 'config/secret/detail',
+        name: 'SecretDetail',
+        component: () => import('@/views/config/SecretDetail.vue'),
+        meta: {
+          title: 'Secret详情',
+          requiresAuth: true
+        }
+      },
+      {
         path: 'config/serviceaccount',
         name: 'ServiceAccount',
         component: () => import('@/views/config/ServiceAccount.vue'),
         meta: {
           title: 'ServiceAccount',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'config/serviceaccount/detail',
+        name: 'ServiceAccountDetail',
+        component: () => import('@/views/config/ServiceAccountDetail.vue'),
+        meta: {
+          title: 'ServiceAccount详情',
           requiresAuth: true
         }
       },

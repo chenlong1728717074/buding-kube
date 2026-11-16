@@ -309,51 +309,6 @@
       @confirm="confirmDelete"
       @cancel="() => deleteDialogVisible = false"
     />
-
-    <!-- ServiceAccount 详情抽屉(KubeSphere 风格) -->
-    <DetailDrawer v-model="detailVisible" kind="ServiceAccount" :name="detailRow?.name" :meta="detailMeta">
-      <el-tabs v-model="detailTab" class="ks-tabs">
-        <el-tab-pane label="基本信息" name="info">
-          <div class="ks-info-row"><span class="ks-info-label">名称</span><span class="ks-info-value">{{ detailRow?.name || '-' }}</span></div>
-          <div class="ks-info-row"><span class="ks-info-label">命名空间</span><span class="ks-info-value">{{ detailRow?.namespace || '-' }}</span></div>
-          <div class="ks-info-row"><span class="ks-info-label">自动挂载令牌</span><span class="ks-info-value">{{ detailRow?.automountServiceAccountToken === false ? '否' : '是' }}</span></div>
-          <div class="ks-info-row"><span class="ks-info-label">创建时间</span><span class="ks-info-value">{{ formatDate(detailRow?.creationTimestamp) }}</span></div>
-        </el-tab-pane>
-        <el-tab-pane name="secrets" :label="`挂载 Secrets (${detailSecrets.length})`">
-          <div v-if="detailSecrets.length" class="ks-chips">
-            <span v-for="item in detailSecrets" :key="item.name" class="ks-chip">{{ item.name }}</span>
-          </div>
-          <el-empty v-else description="暂无" :image-size="60" />
-        </el-tab-pane>
-        <el-tab-pane name="pullSecrets" :label="`镜像拉取 (${detailPullSecrets.length})`">
-          <div v-if="detailPullSecrets.length" class="ks-chips">
-            <span v-for="item in detailPullSecrets" :key="item.name" class="ks-chip">{{ item.name }}</span>
-          </div>
-          <el-empty v-else description="暂无" :image-size="60" />
-        </el-tab-pane>
-        <el-tab-pane name="labels" :label="`标签 (${detailLabels.length})`">
-          <div v-if="detailLabels.length" class="ks-chips">
-            <span v-for="item in detailLabels" :key="item.key" class="ks-chip">
-              <span class="ks-chip-key">{{ item.key }}</span>
-              <span class="ks-chip-value">= {{ item.value }}</span>
-            </span>
-          </div>
-          <el-empty v-else description="暂无标签" :image-size="60" />
-        </el-tab-pane>
-        <el-tab-pane name="annotations" :label="`注解 (${detailAnnotations.length})`">
-          <div v-if="detailAnnotations.length" class="ks-chips">
-            <span v-for="item in detailAnnotations" :key="item.key" class="ks-chip">
-              <span class="ks-chip-key">{{ item.key }}</span>
-              <span class="ks-chip-value">= {{ item.value }}</span>
-            </span>
-          </div>
-          <el-empty v-else description="暂无注解" :image-size="60" />
-        </el-tab-pane>
-        <el-tab-pane label="YAML" name="yaml">
-          <YamlEditor :model-value="detailRow?.yaml" :readonly="true" height="calc(100vh - 300px)" />
-        </el-tab-pane>
-      </el-tabs>
-    </DetailDrawer>
   </div>
 </template>
 
@@ -361,12 +316,12 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, MoreFilled, Plus, Document, Check } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { serviceAccountApi, type ServiceAccountVO, type ServiceAccountPageQueryDTO } from '@/api/serviceaccount'
 import { secretApi, type SecretVO } from '@/api/secret'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
-import DetailDrawer from '@/components/DetailDrawer.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import '@/assets/styles/config-editor.css'
 
@@ -397,23 +352,14 @@ const pagination = reactive({
   total: 0
 })
 
-// 详情抽屉(列表数据已包含全部字段, 无需二次请求)
-const detailVisible = ref(false)
-const detailTab = ref('info')
-const detailRow = ref<ServiceAccountVO | null>(null)
-const detailLabels = computed(() => Object.entries(detailRow.value?.labels || {}).map(([key, value]) => ({ key, value })))
-const detailAnnotations = computed(() => Object.entries(detailRow.value?.annotations || {}).map(([key, value]) => ({ key, value })))
-const detailSecrets = computed(() => (detailRow.value?.secrets || []).map(s => ({ name: s.name })))
-const detailPullSecrets = computed(() => (detailRow.value?.imagePullSecrets || []).map(s => ({ name: s.name })))
-const detailMeta = computed(() => [
-  { label: '命名空间', value: detailRow.value?.namespace || '-' },
-  { label: '创建时间', value: formatDate(detailRow.value?.creationTimestamp) || '-' }
-])
+const router = useRouter()
 
+// 详情: 跳转到 KubeSphere 风格详情页
 const openDetail = (row: ServiceAccountVO) => {
-  detailRow.value = row
-  detailTab.value = 'info'
-  detailVisible.value = true
+  router.push({
+    path: `/cluster/${clusterId.value}/config/serviceaccount/detail`,
+    query: { clusterId: clusterId.value, namespace: row.namespace, name: row.name }
+  })
 }
 
 const currentRow = ref<ServiceAccountVO | null>(null)

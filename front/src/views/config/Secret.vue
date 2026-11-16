@@ -405,56 +405,12 @@
       @confirm="confirmDelete"
       @cancel="() => deleteDialogVisible = false"
     />
-
-    <!-- Secret 详情抽屉(KubeSphere 风格) -->
-    <DetailDrawer v-model="detailVisible" kind="Secret" :name="detailRow?.name" :meta="detailMeta">
-      <el-tabs v-model="detailTab" class="ks-tabs">
-        <el-tab-pane label="基本信息" name="info">
-          <div class="ks-info-row"><span class="ks-info-label">名称</span><span class="ks-info-value">{{ detailRow?.name || '-' }}</span></div>
-          <div class="ks-info-row"><span class="ks-info-label">命名空间</span><span class="ks-info-value">{{ detailRow?.namespace || '-' }}</span></div>
-          <div class="ks-info-row"><span class="ks-info-label">类型</span><span class="ks-info-value">{{ detailRow?.type || '-' }}</span></div>
-          <div class="ks-info-row"><span class="ks-info-label">别名</span><span class="ks-info-value">{{ detailRow?.alias || '-' }}</span></div>
-          <div class="ks-info-row"><span class="ks-info-label">描述</span><span class="ks-info-value">{{ detailRow?.describe || '-' }}</span></div>
-          <div class="ks-info-row"><span class="ks-info-label">创建时间</span><span class="ks-info-value">{{ formatDate(detailRow?.creationTimestamp) }}</span></div>
-        </el-tab-pane>
-        <el-tab-pane name="data" :label="`数据 (${detailData.length})`">
-          <div class="ks-data-hint">以下值为 Base64 编码后的内容</div>
-          <template v-if="detailData.length">
-            <div v-for="item in detailData" :key="item.key" class="ks-kv-item">
-              <div class="ks-kv-key">{{ item.key }}</div>
-              <div class="ks-kv-value">{{ item.value }}</div>
-            </div>
-          </template>
-          <el-empty v-else description="暂无数据" :image-size="60" />
-        </el-tab-pane>
-        <el-tab-pane name="labels" :label="`标签 (${detailLabels.length})`">
-          <div v-if="detailLabels.length" class="ks-chips">
-            <span v-for="item in detailLabels" :key="item.key" class="ks-chip">
-              <span class="ks-chip-key">{{ item.key }}</span>
-              <span class="ks-chip-value">= {{ item.value }}</span>
-            </span>
-          </div>
-          <el-empty v-else description="暂无标签" :image-size="60" />
-        </el-tab-pane>
-        <el-tab-pane name="annotations" :label="`注解 (${detailAnnotations.length})`">
-          <div v-if="detailAnnotations.length" class="ks-chips">
-            <span v-for="item in detailAnnotations" :key="item.key" class="ks-chip">
-              <span class="ks-chip-key">{{ item.key }}</span>
-              <span class="ks-chip-value">= {{ item.value }}</span>
-            </span>
-          </div>
-          <el-empty v-else description="暂无注解" :image-size="60" />
-        </el-tab-pane>
-        <el-tab-pane label="YAML" name="yaml">
-          <YamlEditor :model-value="detailRow?.yaml" :readonly="true" height="calc(100vh - 300px)" />
-        </el-tab-pane>
-      </el-tabs>
-    </DetailDrawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, MoreFilled, Plus, Document, Check, WarningFilled } from '@element-plus/icons-vue'
 import { secretApi, type SecretVO, type SecretPageQueryDTO } from '@/api/secret'
@@ -462,7 +418,6 @@ import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
-import DetailDrawer from '@/components/DetailDrawer.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import KVEditorPane from '@/components/KVEditorPane.vue'
 import '@/assets/styles/config-editor.css'
@@ -473,6 +428,7 @@ type KvRow = { key: string; value: string }
 // 集群上下文
 const clusterStore = useClusterStore()
 const clusterId = computed(() => clusterStore.currentClusterId)
+const router = useRouter()
 
 const loading = ref(false)
 const secrets = ref<SecretVO[]>([])
@@ -494,23 +450,12 @@ const pagination = reactive({
   total: 0
 })
 
-// 详情抽屉(列表数据已包含全部字段, 无需二次请求)
-const detailVisible = ref(false)
-const detailTab = ref('info')
-const detailRow = ref<SecretVO | null>(null)
-const detailLabels = computed(() => Object.entries(detailRow.value?.labels || {}).map(([key, value]) => ({ key, value })))
-const detailAnnotations = computed(() => Object.entries(detailRow.value?.annotations || {}).map(([key, value]) => ({ key, value })))
-const detailData = computed(() => Object.entries(detailRow.value?.data || {}).map(([key, value]) => ({ key, value })))
-const detailMeta = computed(() => [
-  { label: '命名空间', value: detailRow.value?.namespace || '-' },
-  { label: '类型', value: detailRow.value?.type || '-' },
-  { label: '创建时间', value: formatDate(detailRow.value?.creationTimestamp) || '-' }
-])
-
+// 详情: 跳转到 KubeSphere 风格详情页
 const openDetail = (row: SecretVO) => {
-  detailRow.value = row
-  detailTab.value = 'info'
-  detailVisible.value = true
+  router.push({
+    path: `/cluster/${clusterId.value}/config/secret/detail`,
+    query: { clusterId: clusterId.value, namespace: row.namespace, name: row.name }
+  })
 }
 
 const currentRow = ref<SecretVO | null>(null)

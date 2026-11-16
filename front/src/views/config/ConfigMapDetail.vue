@@ -1,80 +1,85 @@
 <template>
-  <div class="configmap-detail">
-    <div class="page-header">
-      <div class="header-left">
-        <el-button @click="handleBack" style="margin-right: 16px;">
+  <div class="detail-page">
+    <!-- 头部卡片 -->
+    <el-card class="ks-header-card" shadow="never">
+      <div class="ks-breadcrumb-row">
+        <el-link :underline="false" class="ks-back" @click="handleBack">
           <el-icon><ArrowLeft /></el-icon>
-          返回
-        </el-button>
-        <h1>ConfigMap详情</h1>
-      </div>
-      <div class="header-right">
-        <el-button size="small" @click="scrollToDetail">详情</el-button>
-        <el-dropdown @command="handleMore" trigger="click">
-          <el-button size="small" text circle class="more-btn">
-            <el-icon><MoreFilled /></el-icon>
+          <span>ConfigMap</span>
+        </el-link>
+        <el-dropdown trigger="click" popper-class="ks-dark-menu" @command="handleMore">
+          <el-button class="ks-action-btn">
+            操作
+            <el-icon class="el-icon--right"><ArrowUp /></el-icon>
           </el-button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="editInfo">编辑信息</el-dropdown-item>
-              <el-dropdown-item command="yaml">查看/编辑YAML</el-dropdown-item>
-              <el-dropdown-item command="editData">编辑设置</el-dropdown-item>
+              <el-dropdown-item command="editInfo"><el-icon><EditPen /></el-icon>编辑信息</el-dropdown-item>
+              <el-dropdown-item command="yaml"><el-icon><Document /></el-icon>查看/编辑YAML</el-dropdown-item>
+              <el-dropdown-item command="editData"><el-icon><Setting /></el-icon>编辑设置</el-dropdown-item>
+              <el-dropdown-item command="delete" divided><el-icon><Delete /></el-icon>删除</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-        <el-button size="small" type="danger" @click="openDelete">删除</el-button>
       </div>
-    </div>
+      <div class="ks-title-row">
+        <div class="ks-icon-block"><el-icon :size="24"><Document /></el-icon></div>
+        <div class="ks-title-main">
+          <div class="ks-name">{{ cm?.name || name }}</div>
+          <div class="ks-desc">{{ cm?.describe || '-' }}</div>
+        </div>
+      </div>
+    </el-card>
 
     <div v-if="loading" class="loading-container">
-      <el-skeleton :rows="10" animated />
+      <el-skeleton :rows="8" animated />
     </div>
 
-    <div v-else-if="cm" class="detail-content" ref="detailRef">
-      <el-card class="info-card">
+    <template v-else-if="cm">
+      <!-- 属性 -->
+      <el-card class="ks-card" shadow="never">
         <template #header>
-          <span>基本信息</span>
+          <div class="ks-card-header"><span>属性</span></div>
         </template>
-        <div class="info-grid">
-          <div class="info-item"><label>集群ID:</label><span>{{ clusterId }}</span></div>
-          <div class="info-item"><label>命名空间:</label><span>{{ cm.namespace }}</span></div>
-          <div class="info-item"><label>名称:</label><span>{{ cm.name }}</span></div>
-          <div class="info-item"><label>别名:</label><span>{{ cm.alias || '-' }}</span></div>
-          <div class="info-item"><label>备注:</label><span>{{ cm.describe || '-' }}</span></div>
-          <div class="info-item"><label>创建时间:</label><span>{{ formatDate(cm.creationTimestamp) }}</span></div>
+        <div class="props-grid">
+          <div class="prop-item"><div class="prop-label">集群</div><div class="prop-value">{{ clusterId }}</div></div>
+          <div class="prop-item"><div class="prop-label">命名空间</div><div class="prop-value">{{ cm.namespace }}</div></div>
+          <div class="prop-item"><div class="prop-label">别名</div><div class="prop-value">{{ cm.alias || '-' }}</div></div>
+          <div class="prop-item"><div class="prop-label">创建时间</div><div class="prop-value">{{ formatDate(cm.creationTimestamp) }}</div></div>
+          <div class="prop-item"><div class="prop-label">备注</div><div class="prop-value">{{ cm.describe || '-' }}</div></div>
         </div>
       </el-card>
 
-      <el-card class="info-card">
-        <template #header>
-          <span>标签</span>
-        </template>
-        <el-table :data="labelRows" size="small" style="width:100%">
-          <el-table-column prop="key" label="键" width="260" />
-          <el-table-column prop="value" label="值" />
-        </el-table>
+      <!-- 数据 -->
+      <el-card class="ks-card" shadow="never">
+        <template #header><div class="ks-card-header"><span>数据 ({{ dataRows.length }})</span></div></template>
+        <div v-if="dataRows.length" class="ks-data-list">
+          <div v-for="row in dataRows" :key="row.key" class="ks-data-row" @click="toggleExpand(row.key)">
+            <span class="ks-data-key">{{ row.key }}</span>
+            <span class="ks-data-value" :class="{ expanded: !!expandedKeys[row.key] }">{{ expandedKeys[row.key] ? row.value : truncateValue(row.value) }}</span>
+          </div>
+        </div>
+        <el-empty v-else description="暂无数据" :image-size="60" />
       </el-card>
 
-      <el-card class="info-card">
-        <template #header>
-          <span>注解</span>
-        </template>
-        <el-table :data="annotationRows" size="small" style="width:100%">
-          <el-table-column prop="key" label="键" width="260" />
-          <el-table-column prop="value" label="值" />
-        </el-table>
+      <!-- 标签 -->
+      <el-card class="ks-card" shadow="never">
+        <template #header><div class="ks-card-header"><span>标签 ({{ labelRows.length }})</span></div></template>
+        <div v-if="labelRows.length" class="ks-chips">
+          <span v-for="row in labelRows" :key="row.key" class="ks-chip"><span class="ks-chip-key">{{ row.key }}</span><span class="ks-chip-value">= {{ row.value }}</span></span>
+        </div>
+        <el-empty v-else description="暂无标签" :image-size="60" />
       </el-card>
 
-      <el-card class="info-card">
-        <template #header>
-          <span>数据</span>
-        </template>
-        <el-table :data="dataRows" size="small" style="width:100%">
-          <el-table-column prop="key" label="键" width="220" />
-          <el-table-column prop="value" label="值" />
-        </el-table>
+      <!-- 注解 -->
+      <el-card class="ks-card" shadow="never">
+        <template #header><div class="ks-card-header"><span>注解 ({{ annotationRows.length }})</span></div></template>
+        <div v-if="annotationRows.length" class="ks-chips">
+          <span v-for="row in annotationRows" :key="row.key" class="ks-chip"><span class="ks-chip-key">{{ row.key }}</span><span class="ks-chip-value">= {{ row.value }}</span></span>
+        </div>
+        <el-empty v-else description="暂无注解" :image-size="60" />
       </el-card>
-    </div>
+    </template>
 
     <div v-else class="empty-container">
       <el-empty description="未找到ConfigMap" />
@@ -181,7 +186,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, MoreFilled } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowUp, EditPen, Document, Setting, Delete } from '@element-plus/icons-vue'
 import { configMapApi, type ConfigMapVO } from '@/api/configmap'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -197,7 +202,6 @@ const cm = ref<ConfigMapVO | null>(null)
 const dataRows = ref<{ key:string; value:string }[]>([])
 const labelRows = ref<{ key:string; value:string }[]>([])
 const annotationRows = ref<{ key:string; value:string }[]>([])
-const detailRef = ref()
 
 const editInfoDialogVisible = ref(false)
 const editInfoLoading = ref(false)
@@ -215,7 +219,16 @@ const deleteDialogVisible = ref(false)
 const deleteLoading = ref(false)
 
 const handleBack = () => router.back()
-const scrollToDetail = () => { try { (detailRef.value as HTMLElement)?.scrollIntoView({ behavior: 'smooth' }) } catch {} }
+
+// 数据值展开/收起
+const expandedKeys = ref<Record<string, boolean>>({})
+const toggleExpand = (key: string) => {
+  expandedKeys.value[key] = !expandedKeys.value[key]
+}
+const truncateValue = (value: string) => {
+  const flat = String(value ?? '').replace(/\s+/g, ' ').trim()
+  return flat.length > 120 ? flat.slice(0, 120) + '…' : flat
+}
 
 const handleMore = (cmd: string) => {
   switch (cmd) {
@@ -232,6 +245,9 @@ const handleMore = (cmd: string) => {
     case 'editData':
       editRows.value = Object.entries(cm.value?.data || {}).map(([k,v]) => ({ key: k, value: v }))
       editDataDialogVisible.value = true
+      break
+    case 'delete':
+      openDelete()
       break
   }
 }
@@ -341,25 +357,181 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.configmap-detail { padding: 20px; }
-.page-header {
+.detail-page {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading-container {
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+/* 头部卡片 */
+.ks-breadcrumb-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-.header-left { display:flex; align-items:center; gap:16px; }
-.page-header h1 { margin:0; font-size:24px; font-weight:600; color:#2c3e50; }
-.header-right { display:flex; gap:8px; }
-.loading-container { padding: 20px; }
-.detail-content { display:flex; flex-direction:column; gap:16px; }
-.info-card { border-radius:8px; }
-.info-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
-.info-item label { color:#64748b; margin-right:8px; }
+
+.ks-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.ks-back:hover {
+  color: var(--el-color-primary);
+}
+
+.ks-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.ks-icon-block {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ks-title-main {
+  min-width: 0;
+}
+
+.ks-name {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1f2937;
+  word-break: break-all;
+  line-height: 1.3;
+}
+
+.ks-desc {
+  margin-top: 4px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+/* 卡片与属性网格 */
+.ks-card {
+  border-radius: 8px;
+}
+
+.ks-card-header {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.props-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px 32px;
+}
+
+.prop-label {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+.prop-value {
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+/* 数据行(KubeSphere 胶囊样式) */
+.ks-data-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f7f8fa;
+  border-radius: 24px;
+  padding: 12px 24px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.ks-data-row:hover {
+  background: #f0f2f5;
+}
+
+.ks-data-key {
+  width: 220px;
+  flex-shrink: 0;
+  color: #6b7280;
+  font-size: 13px;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ks-data-value {
+  flex: 1;
+  min-width: 0;
+  color: #1f2937;
+  font-size: 13px;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.ks-data-value.expanded {
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 300px;
+  text-align: left;
+}
+
+/* 标签/注解 芯片 */
+.ks-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ks-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 4px 10px;
+  background: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.ks-chip-key {
+  color: #1f2937;
+  margin-right: 4px;
+}
+
+.ks-chip-value {
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .config-dialog :deep(.el-dialog__header) {
   padding: 0;
@@ -372,5 +544,34 @@ onMounted(() => {
 
 .config-dialog :deep(.el-dialog__footer) {
   padding: 0;
+}
+</style>
+
+<!-- 操作下拉深色菜单(KubeSphere 风格), popper 挂在 body 上需全局样式 -->
+<style>
+.ks-dark-menu.el-popper {
+  background: #1f2937;
+  border: 1px solid #1f2937;
+}
+
+.ks-dark-menu .el-dropdown-menu {
+  background: #1f2937;
+  padding: 6px;
+}
+
+.ks-dark-menu .el-dropdown-menu__item {
+  color: #e5e7eb;
+  padding: 9px 16px;
+  border-radius: 4px;
+}
+
+.ks-dark-menu .el-dropdown-menu__item:hover {
+  background: #374151;
+  color: #fff;
+}
+
+.ks-dark-menu .el-popper__arrow::before {
+  background: #1f2937;
+  border: 1px solid #1f2937;
 }
 </style>
