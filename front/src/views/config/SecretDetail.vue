@@ -5,7 +5,7 @@
       <div class="ks-breadcrumb-row">
         <el-link :underline="false" class="ks-back" @click="handleBack">
           <el-icon><ArrowLeft /></el-icon>
-          <span>保密字典</span>
+          <span>Secret</span>
         </el-link>
         <el-dropdown trigger="click" popper-class="ks-dark-menu" @command="handleMore">
           <el-button class="ks-action-btn">
@@ -87,8 +87,8 @@
       <el-empty description="未找到Secret" />
     </div>
 
-    <!-- 编辑信息 -->
-    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="720px" :close-on-click-modal="false" class="config-dialog">
+    <!-- 编辑信息(与列表页同款) -->
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="900px" :close-on-click-modal="false" class="config-dialog">
       <template #header>
         <div class="dialog-header">
           <h3 class="dialog-title">编辑信息</h3>
@@ -96,10 +96,22 @@
       </template>
       <div class="config-editor">
         <div class="config-content">
-          <el-form :model="editInfoForm" label-width="100px">
-            <el-form-item label="别名"><el-input v-model="editInfoForm.alias" /></el-form-item>
-            <el-form-item label="备注"><el-input v-model="editInfoForm.describe" type="textarea" :rows="3" /></el-form-item>
-          </el-form>
+          <div class="group-box" style="margin-bottom: 12px;">
+            <div class="group-title">基本信息</div>
+            <el-form :model="editInfoForm" label-width="100px">
+              <el-form-item label="名称">
+                <el-input :model-value="secret?.name || ''" disabled />
+              </el-form-item>
+              <el-form-item label="别名">
+                <el-input v-model="editInfoForm.alias" placeholder="请输入别名" />
+                <div class="helper">别名只能包含中文、字母、数字和连字符（-），不得以连字符（-）开头或结尾，最长 63 个字符。</div>
+              </el-form-item>
+              <el-form-item label="备注">
+                <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" placeholder="请输入备注" />
+                <div class="helper">描述可包含任意字符，最长 256 个字符。</div>
+              </el-form-item>
+            </el-form>
+          </div>
         </div>
       </div>
       <template #footer>
@@ -110,37 +122,46 @@
       </template>
     </el-dialog>
 
-    <!-- 编辑设置（stringData） -->
-    <el-dialog v-model="editDataDialogVisible" title="编辑设置" width="80%" :close-on-click-modal="false" class="config-dialog">
+    <!-- 编辑数据设置(与列表页同款) -->
+    <el-dialog v-model="editDataDialogVisible" title="编辑数据设置" width="1600px" :close-on-click-modal="false" class="config-dialog">
       <template #header>
         <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">编辑设置</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">以明文(stringData)提交，服务端将自动编码存储</div>
-          </div>
+          <h3 class="dialog-title">编辑数据设置</h3>
         </div>
       </template>
+
       <div class="config-editor">
+        <div class="resource-info-bar">
+          <div class="resource-info-item">
+            <span class="resource-info-label">命名空间:</span>
+            <span class="resource-info-value">{{ secret?.namespace || '-' }}</span>
+          </div>
+          <div class="resource-info-item">
+            <span class="resource-info-label">名称:</span>
+            <span class="resource-info-value">{{ secret?.name || '-' }}</span>
+          </div>
+        </div>
+
         <div class="config-content">
-          <div class="kv-editor">
-            <div class="kv-toolbar">
-              <el-button size="small" type="primary" @click="addDataRow">新增键值</el-button>
-              <el-button size="small" @click="resetDataRows">重置</el-button>
+          <div class="data-form">
+            <div class="form-section">
+              <div class="section-header-row">
+                <div class="section-title">数据 *(以明文 stringData 提交)</div>
+                <div class="section-actions">
+                  <el-button size="small" @click="kvEditRef?.addBlank()">添加数据</el-button>
+                  <el-button size="small" @click="openEditImport">从文件导入</el-button>
+                  <input ref="editImportInputRef" style="display: none" type="file" accept=".properties,.ini,.conf,.txt" @change="handleEditImportChange" />
+                  <el-button size="small" @click="resetEditDataRows">重置</el-button>
+                </div>
+              </div>
+              <div class="data-editor">
+                <KVEditorPane ref="kvEditRef" v-model="editDataRows" height="500px" />
+              </div>
             </div>
-            <el-table :data="editRows" size="small" style="width: 100%">
-              <el-table-column label="键" width="220">
-                <template #default="{ row }"><el-input v-model="row.key" /></template>
-              </el-table-column>
-              <el-table-column label="值">
-                <template #default="{ row }"><el-input v-model="row.value" type="textarea" :rows="3" /></template>
-              </el-table-column>
-              <el-table-column label="操作" width="100" align="center">
-                <template #default="{ $index }"><el-button type="danger" size="small" @click="removeDataRow($index)">删除</el-button></template>
-              </el-table-column>
-            </el-table>
           </div>
         </div>
       </div>
+
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="editDataDialogVisible = false">取消</el-button>
@@ -192,7 +213,19 @@ import { ArrowLeft, ArrowUp, EditPen, Document, Setting, Delete, Key } from '@el
 import { secretApi, type SecretVO } from '@/api/secret'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
+import KVEditorPane from '@/components/KVEditorPane.vue'
 import '@/assets/styles/config-editor.css'
+
+type KvRow = { key: string; value: string }
+
+const rowsFromSecret = (row?: SecretVO | null) => {
+  const sd = row?.stringData
+  if (sd && Object.keys(sd).length > 0) {
+    return Object.entries(sd).map(([k, v]) => ({ key: k, value: v }))
+  }
+  const data = row?.data || {}
+  return Object.entries(data).map(([k, v]) => ({ key: k, value: decodeBase64ToUtf8(v) }))
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -233,7 +266,7 @@ const handleMore = (cmd: string) => {
       yamlDialogVisible.value = true
       break
     case 'editData':
-      editRows.value = Object.entries(secret.value?.data || {}).map(([k, v]) => ({ key: k, value: decodeBase64ToUtf8(String(v ?? '')) }))
+      editDataRows.value = rowsFromSecret(secret.value)
       editDataDialogVisible.value = true
       break
     case 'delete':
@@ -291,7 +324,9 @@ const editInfoForm = reactive({ alias: '', describe: '' })
 
 const editDataDialogVisible = ref(false)
 const editDataLoading = ref(false)
-const editRows = ref<{ key: string; value: string }[]>([])
+const editDataRows = ref<KvRow[]>([])
+const kvEditRef = ref()
+const editImportInputRef = ref()
 
 const yamlDialogVisible = ref(false)
 const yamlContent = ref('')
@@ -321,17 +356,84 @@ const confirmEditInfo = async () => {
   }
 }
 
-const addDataRow = () => { editRows.value.push({ key: '', value: '' }) }
-const removeDataRow = (idx: number) => { editRows.value.splice(idx, 1) }
-const resetDataRows = () => {
-  editRows.value = Object.entries(secret.value?.data || {}).map(([k, v]) => ({ key: k, value: decodeBase64ToUtf8(String(v ?? '')) }))
+// KV 工具函数(与列表页一致)
+const collectRowsData = (rows: KvRow[]) => {
+  const data: Record<string, string> = {}
+  for (const { key, value } of rows) {
+    const k = (key || '').trim()
+    if (!k) continue
+    data[k] = value ?? ''
+  }
+  return data
 }
+
+const parseKvFromText = (text: string) => {
+  const result: Record<string, string> = {}
+  const lines = String(text || '').split(/\r?\n/)
+  let section = ''
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) continue
+    if (line.startsWith('#') || line.startsWith(';')) continue
+    if (line.startsWith('[') && line.endsWith(']')) {
+      section = line.slice(1, -1).trim()
+      continue
+    }
+    const idx = line.indexOf('=')
+    if (idx <= 0) continue
+    const key = line.slice(0, idx).trim()
+    const value = line.slice(idx + 1).trim()
+    const fullKey = section ? `${section}.${key}` : key
+    if (!fullKey) continue
+    result[fullKey] = value
+  }
+  return result
+}
+
+const mergeDataRows = (rows: Array<{ key: string; value: string }>, incoming: Record<string, string>) => {
+  const map = new Map(rows.map(r => [r.key, r]))
+  for (const [k, v] of Object.entries(incoming)) {
+    const existed = map.get(k)
+    if (existed) {
+      existed.value = v
+    } else {
+      rows.push({ key: k, value: v })
+      map.set(k, rows[rows.length - 1])
+    }
+  }
+}
+
+const openEditImport = () => {
+  editImportInputRef.value?.click()
+}
+
+const handleEditImportChange = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const text = await file.text()
+    const parsed = parseKvFromText(text)
+    const before = editDataRows.value.length
+    mergeDataRows(editDataRows.value, parsed)
+    const after = editDataRows.value.length
+    ElMessage.success(`已导入 ${Object.keys(parsed).length} 项，新增 ${Math.max(after - before, 0)} 项`)
+  } catch {
+    ElMessage.error('导入失败')
+  } finally {
+    input.value = ''
+  }
+}
+
+const resetEditDataRows = () => {
+  editDataRows.value = rowsFromSecret(secret.value)
+}
+
 const confirmEditData = async () => {
   if (!secret.value) return
   editDataLoading.value = true
   try {
-    const stringData: Record<string, string> = {}
-    for (const { key, value } of editRows.value) { if (key) stringData[key] = value }
+    const stringData = collectRowsData(editDataRows.value)
     await secretApi.updateData({
       clusterId: clusterId.value,
       namespace: namespace.value,

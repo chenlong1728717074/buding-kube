@@ -5,7 +5,7 @@
       <div class="ks-breadcrumb-row">
         <el-link :underline="false" class="ks-back" @click="handleBack">
           <el-icon><ArrowLeft /></el-icon>
-          <span>服务帐户</span>
+          <span>ServiceAccount</span>
         </el-link>
         <el-dropdown trigger="click" popper-class="ks-dark-menu" @command="handleMore">
           <el-button class="ks-action-btn">
@@ -89,8 +89,8 @@
       <el-empty description="未找到ServiceAccount" />
     </div>
 
-    <!-- 编辑信息 -->
-    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="760px" :close-on-click-modal="false" class="config-dialog">
+    <!-- 编辑信息(与列表页同款) -->
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="900px" :close-on-click-modal="false" class="config-dialog">
       <template #header>
         <div class="dialog-header">
           <h3 class="dialog-title">编辑信息</h3>
@@ -98,17 +98,20 @@
       </template>
       <div class="config-editor">
         <div class="config-content">
-          <el-form :model="editInfoForm" label-width="130px">
-            <el-form-item label="自动挂载令牌">
-              <el-switch v-model="editInfoForm.automountServiceAccountToken" />
-            </el-form-item>
-            <el-form-item label="标签 (JSON)">
-              <el-input v-model="editInfoForm.labelsJson" type="textarea" :rows="4" placeholder='{"key": "value"}' />
-            </el-form-item>
-            <el-form-item label="注解 (JSON)">
-              <el-input v-model="editInfoForm.annotationsJson" type="textarea" :rows="4" placeholder='{"key": "value"}' />
-            </el-form-item>
-          </el-form>
+          <div class="group-box" style="margin-bottom: 12px;">
+            <div class="group-title">基本信息</div>
+            <el-form :model="editInfoForm" label-width="100px">
+              <el-form-item label="名称">
+                <el-input :model-value="sa?.name || ''" disabled />
+              </el-form-item>
+              <el-form-item label="标签(JSON)">
+                <el-input v-model="editInfoForm.labelsJson" type="textarea" :rows="3" />
+              </el-form-item>
+              <el-form-item label="注解(JSON)">
+                <el-input v-model="editInfoForm.annotationsJson" type="textarea" :rows="3" />
+              </el-form-item>
+            </el-form>
+          </div>
         </div>
       </div>
       <template #footer>
@@ -186,7 +189,6 @@ const handleMore = (cmd: string) => {
   switch (cmd) {
     case 'editInfo':
       if (!sa.value) return
-      editInfoForm.automountServiceAccountToken = sa.value.automountServiceAccountToken !== false
       editInfoForm.labelsJson = JSON.stringify(sa.value.labels || {}, null, 2)
       editInfoForm.annotationsJson = JSON.stringify(sa.value.annotations || {}, null, 2)
       editInfoDialogVisible.value = true
@@ -229,7 +231,6 @@ const fetchDetailFromList = async () => {
 const editInfoDialogVisible = ref(false)
 const editInfoLoading = ref(false)
 const editInfoForm = reactive({
-  automountServiceAccountToken: true,
   labelsJson: '',
   annotationsJson: ''
 })
@@ -250,7 +251,7 @@ const confirmEditInfo = async () => {
       clusterId: clusterId.value,
       namespace: namespace.value,
       name: name.value,
-      automountServiceAccountToken: editInfoForm.automountServiceAccountToken,
+      automountServiceAccountToken: sa.value.automountServiceAccountToken,
       imagePullSecrets: imagePullSecretNames.value,
       secrets: secretNames.value,
       labels,
