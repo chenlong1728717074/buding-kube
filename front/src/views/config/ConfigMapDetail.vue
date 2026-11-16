@@ -117,31 +117,29 @@
       <el-empty description="未找到ConfigMap" />
     </div>
 
-    <!-- 编辑信息(与列表页同款) -->
-    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="900px" :close-on-click-modal="false" class="config-dialog">
+    <!-- 编辑信息(与命名空间编辑弹窗同款) -->
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="80%" :close-on-click-modal="false" class="config-dialog">
       <template #header>
         <div class="dialog-header">
-          <h3 class="dialog-title">编辑信息</h3>
+          <div>
+            <h3 class="dialog-title">编辑信息</h3>
+            <div style="margin-top:4px;color:#6b7280;font-size:12px;">ConfigMap 基础信息</div>
+          </div>
         </div>
       </template>
       <div class="config-editor">
         <div class="config-content">
-          <div class="group-box" style="margin-bottom: 12px;">
-            <div class="group-title">基本信息</div>
-            <el-form :model="editInfoForm" label-width="120px">
-              <el-form-item label="名称">
-                <el-input :model-value="cm?.name || ''" disabled />
-              </el-form-item>
-              <el-form-item label="别名">
-                <el-input v-model="editInfoForm.alias" placeholder="请输入别名" maxlength="63" show-word-limit />
-                <div class="helper">别名只能包含中文、字母、数字和连字符（-），不得以连字符（-）开头或结尾，最长 63 个字符。</div>
-              </el-form-item>
-              <el-form-item label="备注">
-                <el-input v-model="editInfoForm.describe" type="textarea" :rows="4" placeholder="请输入备注" maxlength="200" show-word-limit />
-                <div class="helper">描述可包含任意字符，最长 256 个字符。</div>
-              </el-form-item>
-            </el-form>
-          </div>
+          <el-form :model="editInfoForm" label-width="100px" class="configmap-form">
+            <el-form-item label="名称">
+              <el-input :model-value="cm?.name || ''" disabled />
+            </el-form-item>
+            <el-form-item label="别名" prop="alias">
+              <el-input v-model="editInfoForm.alias" placeholder="请输入别名" />
+            </el-form-item>
+            <el-form-item label="备注" prop="describe">
+              <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" placeholder="请输入备注" />
+            </el-form-item>
+          </el-form>
         </div>
       </div>
       <template #footer>
