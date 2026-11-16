@@ -39,7 +39,7 @@
         <el-table-column type="selection" width="55" header-align="center" align="center" />
         <el-table-column prop="name" label="名称" min-width="160" header-align="center" align="center">
           <template #default="{ row }">
-            <el-link type="primary" @click="goDetail(row)">{{ row.name }}</el-link>
+            <el-link type="primary" @click="openDetail(row)">{{ row.name }}</el-link>
           </template>
         </el-table-column>
         <el-table-column prop="namespace" label="命名空间" width="140" header-align="center" align="center" />
@@ -56,7 +56,7 @@
         <el-table-column label="操作" width="200" fixed="right" header-align="center" align="center">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" class="btn-main" @click="goDetail(row)">详情</el-button>
+              <el-button size="small" type="primary" class="btn-main" @click="openDetail(row)">详情</el-button>
               <el-dropdown trigger="click" @command="(cmd) => handleRowAction(cmd, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
@@ -309,12 +309,60 @@
       @confirm="confirmDelete"
       @cancel="() => deleteDialogVisible = false"
     />
+
+    <!-- ServiceAccount 详情弹窗 -->
+    <el-dialog v-model="detailVisible" :title="`ServiceAccount详情 - ${detailRow?.name || ''}`" width="820px" top="6vh">
+      <div class="detail-wrapper">
+        <div class="detail-grid">
+          <div class="detail-item"><span class="label">名称</span><span class="value">{{ detailRow?.name || '-' }}</span></div>
+          <div class="detail-item"><span class="label">命名空间</span><span class="value">{{ detailRow?.namespace || '-' }}</span></div>
+          <div class="detail-item"><span class="label">自动挂载令牌</span><span class="value">{{ detailRow?.automountServiceAccountToken === false ? '否' : '是' }}</span></div>
+          <div class="detail-item"><span class="label">创建时间</span><span class="value">{{ formatDate(detailRow?.creationTimestamp) }}</span></div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">挂载的 Secrets ({{ detailSecrets.length }})</div>
+          <el-table v-if="detailSecrets.length" :data="detailSecrets" size="small" style="width: 100%">
+            <el-table-column prop="name" label="名称" />
+          </el-table>
+          <el-empty v-else description="暂无" :image-size="60" />
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">镜像拉取 Secrets ({{ detailPullSecrets.length }})</div>
+          <el-table v-if="detailPullSecrets.length" :data="detailPullSecrets" size="small" style="width: 100%">
+            <el-table-column prop="name" label="名称" />
+          </el-table>
+          <el-empty v-else description="暂无" :image-size="60" />
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">标签 ({{ detailLabels.length }})</div>
+          <el-table v-if="detailLabels.length" :data="detailLabels" size="small" style="width: 100%">
+            <el-table-column prop="key" label="键" width="240" />
+            <el-table-column prop="value" label="值" show-overflow-tooltip />
+          </el-table>
+          <el-empty v-else description="暂无标签" :image-size="60" />
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">注解 ({{ detailAnnotations.length }})</div>
+          <el-table v-if="detailAnnotations.length" :data="detailAnnotations" size="small" style="width: 100%">
+            <el-table-column prop="key" label="键" width="240" />
+            <el-table-column prop="value" label="值" show-overflow-tooltip />
+          </el-table>
+          <el-empty v-else description="暂无注解" :image-size="60" />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, MoreFilled, Plus, Document, Check } from '@element-plus/icons-vue'
 import { serviceAccountApi, type ServiceAccountVO, type ServiceAccountPageQueryDTO } from '@/api/serviceaccount'
@@ -327,7 +375,6 @@ import '@/assets/styles/config-editor.css'
 
 type KvRow = { key: string; value: string }
 
-const router = useRouter()
 
 // 集群上下文
 const clusterStore = useClusterStore()
@@ -353,8 +400,17 @@ const pagination = reactive({
   total: 0
 })
 
-const goDetail = (row: ServiceAccountVO) => {
-  router.push({ path: `/cluster/${clusterId.value}/config/serviceaccount/detail`, query: { clusterId: clusterId.value, namespace: row.namespace, name: row.name } })
+// 详情弹窗(列表数据已包含全部字段, 无需二次请求)
+const detailVisible = ref(false)
+const detailRow = ref<ServiceAccountVO | null>(null)
+const detailLabels = computed(() => Object.entries(detailRow.value?.labels || {}).map(([key, value]) => ({ key, value })))
+const detailAnnotations = computed(() => Object.entries(detailRow.value?.annotations || {}).map(([key, value]) => ({ key, value })))
+const detailSecrets = computed(() => (detailRow.value?.secrets || []).map(s => ({ name: s.name })))
+const detailPullSecrets = computed(() => (detailRow.value?.imagePullSecrets || []).map(s => ({ name: s.name })))
+
+const openDetail = (row: ServiceAccountVO) => {
+  detailRow.value = row
+  detailVisible.value = true
 }
 
 const currentRow = ref<ServiceAccountVO | null>(null)
@@ -848,6 +904,47 @@ onMounted(async () => {
   height: 28px;
   padding: 0 10px;
   border-radius: 8px;
+}
+
+.detail-wrapper {
+  max-height: 65vh;
+  overflow: auto;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px 24px;
+  margin-bottom: 20px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item .label,
+.detail-section-title {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.detail-item .value {
+  font-size: 14px;
+  color: #1f2937;
+  word-break: break-all;
+}
+
+.detail-section {
+  margin-top: 18px;
+}
+
+.detail-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 10px;
 }
 
 </style>

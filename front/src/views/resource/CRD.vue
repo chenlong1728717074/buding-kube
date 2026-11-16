@@ -123,7 +123,7 @@
     <!-- CRD YAML 对话框 -->
     <el-dialog v-model="yamlVisible" :title="`YAML - ${currentCrd?.name || ''}`" width="70%" top="5vh">
       <div v-loading="yamlLoading" class="yaml-wrapper">
-        <pre class="yaml-pre">{{ yamlContent }}</pre>
+        <YamlEditor :model-value="yamlContent" :readonly="true" height="100%" class="yaml-editor" />
       </div>
       <template #footer>
         <el-button @click="yamlVisible = false">关闭</el-button>
@@ -139,6 +139,8 @@ import { Search, Refresh, MoreFilled } from '@element-plus/icons-vue'
 import { useClusterStore } from '@/stores/cluster'
 import { crdApi, type CrdVO } from '@/api/crd'
 import { jsonToYaml } from '@/utils/yaml'
+import YamlEditor from '@/components/YamlEditor.vue'
+import '@/assets/styles/config-editor.css'
 
 const clusterStore = useClusterStore()
 
@@ -316,20 +318,12 @@ onMounted(() => {
 }
 
 .yaml-wrapper {
-  max-height: 65vh;
+  height: 60vh;
   overflow: auto;
 }
 
-.yaml-pre {
-  margin: 0;
-  padding: 16px;
-  font-family: 'SF Mono', Monaco, Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  background: #f8fafc;
-  border-radius: 8px;
-  white-space: pre-wrap;
-  word-break: break-all;
+.yaml-editor {
+  height: 100%;
 }
 
 .detail-wrapper {
