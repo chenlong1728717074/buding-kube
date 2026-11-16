@@ -3,7 +3,7 @@
     <!-- 顶部导航 -->
     <header class="header">
       <div class="header-left">
-        <h1 class="logo" @click="goHome">Buding K8s</h1>
+        <h1 class="logo" @click="goHome">BuDing Kube</h1>
       </div>
       <div class="header-right">
         <div class="header-extras">

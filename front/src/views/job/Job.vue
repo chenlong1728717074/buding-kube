@@ -306,7 +306,7 @@ const handleViewDetail = (row: JobVO) => {
 // 跳转到命名空间详情
 const handleNamespaceDetail = (row: JobVO) => {
   router.push({
-    path: '/namespace/detail',
+    path: `/cluster/${clusterId.value}/namespace/detail`,
     query: {
       clusterId: clusterId.value,
       namespace: row.namespace

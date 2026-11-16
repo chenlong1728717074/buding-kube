@@ -298,7 +298,7 @@ const handleCurrentChange = (page: number) => {
 // 跳转到命名空间详情
 const handleNamespaceDetail = (row: EndpointVO) => {
   router.push({
-    path: '/namespace/detail',
+    path: `/cluster/${clusterId.value}/namespace/detail`,
     query: {
       clusterId: clusterId.value,
       namespace: row.namespace

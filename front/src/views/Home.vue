@@ -3,7 +3,7 @@
     <!-- 欢迎区域 -->
     <div class="welcome-section">
       <h1>欢迎，{{ userStore.userInfo?.username }}</h1>
-      <p class="welcome-desc">Buding K8s 多集群管理平台</p>
+      <p class="welcome-desc">BuDing Kube 多集群管理平台</p>
     </div>
 
     <!-- 模块卡片 -->

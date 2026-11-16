@@ -39,7 +39,7 @@
       <el-table v-loading="loading" :data="crds" stripe style="width: 100%">
         <el-table-column prop="name" label="名称" min-width="280" header-align="center" align="center">
           <template #default="{ row }">
-            <el-link type="primary" @click="openYaml(row)">{{ row.name }}</el-link>
+            <el-link type="primary" @click="openDetail(row)">{{ row.name }}</el-link>
           </template>
         </el-table-column>
         <el-table-column prop="group" label="组" min-width="180" :show-overflow-tooltip="true" header-align="center" align="center" />
@@ -59,10 +59,20 @@
         <el-table-column prop="createTime" label="创建时间" min-width="160" header-align="center" align="center">
           <template #default="{ row }">{{ row.createTime || '-' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right" header-align="center" align="center">
+        <el-table-column label="操作" width="200" fixed="right" header-align="center" align="center">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" class="btn-main" @click="openYaml(row)">详情</el-button>
+              <el-button size="small" type="primary" class="btn-main" @click="openDetail(row)">详情</el-button>
+              <el-dropdown trigger="click" @command="(cmd) => handleRowAction(cmd, row)">
+                <el-button size="small" text circle class="more-btn">
+                  <el-icon><MoreFilled /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
               <el-button size="small" type="danger" plain class="btn-danger" @click="openDelete(row)">删除</el-button>
             </div>
           </template>
@@ -82,8 +92,36 @@
       </div>
     </el-card>
 
-    <!-- CRD YAML 详情对话框 -->
-    <el-dialog v-model="yamlVisible" :title="`CRD详情 - ${currentCrd?.name || ''}`" width="70%" top="5vh">
+    <!-- CRD 详情对话框(结构化信息) -->
+    <el-dialog v-model="detailVisible" :title="`CRD详情 - ${currentCrd?.name || ''}`" width="720px" top="8vh">
+      <div v-loading="detailLoading" class="detail-wrapper">
+        <div class="detail-grid">
+          <div class="detail-item"><span class="label">名称</span><span class="value">{{ detailData.name }}</span></div>
+          <div class="detail-item"><span class="label">组</span><span class="value">{{ detailData.group }}</span></div>
+          <div class="detail-item"><span class="label">Kind</span><span class="value">{{ detailData.kind }}</span></div>
+          <div class="detail-item"><span class="label">List Kind</span><span class="value">{{ detailData.listKind }}</span></div>
+          <div class="detail-item"><span class="label">存储版本</span><span class="value">{{ detailData.version }}</span></div>
+          <div class="detail-item"><span class="label">作用域</span><span class="value">{{ detailData.scope === 'Cluster' ? '集群级' : '命名空间级' }}</span></div>
+          <div class="detail-item"><span class="label">复数名</span><span class="value">{{ detailData.plural }}</span></div>
+          <div class="detail-item"><span class="label">单数名</span><span class="value">{{ detailData.singular }}</span></div>
+          <div class="detail-item"><span class="label">短名</span><span class="value">{{ detailData.shortNames?.length ? detailData.shortNames.join(', ') : '-' }}</span></div>
+          <div class="detail-item"><span class="label">创建时间</span><span class="value">{{ detailData.createTime }}</span></div>
+        </div>
+        <div v-if="detailData.versions?.length" class="verbs-section">
+          <span class="label">全部版本</span>
+          <div class="verb-tags">
+            <el-tag v-for="ver in detailData.versions" :key="ver" size="small" type="info">{{ ver }}</el-tag>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
+        <el-button v-if="currentCrd" type="primary" @click="openYaml(currentCrd)">查看YAML</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- CRD YAML 对话框 -->
+    <el-dialog v-model="yamlVisible" :title="`YAML - ${currentCrd?.name || ''}`" width="70%" top="5vh">
       <div v-loading="yamlLoading" class="yaml-wrapper">
         <pre class="yaml-pre">{{ yamlContent }}</pre>
       </div>
@@ -97,7 +135,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh } from '@element-plus/icons-vue'
+import { Search, Refresh, MoreFilled } from '@element-plus/icons-vue'
 import { useClusterStore } from '@/stores/cluster'
 import { crdApi, type CrdVO } from '@/api/crd'
 import { jsonToYaml } from '@/utils/yaml'
@@ -118,6 +156,54 @@ const yamlVisible = ref(false)
 const yamlLoading = ref(false)
 const yamlContent = ref('')
 const currentCrd = ref<CrdVO | null>(null)
+
+// 结构化详情
+const detailVisible = ref(false)
+const detailLoading = ref(false)
+const detailData = ref<Partial<CrdVO> & { listKind?: string; plural?: string; singular?: string; shortNames?: string[]; versions?: string[] }>({})
+
+// 行操作分发
+const handleRowAction = (command: string, row: CrdVO) => {
+  if (command === 'yaml') {
+    openYaml(row)
+  }
+}
+
+// 打开结构化详情
+const openDetail = async (row: CrdVO) => {
+  const clusterId = clusterStore.currentClusterId
+  if (!clusterId) return
+  currentCrd.value = row
+  detailVisible.value = true
+  detailLoading.value = true
+  detailData.value = {
+    name: row.name,
+    group: row.group,
+    kind: row.kind,
+    version: row.version,
+    scope: row.scope,
+    createTime: row.createTime
+  }
+  try {
+    const response = await crdApi.getCrd(clusterId, row.name)
+    const data = response.data as any
+    const meta = data.metadata || {}
+    detailData.value = {
+      ...detailData.value,
+      plural: data.spec?.names?.plural || '-',
+      singular: data.spec?.names?.singular || '-',
+      listKind: data.spec?.names?.listKind || '-',
+      shortNames: data.spec?.names?.shortNames || [],
+      versions: data.spec?.versions?.map((v: any) => v.name).filter(Boolean) || [],
+      createTime: meta.creationTimestamp ? String(meta.creationTimestamp).replace('T', ' ').slice(0, 19) : row.createTime
+    }
+  } catch (error) {
+    console.error('Failed to load CRD detail:', error)
+    // 获取失败时仍展示列表已知信息
+  } finally {
+    detailLoading.value = false
+  }
+}
 
 // 加载 CRD 列表
 const loadCrds = async () => {
@@ -244,5 +330,46 @@ onMounted(() => {
   border-radius: 8px;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.detail-wrapper {
+  min-height: 200px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 24px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item .label,
+.verbs-section .label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.detail-item .value {
+  font-size: 14px;
+  color: #1f2937;
+  word-break: break-all;
+}
+
+.verbs-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.verb-tags {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 </style>

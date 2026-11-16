@@ -3,7 +3,7 @@
     <!-- 侧边栏 -->
     <el-aside :width="isCollapsed ? '72px' : '250px'" class="sidebar">
       <div class="logo" @click="goHome" style="cursor: pointer;">
-        <h2>{{ isCollapsed ? 'K' : 'K8s管理平台' }}</h2>
+        <h2>{{ isCollapsed ? 'B' : 'BuDing Kube 管理平台' }}</h2>
       </div>
       <el-menu
         :default-active="activeMenu"

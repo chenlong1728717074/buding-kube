@@ -451,7 +451,7 @@ const pagination = reactive({
 })
 
 const goDetail = (row: SecretVO) => {
-  router.push({ path: '/config/secret/detail', query: { clusterId: clusterId.value, namespace: row.namespace, name: row.name } })
+  router.push({ path: `/cluster/${clusterId.value}/config/secret/detail`, query: { clusterId: clusterId.value, namespace: row.namespace, name: row.name } })
 }
 
 const currentRow = ref<SecretVO | null>(null)

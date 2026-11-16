@@ -496,6 +496,8 @@ const handleViewDetail = (row: NamespaceVO) => {
   router.push({
     path: `/cluster/${clusterId.value}/namespace/detail`,
     query: {
+      clusterId: clusterId.value,
+      clusterName: clusterStore.currentClusterName,
       namespace: row.name
     }
   })

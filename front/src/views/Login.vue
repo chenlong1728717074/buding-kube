@@ -99,7 +99,7 @@ const onSubmit = async () => {
         const greet = hour < 12 ? '早上好' : hour < 18 ? '下午好' : '晚上好'
         const emoji = hour < 12 ? '☀️' : hour < 18 ? '🌤️' : '🌛'
         ElNotification({
-          message: `${greet} ${emoji} ${loginForm.value.username}，欢迎使用 K8s 管理平台`,
+          message: `${greet} ${emoji} ${loginForm.value.username}，欢迎使用 BuDing Kube 管理平台`,
           type: 'success',
           duration: 3000
         })

@@ -112,7 +112,7 @@
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
-                    <el-dropdown-item command="restart">重建</el-dropdown-item>
+                    <el-dropdown-item command="restart">滚动重启</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -533,11 +533,11 @@ const handleDelete = (row: DeploymentVO) => {
   })
 }
 
-// 重建Deployment
+// 滚动重启Deployment
 const handleRestart = (row: DeploymentVO) => {
   ElMessageBox.confirm(
-    `确定要重建Deployment "${row.name}" 吗？`,
-    '确认重建',
+    `确定要滚动重启 Deployment "${row.name}" 吗？`,
+    '确认滚动重启',
     {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
@@ -550,14 +550,14 @@ const handleRestart = (row: DeploymentVO) => {
         namespace: row.namespace,
         name: row.name
       })
-      ElMessage.success('重建成功')
+      ElMessage.success('滚动重启成功')
       fetchDeploymentList()
     } catch (error) {
-      console.error('重建失败:', error)
-      ElMessage.error('重建失败')
+      console.error('滚动重启失败:', error)
+      ElMessage.error('滚动重启失败')
     }
   }).catch(() => {
-    ElMessage.info('已取消重建')
+    ElMessage.info('已取消滚动重启')
   })
 }
 

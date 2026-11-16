@@ -117,10 +117,10 @@
     </el-dialog>
 
     <!-- 添加ConfigMap（参考设计） -->
-    <el-dialog v-model="createDialogVisible" title="创建保密字典" width="1600px" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="createDialogVisible" title="创建ConfigMap" width="1200px" :close-on-click-modal="false" class="config-dialog">
       <template #header>
         <div class="dialog-header">
-          <h3 class="dialog-title">创建保密字典</h3>
+          <h3 class="dialog-title">创建ConfigMap</h3>
           <div class="dialog-actions">
             <el-switch v-model="createYamlMode" active-text="编辑 YAML" />
           </div>
@@ -157,21 +157,34 @@
             <YamlEditor :model-value="createYaml" :readonly="true" height="550px" />
           </div>
           <div v-else-if="createSection === 'basic'" class="basic-form">
-            <el-form :model="createForm" label-width="80px" label-position="right">
-              <el-form-item label="命名空间" required>
-                <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 100%">
-                  <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="名称" required>
-                <el-input v-model="createForm.name" placeholder="请输入名称" />
-              </el-form-item>
-              <el-form-item label="别名">
-                <el-input v-model="createForm.alias" placeholder="可选" />
-              </el-form-item>
-              <el-form-item label="描述">
-                <el-input v-model="createForm.describe" type="textarea" :rows="4" placeholder="可选" />
-              </el-form-item>
+            <el-form :model="createForm" label-position="top" class="create-form">
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="命名空间" required>
+                    <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 100%">
+                      <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="名称" required>
+                    <el-input v-model="createForm.name" placeholder="小写字母、数字、'-' 和 '.'" />
+                    <div class="field-hint">将作为 ConfigMap 的元数据名称，创建后不可修改</div>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="别名">
+                    <el-input v-model="createForm.alias" placeholder="可选，用于列表展示" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="描述">
+                    <el-input v-model="createForm.describe" placeholder="可选，备注用途" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
             </el-form>
 
             <div class="form-section">
@@ -490,7 +503,7 @@ const handleCurrentChange = (page: number) => { pagination.page = page; fetchLis
 
 const router = useRouter()
 const goDetail = (row: ConfigMapVO) => {
-  router.push({ path: '/config/configmap/detail', query: { clusterId: clusterId.value, namespace: row.namespace, name: row.name } })
+  router.push({ path: `/cluster/${clusterId.value}/config/configmap/detail`, query: { clusterId: clusterId.value, namespace: row.namespace, name: row.name } })
 }
 
 const handleRowAction = (cmd: string, row: ConfigMapVO) => {
@@ -1044,6 +1057,18 @@ const removeMetaRow = (rows: KvRow[], idx: number) => {
   height: 28px;
   padding: 0 10px;
   border-radius: 8px;
+}
+
+.create-form .field-hint {
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.create-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #374151;
 }
 
 </style>

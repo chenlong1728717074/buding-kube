@@ -163,7 +163,7 @@ const handleBack = () => {
 // 查看详情
 const handleViewDetail = () => {
   router.push({
-    path: '/namespace/detail',
+    path: `/cluster/${route.query.clusterId}/namespace/detail`,
     query: {
       clusterId: route.query.clusterId,
       namespace: route.query.namespace

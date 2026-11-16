@@ -119,7 +119,7 @@
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
-                    <el-dropdown-item command="restart">重建</el-dropdown-item>
+                    <el-dropdown-item command="restart">滚动重启</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -660,12 +660,12 @@ const handleDelete = async (row: DaemonSetVO) => {
   }
 }
 
-// 重建DaemonSet
+// 滚动重启DaemonSet
 const handleRestart = async (row: DaemonSetVO) => {
   try {
     await ElMessageBox.confirm(
-      `确定要重建DaemonSet "${row.name}" 吗？`,
-      '确认重建',
+      `确定要滚动重启 DaemonSet "${row.name}" 吗？`,
+      '确认滚动重启',
       {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -681,15 +681,15 @@ const handleRestart = async (row: DaemonSetVO) => {
 
     const response = await daemonSetApi.rolloutDaemonSet(params)
     if (response.code === 200) {
-      ElMessage.success('重建成功')
+      ElMessage.success('滚动重启成功')
       fetchDaemonSetList()
     } else {
-      ElMessage.error(response.message || '重建失败')
+      ElMessage.error(response.message || '滚动重启失败')
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      console.error('重建DaemonSet失败:', error)
-      ElMessage.error('重建失败')
+      console.error('滚动重启DaemonSet失败:', error)
+      ElMessage.error('滚动重启失败')
     }
   }
 }
