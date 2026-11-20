@@ -336,3 +336,26 @@ body {
   border-color: var(--el-color-danger);
   box-shadow: 0 4px 10px rgba(220, 38, 38, 0.22);
 }
+
+/* ===== 全局 UI 细节优化 ===== */
+
+/* 表格表头: 浅灰底 + 加粗, 与卡片风格统一 */
+.el-table th.el-table__cell {
+  background: #f8fafc;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+/* 弹窗与消息框圆角统一 */
+.el-message-box {
+  border-radius: 12px !important;
+}
+
+.el-dialog__title {
+  font-weight: 600;
+}
+
+/* 菜单与下拉条目字号统一 */
+.el-dropdown-menu__item {
+  font-size: 13px;
+}

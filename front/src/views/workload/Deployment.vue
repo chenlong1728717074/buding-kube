@@ -513,7 +513,8 @@ const handleDelete = (row: DeploymentVO) => {
     {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning'
+      confirmButtonClass: 'el-button--danger',
+            type: 'warning'
     }
   ).then(async () => {
     try {

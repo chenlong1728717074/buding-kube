@@ -411,6 +411,7 @@ const handleCommand = (command: string, cluster: any) => {
   } else if (command === 'delete') {
     ElMessageBox.confirm(`确定要删除集群 "${cluster.alias || cluster.name}" 吗？`, '提示', {
       type: 'warning',
+        confirmButtonClass: 'el-button--danger',
       confirmButtonText: '确定',
       cancelButtonText: '取消'
     }).then(async () => {

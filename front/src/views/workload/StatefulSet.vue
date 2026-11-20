@@ -636,6 +636,7 @@ const handleDelete = async (row: StatefulSetVO) => {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning',
+        confirmButtonClass: 'el-button--danger',
       }
     )
 

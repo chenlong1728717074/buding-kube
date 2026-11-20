@@ -413,6 +413,7 @@ const handleDelete = (row: CronJobVO) => {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
+        confirmButtonClass: 'el-button--danger',
     }
   ).then(() => {
     ElMessage.info('删除功能开发中')
