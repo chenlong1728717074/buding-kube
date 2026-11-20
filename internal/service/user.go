@@ -8,6 +8,7 @@ import (
 	"buding-kube/pkg/logs"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -31,6 +32,36 @@ func GetSingletonUserService() *UserService {
 
 func NewUserService() *UserService {
 	return &UserService{}
+}
+
+// emailRegexp 邮箱格式校验(允许为空, 填写时必须合法)
+var emailRegexp = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
+func validateEmail(email string) error {
+	if email == "" {
+		return nil
+	}
+	if !emailRegexp.MatchString(email) {
+		return errors.New("邮箱格式不正确")
+	}
+	return nil
+}
+
+// ensureEmailUnique 校验邮箱未被其他用户占用(允许为空)
+func (s *UserService) ensureEmailUnique(email, excludeUsername string) error {
+	if email == "" {
+		return nil
+	}
+	users, err := kube.ListUsers(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for i := range users {
+		if users[i].Spec.Email == email && users[i].Name != excludeUsername {
+			return errors.New("邮箱已被其他用户使用")
+		}
+	}
+	return nil
 }
 
 // GetUser  根据用户名获取用户
@@ -90,6 +121,12 @@ func (s *UserService) CreateUser(req dto.CreateUserDTO, currentUser *kube.LoginU
 	if req.Password == "" {
 		return errors.New("请输入密码")
 	}
+	if err := validateEmail(req.Email); err != nil {
+		return err
+	}
+	if err := s.ensureEmailUnique(req.Email, req.Username); err != nil {
+		return err
+	}
 	if req.Role == kube.RoleSuperAdmin {
 		return errors.New("不允许创建超级管理员")
 	}
@@ -107,6 +144,12 @@ func (s *UserService) UpdateUser(req dto.CreateUserDTO, currentUser *kube.LoginU
 	var err error
 	user, err = kube.GetUser(req.Username)
 	if err != nil {
+		return err
+	}
+	if err := validateEmail(req.Email); err != nil {
+		return err
+	}
+	if err := s.ensureEmailUnique(req.Email, req.Username); err != nil {
 		return err
 	}
 	if !currentUser.CanManageUser(user) {
@@ -146,6 +189,7 @@ func BuildUserFromDTO(req dto.CreateUserDTO) (*kube.User, error) {
 		Spec: kube.UserSpec{
 			Email:      req.Email,
 			RealName:   req.RealName,
+			Phone:      req.Phone,
 			Password:   password,
 			Role:       req.Role,
 			Enabled:    state == kube.UserStateActive,
@@ -160,6 +204,7 @@ func BuildUserFromDTO(req dto.CreateUserDTO) (*kube.User, error) {
 
 func UpdateUserFromDTO(req dto.CreateUserDTO, user *kube.User) {
 	user.Spec.RealName = req.RealName
+	user.Spec.Phone = req.Phone
 	user.Spec.Email = req.Email
 	user.Spec.Role = req.Role
 	user.Spec.Department = req.Department

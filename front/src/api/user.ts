@@ -18,6 +18,7 @@ export enum UserStatus {
 // 用户信息VO
 export interface UserVO {
   username: string
+  realName?: string
   email?: string
   role: UserRole | string
   status: UserStatus | string

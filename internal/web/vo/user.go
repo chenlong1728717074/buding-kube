@@ -8,6 +8,8 @@ import (
 // UserVO 用户视图对象
 type UserVO struct {
 	Username   string            `json:"username" example:"zhangsan"`          // 用户名
+	RealName   string            `json:"realName" example:"张三"`                // 真实姓名
+	Phone      string            `json:"phone" example:"13800138000"`          // 手机号
 	Email      string            `json:"email" example:"zhangsan@example.com"` // 邮箱
 	Role       kube.Role         `json:"role" example:"1"`                     // 角色: 1=超级管理员 2=管理员 3=普通用户
 	Status     string            `json:"status" example:"active"`              // 状态: active/inactive/suspended/expired
@@ -21,6 +23,8 @@ type UserVO struct {
 func User2VO(user *kube.User) *UserVO {
 	result := UserVO{
 		Username:   user.Name,
+		RealName:   user.Spec.RealName,
+		Phone:      user.Spec.Phone,
 		Email:      user.Spec.Email,
 		Role:       user.Spec.Role,
 		Department: user.Spec.Department,

@@ -8,8 +8,10 @@ import (
 	"buding-kube/pkg/utils/jwt"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/alexedwards/argon2id"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -50,6 +52,13 @@ func (s *AuthService) Login(login dto.LoginDTO) (*vo.LoginUserVO, error) {
 	if !match {
 		return nil, errors.New("用户名或密码错误")
 	}
+
+	// 更新最后登录时间(失败不影响登录)
+	user.Status.LastLogin = &metav1.Time{Time: time.Now()}
+	if err := kube.UpdateUser(user); err != nil {
+		logs.Error("更新最后登录时间失败: %v", err)
+	}
+
 	token, err := jwt.Token.GenerateToken(user)
 	if err != nil {
 		logs.Error("token 生成失败 %v", err)

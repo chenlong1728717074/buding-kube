@@ -246,6 +246,10 @@ func buildUserCRD() *apiextensionsv1.CustomResourceDefinition {
 											Type:        "string",
 											Description: "User real name",
 										},
+										"phone": {
+											Type:        "string",
+											Description: "User phone number",
+										},
 										"password": {
 											Type:        "string",
 											Description: "User password",

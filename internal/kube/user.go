@@ -106,6 +106,7 @@ func (u *LoginUser) CanDeleteUser(target *User) bool {
 type UserSpec struct {
 	Email      string            `json:"email"`
 	RealName   string            `json:"realName,omitempty"`
+	Phone      string            `json:"phone,omitempty"`
 	Password   string            `json:"password"`
 	Role       Role              `json:"role"` // super/admin/normal
 	Enabled    bool              `json:"enabled"`

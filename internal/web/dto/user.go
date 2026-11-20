@@ -10,6 +10,7 @@ type CreateUserDTO struct {
 	RealName   string    `json:"realName" binding:"required" example:"张三"`       // 真实姓名
 	Password   string    `json:"password"  example:"123456"`                     // 密码，用户登录密码
 	Email      string    `json:"email" example:"zhangsan@example.com"`           // 邮箱
+	Phone      string    `json:"phone" example:"13800138000"`                    // 手机号
 	Role       kube.Role `json:"role" binding:"required" example:"admin"`        // 角色: super/admin/normal
 	Department string    `json:"department" example:"研发部"`                       // 部门
 	Status     string    `json:"status" example:"active"`                        // 状态: active/inactive/suspended/expired

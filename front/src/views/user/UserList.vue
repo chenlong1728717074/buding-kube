@@ -138,6 +138,7 @@
           <template #default="{ row }">
             <div class="user-info">
               <div class="user-name">{{ row.username }}</div>
+              <div v-if="row.realName" class="user-realname">{{ row.realName }}</div>
             </div>
           </template>
         </el-table-column>
@@ -257,16 +258,29 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="用户名" prop="username">
-              <el-input 
-                v-model="userForm.username" 
-                placeholder="请输入用户名" 
+              <el-input
+                v-model="userForm.username"
+                placeholder="请输入用户名"
                 :disabled="isEdit"
               />
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="姓名" prop="realName">
+              <el-input v-model="userForm.realName" placeholder="请输入姓名" maxlength="50" show-word-limit />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
             <el-form-item label="邮箱" prop="email">
               <el-input v-model="userForm.email" placeholder="请输入邮箱" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="手机号" prop="phone">
+              <el-input v-model="userForm.phone" placeholder="请输入手机号" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -309,14 +323,9 @@
         </el-row>
         
         <el-row :gutter="20">
-          <el-col :span="12">
+          <el-col :span="24">
             <el-form-item label="部门" prop="department">
               <el-input v-model="userForm.department" placeholder="请输入部门" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="手机号" prop="phone">
-              <el-input v-model="userForm.phone" placeholder="请输入手机号" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -649,7 +658,7 @@ const handleEdit = (row: UserVO) => {
   dialogTitle.value = '编辑用户'
   Object.assign(userForm, {
     username: row.username,
-    realName: row.username,
+    realName: row.realName || '',
     email: row.email || '',
     password: '',
     role: normalizeRole(String(row.role)),
@@ -1089,6 +1098,11 @@ onMounted(() => {
 .user-name {
   font-weight: 500;
   color: #2c3e50;
+}
+
+.user-realname {
+  font-size: 12px;
+  color: #9ca3af;
 }
 
 .status-tag {
