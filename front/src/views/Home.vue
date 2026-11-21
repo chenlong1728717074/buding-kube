@@ -3,7 +3,7 @@
     <!-- 欢迎区域 -->
     <div class="welcome-section">
       <h1>欢迎，{{ userStore.userInfo?.username }}</h1>
-      <p class="welcome-desc">BuDing Kube 多集群管理平台</p>
+      <p class="welcome-desc">BuDing Kubernetes 多集群管理平台</p>
     </div>
 
     <!-- 模块卡片 -->
@@ -119,7 +119,7 @@ onMounted(() => {
 
 /* 欢迎区域 */
 .welcome-section {
-  text-align: center;
+  text-align: left;
   margin-bottom: 60px;
 }
 
