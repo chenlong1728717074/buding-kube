@@ -43,6 +43,11 @@ export const redirectToLogin = async (message?: string) => {
   if (redirectingToLogin) return
   redirectingToLogin = true
   clearAuthStorage()
+  // 同步清空内存中的用户状态, 否则守卫读到过期的 isLoggedIn 会把 /login 弹回 /home
+  try {
+    const { useUserStore } = await import('@/stores/user')
+    useUserStore().clearUserData()
+  } catch {}
   try {
     await router.push('/login')
   } finally {
