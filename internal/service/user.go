@@ -104,6 +104,11 @@ func (s *UserService) ListUsers(query dto.UserQueryDTO) ([]*vo.UserVO, error) {
 			continue
 		}
 
+		if query.Role != "" &&
+			string(voUser.Role) != string(query.Role) {
+			continue
+		}
+
 		result = append(result, voUser)
 	}
 
@@ -139,7 +144,7 @@ func (s *UserService) CreateUser(req dto.CreateUserDTO, currentUser *kube.LoginU
 
 // UpdateUser 更新用户
 // 注意: 用户名(username)是不可修改的，它作为唯一标识符用于查询用户
-func (s *UserService) UpdateUser(req dto.CreateUserDTO, currentUser *kube.LoginUser) error {
+func (s *UserService) UpdateUser(req dto.UpdateUserDTO, currentUser *kube.LoginUser) error {
 	var user *kube.User
 	var err error
 	user, err = kube.GetUser(req.Username)
@@ -155,6 +160,15 @@ func (s *UserService) UpdateUser(req dto.CreateUserDTO, currentUser *kube.LoginU
 	if !currentUser.CanManageUser(user) {
 		return errors.New("权限不足")
 	}
+	// 角色与状态是管理字段: 修改角色要求操作者是管理员且不能改自己的角色, 防止普通用户自行提权
+	if req.Role != "" && req.Role != user.Spec.Role {
+		if kube.RoleLevel(currentUser.Role) > kube.RoleLevel(kube.RoleAdmin) {
+			return errors.New("权限不足")
+		}
+		if req.Username == currentUser.Username {
+			return errors.New("不能修改自己的角色")
+		}
+	}
 	if req.Username == kube.SuperAdmin && req.Role != kube.RoleSuperAdmin {
 		return errors.New("不能修改admin用户的角色")
 	}
@@ -165,6 +179,24 @@ func (s *UserService) UpdateUser(req dto.CreateUserDTO, currentUser *kube.LoginU
 		return errors.New("admin 用户的启用状态和状态不允许修改")
 	}
 	UpdateUserFromDTO(req, user)
+	return kube.UpdateUser(user)
+}
+
+// UpdateProfile 更新个人信息(仅允许修改本人的基本资料, 不涉及角色/状态)
+func (s *UserService) UpdateProfile(req dto.ProfileUpdateDTO, currentUser *kube.LoginUser) error {
+	user, err := kube.GetUser(currentUser.Username)
+	if err != nil {
+		return err
+	}
+	if err := validateEmail(req.Email); err != nil {
+		return err
+	}
+	if err := s.ensureEmailUnique(req.Email, user.Name); err != nil {
+		return err
+	}
+	user.Spec.RealName = req.RealName
+	user.Spec.Email = req.Email
+	user.Spec.Phone = req.Phone
 	return kube.UpdateUser(user)
 }
 
@@ -202,11 +234,13 @@ func BuildUserFromDTO(req dto.CreateUserDTO) (*kube.User, error) {
 	}, nil
 }
 
-func UpdateUserFromDTO(req dto.CreateUserDTO, user *kube.User) {
+func UpdateUserFromDTO(req dto.UpdateUserDTO, user *kube.User) {
 	user.Spec.RealName = req.RealName
 	user.Spec.Phone = req.Phone
 	user.Spec.Email = req.Email
-	user.Spec.Role = req.Role
+	if req.Role != "" {
+		user.Spec.Role = req.Role
+	}
 	user.Spec.Department = req.Department
 	if req.Status != "" {
 		user.Status.State = req.Status
@@ -276,9 +310,12 @@ func (s *UserService) BatchDeleteUsers(usernames []string, currentUser *kube.Log
 	return nil
 }
 
-// ResetPassword 重置用户密码（默认重置为 123456）
 // ResetPassword 重置用户密码: newPassword 为空时使用默认密码 123456
 func (s *UserService) ResetPassword(name, newPassword string, currentUser *kube.LoginUser) error {
+	if name == currentUser.Username {
+		// 自己改密码必须走 ChangePassword(校验旧密码), 否则任意用户可绕过旧密码校验重置自己的密码
+		return errors.New("不能重置自己的密码, 请使用修改密码功能")
+	}
 	user, err := kube.GetUser(name)
 	if err != nil {
 		return err

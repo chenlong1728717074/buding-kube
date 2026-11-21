@@ -298,7 +298,7 @@ func UpdateUser(user *User) error {
 		return fmt.Errorf("更新用户失败: %w", err)
 	}
 
-	fmt.Printf("✅ 更新用户: %s\n", user.Name)
+	logs.Info("更新用户: %s", user.Name)
 	return nil
 }
 

@@ -109,14 +109,11 @@ func (s *NamespaceService) Update(create dto.NamespaceCreateDTO) error {
 	if ns.Annotations == nil {
 		ns.Annotations = make(map[string]string)
 	}
-	if create.Annotations == nil {
-		create.Annotations = make(map[string]string)
-	}
 	if create.Alias != "" {
-		create.Annotations["alias"] = create.Alias
+		ns.Annotations["alias"] = create.Alias
 	}
 	if create.Describe != "" {
-		create.Annotations["describe"] = create.Describe
+		ns.Annotations["describe"] = create.Describe
 	}
 
 	_, err = clientSet.CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})

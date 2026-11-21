@@ -84,11 +84,16 @@ func (s *DaemonSetService) Update(query dto.WorkloadUpdateDTO) error {
 		logs.Error("获取DaemonSet失败: %s %s", query.ClusterId, err.Error())
 		return fmt.Errorf("获取DaemonSet失败 %v", err)
 	}
-	if query.Alias != "" {
-		ds.Annotations["alias"] = query.Alias
-	}
-	if query.Describe != "" {
-		ds.Annotations["describe"] = query.Describe
+	if query.Alias != "" || query.Describe != "" {
+		if ds.Annotations == nil {
+			ds.Annotations = make(map[string]string)
+		}
+		if query.Alias != "" {
+			ds.Annotations["alias"] = query.Alias
+		}
+		if query.Describe != "" {
+			ds.Annotations["describe"] = query.Describe
+		}
 	}
 	_, err = clientSet.AppsV1().DaemonSets(query.Namespace).Update(context.TODO(), ds, metav1.UpdateOptions{})
 	if err != nil {

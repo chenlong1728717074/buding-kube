@@ -103,8 +103,4 @@ func SetupRouter(engine *gin.RouterGroup) {
 	//crd
 	crd := engine.Group("/crd", middleware.JWTAuth())
 	api.NewCrdApi(crd)
-
-	//tool
-	tool := engine.Group("/tool", middleware.JWTAuth())
-	api.NewToolApi(tool)
 }

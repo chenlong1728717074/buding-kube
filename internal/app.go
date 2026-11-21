@@ -60,7 +60,8 @@ func (app *App) Start() {
 		Addr:           addr,
 		Handler:        app.engine,
 		ReadTimeout:    10 * time.Second, // 添加超时配置
-		WriteTimeout:   10 * time.Second,
+		WriteTimeout:   0,                // 不限制写超时: Pod 日志 SSE、文件下载是长连接流式响应
+		IdleTimeout:    120 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 	app.server = server

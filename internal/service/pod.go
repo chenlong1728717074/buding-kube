@@ -55,7 +55,7 @@ func (s *PodService) Delete(pod dto.PodDTO) error {
 		flag := int64(0)
 		options.GracePeriodSeconds = &flag
 	}
-	err = clientSet.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+	err = clientSet.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, options)
 	if err != nil {
 		logs.Error("删除pod失败: %s %s", pod.ClusterId, err.Error())
 		return err
@@ -160,6 +160,10 @@ func (ps *PodService) PodLog(query dto.PodLogDTO) (io.ReadCloser, error) {
 		return nil, errors.New("获取集群失败")
 	}
 	options, err := ps.buildLogOption(clientSet, query)
+	if err != nil {
+		logs.Error("构建日志选项失败: %s %s", query.ClusterId, err.Error())
+		return nil, errors.New("构建日志选项失败")
+	}
 	req := clientSet.CoreV1().Pods(query.Namespace).GetLogs(query.Name, options)
 	if req.Error() != nil {
 		logs.Error("连接到pod日志失败: %s %s", query.ClusterId, err.Error())
@@ -192,68 +196,6 @@ func (s *PodService) Download(query dto.PodDownloadDTO) (io.ReadCloser, error) {
 
 	logs.Info("文件下载开始: %s", filePath)
 	return reader, nil
-}
-
-func (s *PodService) Upload(query dto.PodDownloadDTO, file multipart.File, header *multipart.FileHeader) error {
-	cache, err := ClusterMap.GetCache(query.ClusterId)
-	if err != nil {
-		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
-		return errors.New("获取集群失败")
-	}
-
-	// 优雅处理文件路径，兼容Windows和Linux
-	targetPath := formatTargetPath(query.FilePath, header.Filename)
-
-	// 构建 exec 请求
-	req := cache.clientSet.CoreV1().RESTClient().Post().
-		Resource("pods").
-		Name(query.Name).
-		Namespace(query.Namespace).
-		SubResource("exec").
-		VersionedParams(&v1.PodExecOptions{
-			Container: query.ContainerName,
-			Command:   []string{"/bin/sh", "-c", fmt.Sprintf("cat > %s", targetPath)},
-			Stdin:     true,
-			Stdout:    false,
-			Stderr:    true,
-			TTY:       false,
-		}, scheme.ParameterCodec)
-
-	// 创建 executor
-	executor, err := remotecommand.NewSPDYExecutor(cache.config, "POST", req.URL())
-	if err != nil {
-		return fmt.Errorf("创建执行器失败: %v", err)
-	}
-
-	// 准备输入输出流
-	fileContent, err := io.ReadAll(file)
-	if err != nil {
-		return errors.New("读取文件内容失败: " + err.Error())
-	}
-
-	stdin := bytes.NewReader(fileContent)
-	var stderrBuf bytes.Buffer
-
-	// 执行命令
-	err = executor.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
-		Stdin:             stdin,
-		Stdout:            nil,
-		Stderr:            &stderrBuf,
-		TerminalSizeQueue: nil,
-	})
-
-	if err != nil {
-		logs.Error("文件上传失败: %v, stderr: %s", err, stderrBuf.String())
-		return fmt.Errorf("文件上传失败: %v", err)
-	}
-
-	// 检查 stderr 是否有错误信息
-	if stderrBuf.Len() > 0 {
-		logs.Warn("上传过程中的警告信息: %s", stderrBuf.String())
-	}
-
-	logs.Info("文件上传成功: %s", targetPath)
-	return nil
 }
 
 // formatTargetPath 处理目标路径和文件名，确保路径格式正确

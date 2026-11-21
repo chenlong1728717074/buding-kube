@@ -16,6 +16,24 @@ type CreateUserDTO struct {
 	Status     string    `json:"status" example:"active"`                        // 状态: active/inactive/suspended/expired
 }
 
+// UpdateUserDTO 更新用户参数(字段均可选, username 用于定位用户)
+type UpdateUserDTO struct {
+	Username   string    `json:"username" binding:"required" example:"zhangsan"` // 用户名，用户登录账号
+	RealName   string    `json:"realName" example:"张三"`                         // 真实姓名
+	Email      string    `json:"email" example:"zhangsan@example.com"`           // 邮箱
+	Phone      string    `json:"phone" example:"13800138000"`                    // 手机号
+	Role       kube.Role `json:"role" example:"admin"`                           // 角色: super/admin/normal
+	Department string    `json:"department" example:"研发部"`                       // 部门
+	Status     string    `json:"status" example:"active"`                        // 状态: active/inactive/suspended/expired
+}
+
+// ProfileUpdateDTO 个人资料更新参数(仅本人可改基本资料, 不含角色/状态等敏感字段)
+type ProfileUpdateDTO struct {
+	RealName string `json:"realName" example:"张三"`                         // 真实姓名
+	Email    string `json:"email" example:"zhangsan@example.com"`           // 邮箱
+	Phone    string `json:"phone" example:"13800138000"`                    // 手机号
+}
+
 // UserQueryDTO 用户查询参数
 type UserQueryDTO struct {
 	Username     string    `form:"username" example:"zhangsan"` // 用户名，精确匹配

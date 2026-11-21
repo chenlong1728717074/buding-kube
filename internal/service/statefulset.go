@@ -83,11 +83,16 @@ func (s *StatefulSetService) Update(query dto.WorkloadUpdateDTO) error {
 		logs.Error("获取StatefulSet失败: %s %s", query.ClusterId, err.Error())
 		return fmt.Errorf("获取StatefulSet失败 %v", err)
 	}
-	if query.Alias != "" {
-		sts.Annotations["alias"] = query.Alias
-	}
-	if query.Describe != "" {
-		sts.Annotations["describe"] = query.Describe
+	if query.Alias != "" || query.Describe != "" {
+		if sts.Annotations == nil {
+			sts.Annotations = make(map[string]string)
+		}
+		if query.Alias != "" {
+			sts.Annotations["alias"] = query.Alias
+		}
+		if query.Describe != "" {
+			sts.Annotations["describe"] = query.Describe
+		}
 	}
 	_, err = clientSet.AppsV1().StatefulSets(query.Namespace).Update(context.TODO(), sts, metav1.UpdateOptions{})
 	if err != nil {

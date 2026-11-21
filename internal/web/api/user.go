@@ -5,6 +5,7 @@ import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
 	"buding-kube/internal/web/middleware"
+	"buding-kube/internal/web/vo"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,7 +30,9 @@ func NewUserApi(router *gin.RouterGroup) *UserApi {
 // Router 配置路由
 func (api *UserApi) Router() {
 	api.router.POST("", BindJSON[dto.CreateUserDTO](api.CreateUser))
-	api.router.PUT("", middleware.Blocker(), BindJSON[dto.CreateUserDTO](api.UpdateUser))
+	api.router.PUT("", middleware.Blocker(), BindJSON[dto.UpdateUserDTO](api.UpdateUser))
+	api.router.GET("/profile", api.GetProfile)
+	api.router.PUT("/profile", BindJSON[dto.ProfileUpdateDTO](api.UpdateProfile))
 	api.router.PUT("/status", middleware.Blocker(), BindJSON[dto.UpdateUserStatusDTO](api.UpdateUserStatus))
 	api.router.PUT("/enable", middleware.Blocker(), BindJSON[dto.UpdateUserEnableDTO](api.UpdateUserEnable))
 	api.router.POST("/batchDelete", middleware.Blocker(), BindJSON[dto.BatchDeleteUsersDTO](api.BatchDeleteUsers))
@@ -75,7 +78,27 @@ func (api *UserApi) CreateUser(ctx *gin.Context, req dto.CreateUserDTO) {
 	api.SuccessMsg(ctx, "创建用户成功")
 }
 
-func (api *UserApi) UpdateUser(ctx *gin.Context, req dto.CreateUserDTO) {
+// GetProfile 获取当前登录用户的个人信息
+func (api *UserApi) GetProfile(ctx *gin.Context) {
+	currentUser := api.CurrentUser(ctx)
+	user, err := api.srv.GetUser(currentUser.Username)
+	if err != nil {
+		api.NotFound(ctx, "用户不存在")
+		return
+	}
+	api.SuccessWithData(ctx, vo.User2VO(user))
+}
+
+// UpdateProfile 更新当前登录用户的个人信息(仅基本资料字段)
+func (api *UserApi) UpdateProfile(ctx *gin.Context, req dto.ProfileUpdateDTO) {
+	if err := api.srv.UpdateProfile(req, api.CurrentUser(ctx)); err != nil {
+		api.InternalError(ctx, "更新个人信息失败", err)
+		return
+	}
+	api.SuccessMsg(ctx, "更新个人信息成功")
+}
+
+func (api *UserApi) UpdateUser(ctx *gin.Context, req dto.UpdateUserDTO) {
 	if err := api.srv.UpdateUser(req, api.CurrentUser(ctx)); err != nil {
 		api.InternalError(ctx, "修改用户失败", err)
 		return

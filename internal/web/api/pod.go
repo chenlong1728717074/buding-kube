@@ -184,11 +184,11 @@ func (api *PodApi) Log(ctx *gin.Context) {
 		return
 	}
 	stream, err := api.srv.PodLog(query)
-	defer stream.Close()
 	if err != nil {
 		api.InternalError(ctx, "获取失败:", err)
 		return
 	}
+	defer stream.Close()
 	//升级sse
 	api.keepAliveTextPlain(ctx)
 	//发送数据

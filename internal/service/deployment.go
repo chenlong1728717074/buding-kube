@@ -83,11 +83,16 @@ func (s *DeploymentService) Update(query dto.WorkloadUpdateDTO) error {
 		logs.Error("获取Deployments失败: %s %s", query.ClusterId, err.Error())
 		return fmt.Errorf("获取Deployments失败 %v", err)
 	}
-	if query.Alias != "" {
-		dy.Annotations["alias"] = query.Alias
-	}
-	if query.Describe != "" {
-		dy.Annotations["describe"] = query.Describe
+	if query.Alias != "" || query.Describe != "" {
+		if dy.Annotations == nil {
+			dy.Annotations = make(map[string]string)
+		}
+		if query.Alias != "" {
+			dy.Annotations["alias"] = query.Alias
+		}
+		if query.Describe != "" {
+			dy.Annotations["describe"] = query.Describe
+		}
 	}
 	_, err = clientSet.AppsV1().Deployments(query.Namespace).Update(context.TODO(), dy, metav1.UpdateOptions{})
 	if err != nil {
@@ -208,8 +213,8 @@ func (s *DeploymentService) Apply(query dto.WorkloadApplyDTO) error {
 		}
 		return err
 	}
-	_, err = clientSet.AppsV1().Deployments(query.Namespace).Update(context.TODO(), &dy, metav1.UpdateOptions{})
 	dy.ResourceVersion = existingDeploy.ResourceVersion
+	_, err = clientSet.AppsV1().Deployments(query.Namespace).Update(context.TODO(), &dy, metav1.UpdateOptions{})
 	if err != nil {
 		logs.Error("修改Deployments失败: %s %v", query.ClusterId, err)
 		return fmt.Errorf("修改Deployments失败 %v", err)
