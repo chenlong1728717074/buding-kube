@@ -54,9 +54,6 @@ export const redirectToLogin = async (message?: string) => {
 // 请求拦截器
 request.interceptors.request.use(
   (config: AxiosRequestConfig) => {
-    if (uiMockEnabled) {
-      return uiMockHandler(config) as any
-    }
     // 添加token到请求头
     const token = sessionStorage.getItem('token') || localStorage.getItem('token')
     if (token && config.headers) {
