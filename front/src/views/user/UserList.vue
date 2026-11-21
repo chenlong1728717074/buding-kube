@@ -4,7 +4,7 @@
     <el-card class="hero-card" shadow="never">
       <div class="hero-content">
         <div class="hero-icon-block">
-          <el-icon :size="30"><UserFilled /></el-icon>
+          <IconUsers :size="30" />
         </div>
         <div class="hero-text">
           <h1 class="hero-title">用户管理</h1>
@@ -12,7 +12,7 @@
         </div>
         <div class="hero-decoration">
           <div class="hero-shield">
-            <el-icon :size="34"><Lock /></el-icon>
+            <IconShieldLock :size="34" />
           </div>
         </div>
       </div>
@@ -21,28 +21,28 @@
     <!-- 统计卡片 -->
     <div class="stats-grid">
       <el-card class="stat-card stat-blue" shadow="never">
-        <div class="stat-icon-block icon-blue"><el-icon :size="30"><UserFilled /></el-icon></div>
+        <div class="stat-icon-block icon-blue"><IconUsers :size="28" /></div>
         <div class="stat-info">
           <div class="stat-label">总用户数</div>
           <div class="stat-value">{{ pagination.total }}</div>
         </div>
       </el-card>
       <el-card class="stat-card stat-green" shadow="never">
-        <div class="stat-icon-block icon-green"><el-icon :size="30"><CircleCheckFilled /></el-icon></div>
+        <div class="stat-icon-block icon-green"><IconUserCheck :size="28" /></div>
         <div class="stat-info">
           <div class="stat-label">正常用户</div>
           <div class="stat-value">{{ activeCount }}</div>
         </div>
       </el-card>
       <el-card class="stat-card stat-red" shadow="never">
-        <div class="stat-icon-block icon-red"><el-icon :size="30"><CircleCloseFilled /></el-icon></div>
+        <div class="stat-icon-block icon-red"><IconUserX :size="28" /></div>
         <div class="stat-info">
           <div class="stat-label">禁用用户</div>
           <div class="stat-value">{{ inactiveCount }}</div>
         </div>
       </el-card>
       <el-card class="stat-card stat-purple" shadow="never">
-        <div class="stat-icon-block icon-purple"><el-icon :size="30"><Medal /></el-icon></div>
+        <div class="stat-icon-block icon-purple"><IconShieldCheck :size="28" /></div>
         <div class="stat-info">
           <div class="stat-label">管理员</div>
           <div class="stat-value">{{ adminCount }}</div>
@@ -57,7 +57,7 @@
           <el-input
             v-model="searchForm.keyword"
             placeholder="请输入用户名或邮箱"
-            :prefix-icon="Search"
+            :prefix-icon="IconSearch"
             clearable
             style="width: 220px"
             @keyup.enter="handleSearch"
@@ -89,19 +89,19 @@
         </div>
         <div class="filter-right">
           <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
+            <IconPlus :size="16" />
             新增用户
           </el-button>
           <el-button :disabled="selectedUsers.length !== 1" @click="handleToolbarEdit">
-            <el-icon><EditPen /></el-icon>
+            <IconEdit :size="15" />
             编辑
           </el-button>
           <el-button :disabled="selectedUsers.length === 0" @click="handleBatchDisable">
-            <el-icon><CircleClose /></el-icon>
+            <IconBan :size="15" />
             禁用
           </el-button>
           <el-button :disabled="selectedUsers.length === 0" @click="handleBatchDelete">
-            <el-icon><Delete /></el-icon>
+            <IconTrash :size="15" />
             删除
           </el-button>
         </div>
@@ -187,7 +187,7 @@
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-edit" @click="handleEdit(row)">
-                <el-icon><Edit /></el-icon>
+                <IconEdit :size="14" />
                 编辑
               </el-button>
               <el-button
@@ -201,20 +201,20 @@
               </el-button>
               <el-dropdown trigger="click" @command="(command) => handleMoreActions(command, row)">
                 <el-button size="small" class="more-text-btn">
-                  更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                  更多<IconArrowDown :size="14" />
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="resetPassword">
-                      <el-icon><Key /></el-icon>
+                      <IconKey :size="15" />
                       重置密码
                     </el-dropdown-item>
                     <el-dropdown-item command="permissions">
-                      <el-icon><Lock /></el-icon>
+                      <IconLock :size="15" />
                       权限管理
                     </el-dropdown-item>
                     <el-dropdown-item command="delete" divided>
-                      <el-icon><Delete /></el-icon>
+                      <IconTrash :size="15" />
                       <span style="color: var(--el-color-danger);">删除用户</span>
                     </el-dropdown-item>
                   </el-dropdown-menu>
@@ -364,26 +364,27 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Plus,
-  Search,
   Refresh,
-  Delete,
-  ArrowDown,
-  MoreFilled,
-  Edit,
   Switch,
-  Key,
-  Lock,
-  EditPen,
-  CircleClose,
-  UserFilled,
-  CircleCheckFilled,
-  Medal,
   SuccessFilled,
-  CircleCloseFilled,
   WarningFilled,
   InfoFilled
 } from '@element-plus/icons-vue'
+import {
+  IconUsers,
+  IconUserCheck,
+  IconUserX,
+  IconShieldCheck,
+  IconShieldLock,
+  IconSearch,
+  IconPlus,
+  IconEdit,
+  IconBan,
+  IconTrash,
+  IconKey,
+  IconLock,
+  IconArrowDown
+} from '@tabler/icons-vue'
 import {
   userApi,
   type UserVO,
@@ -937,7 +938,7 @@ onMounted(() => {
 .hero-card {
   border: none;
   border-radius: 12px;
-  background: linear-gradient(115deg, #e8f1fd 0%, #ddeafb 55%, #cfe0f8 100%);
+  background: linear-gradient(115deg, #d3e6fb 0%, #c7dcf8 55%, #b7d0f5 100%);
   overflow: hidden;
 }
 
@@ -969,13 +970,13 @@ onMounted(() => {
   margin: 0;
   font-size: 26px;
   font-weight: 700;
-  color: #16325c;
+  color: #0e2a52;
 }
 
 .hero-desc {
   margin: 8px 0 0;
   font-size: 14px;
-  color: #5b7396;
+  color: #4f6a94;
 }
 
 .hero-decoration {
@@ -1057,7 +1058,7 @@ onMounted(() => {
 
 .stat-label {
   font-size: 13px;
-  color: #64748b;
+  color: #475569;
 }
 
 .stat-value {
@@ -1227,7 +1228,7 @@ onMounted(() => {
 
 .user-realname {
   font-size: 12px;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .status-tag {
