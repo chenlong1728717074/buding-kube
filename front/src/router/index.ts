@@ -84,15 +84,6 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
-        path: 'overview',
-        name: 'ClusterOverview',
-        component: () => import('@/views/cluster/ClusterOverview.vue'),
-        meta: {
-          title: '集群概览',
-          requiresAuth: true
-        }
-      },
-      {
         path: 'namespace',
         name: 'NamespaceList',
         component: () => import('@/views/namespace/NamespaceList.vue'),
