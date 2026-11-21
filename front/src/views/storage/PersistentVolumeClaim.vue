@@ -113,7 +113,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled } from '@element-plus/icons-vue'
-import { clusterApi } from '@/api/cluster'
+
 import { namespaceApi } from '@/api/namespace'
 import { pvcApi, type PVCVO, type PVCQueryDTO } from '@/api/pvc'
 import { useClusterStore } from '@/stores/cluster'
@@ -128,7 +128,7 @@ const loading = ref(false)
 const items = ref<PVCVO[]>([])
 const namespaceList = ref<{ name: string }[]>([])
 
-const searchForm = reactive<PVCQueryDTO>({
+const searchForm = reactive<Omit<PVCQueryDTO, 'clusterId'>>({
   page: 1,
   pageSize: 20,
   namespace: '',
@@ -161,7 +161,7 @@ const getStatusType = (phase?: string) => {
     Pending: 'warning',
     Lost: 'danger'
   }
-  return (map[phase] as any) || 'info'
+  return (phase && map[phase]) || 'info'
 }
 
 const formatDate = (dateString?: string) => {

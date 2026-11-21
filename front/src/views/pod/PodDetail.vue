@@ -510,11 +510,9 @@ const fetchPodDetail = async () => {
     }
     
     const response = await podApi.getInfo(params)
-    console.log('Pod详情API响应:', response)
     
     if (response.code === 200 && response.data) {
       podInfo.value = response.data
-      console.log('解析后的Pod详情:', podInfo.value)
     } else {
       ElMessage.error('获取Pod详情失败')
     }

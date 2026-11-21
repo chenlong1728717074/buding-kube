@@ -105,7 +105,7 @@
               <el-button size="small" class="btn-edit" plain @click="handleEdit(row)">
                 编辑
               </el-button>
-              <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
+              <el-dropdown trigger="click" @command="(command: string) => handleMoreAction(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -264,8 +264,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled, Plus, Document } from '@element-plus/icons-vue'
 import { deploymentApi, type DeploymentVO, type DeploymentQueryDTO } from '@/api/deployment'
-import { clusterApi, type ClusterVO } from '@/api/cluster'
-import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import { clusterApi } from '@/api/cluster'
+
 import { useClusterStore } from '@/stores/cluster'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -360,8 +360,6 @@ const fetchDeploymentList = async () => {
     loading.value = false
   }
 }
-
-
 
 // 搜索处理
 const handleSearch = () => {
@@ -622,7 +620,7 @@ const handleApplyYaml = async () => {
 
 // YAML内容变化处理
 const handleYamlChange = (value: string) => {
-  viewYamlForm.value.yaml = value
+  viewYamlForm.yaml = value
 }
 
 // 应用编辑YAML

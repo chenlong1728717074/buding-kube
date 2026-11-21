@@ -1,5 +1,5 @@
 import { request } from '@/utils/request'
-import type { ApiResponse, PageResponse } from '@/types/api'
+import type { ApiResponse, PageResponse } from '@/utils/request'
 
 // Job查询参数
 export interface JobQueryDTO {

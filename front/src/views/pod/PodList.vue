@@ -115,7 +115,7 @@
               <el-button size="small" type="primary" class="btn-main" @click="handleViewDetail(row)">
                 详情
               </el-button>
-              <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
+              <el-dropdown trigger="click" @command="(command: string) => handleMoreAction(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -232,7 +232,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onActivated, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   Search,
   Refresh,
@@ -297,7 +297,6 @@ const fetchNamespaceList = async () => {
     }
     
     const response = await namespaceApi.getList(params)
-    console.log('命名空间列表API响应:', response)
     
     if (response.code === 200 && response.data) {
       namespaceList.value = response.data.items || []
@@ -326,12 +325,10 @@ const fetchPodList = async () => {
     }
     
     const response = await podApi.getList(params)
-    console.log('Pod列表API响应:', response)
     
     if (response.code === 200 && response.data) {
       podList.value = response.data.items || []
       pagination.total = response.data.total || 0
-      console.log('解析后的Pod列表:', podList.value)
     }
   } catch (error: any) {
     console.error('获取Pod列表失败:', error)

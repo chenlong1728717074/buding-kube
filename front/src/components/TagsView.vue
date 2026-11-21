@@ -32,7 +32,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowDown } from '@element-plus/icons-vue'
 
 interface TagItem {
   title: string
@@ -199,6 +198,5 @@ restore()
 .tag-item:hover {
   filter: brightness(1.02);
 }
-
 
 </style>

@@ -199,7 +199,7 @@
               >
                 {{ isUserEnabled(row) ? '禁用' : '启用' }}
               </el-button>
-              <el-dropdown trigger="click" @command="(command) => handleMoreActions(command, row)">
+              <el-dropdown trigger="click" @command="(command: string) => handleMoreActions(command, row)">
                 <el-button size="small" class="more-text-btn">
                   更多<IconArrowDown :size="14" />
                 </el-button>
@@ -364,8 +364,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Refresh,
-  Switch,
+  CircleCloseFilled,
   SuccessFilled,
   WarningFilled,
   InfoFilled
@@ -388,7 +387,6 @@ import {
 import {
   userApi,
   type UserVO,
-  type UserQueryDTO,
   type CreateUserDTO,
   type UpdateUserDTO,
   UserStatus
@@ -570,7 +568,7 @@ const fetchUserList = async () => {
     const res = await userApi.getUsers(params)
     
     if (res.code === 200 && res.data) {
-      userList.value = res.data.items || res.data.list || []
+      userList.value = res.data.items || []
       pagination.total = res.data.total || 0
     } else {
       userList.value = []
@@ -856,11 +854,13 @@ const cancelBatchDeleteUsers = () => {
 // 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return
-  
+
+  // 表单校验失败只提示字段错误, 不弹"创建/更新失败"
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
+  submitLoading.value = true
+
   try {
-    await formRef.value.validate()
-    submitLoading.value = true
-    
     if (isEdit.value) {
       const updateData: UpdateUserDTO = {
         username: userForm.username,

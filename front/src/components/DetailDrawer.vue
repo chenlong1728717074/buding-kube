@@ -16,7 +16,7 @@
             <span class="ks-kind">{{ kind }}</span>
             <span class="ks-name">{{ name }}</span>
           </div>
-          <div v-if="meta.length" class="ks-drawer-meta">
+          <div v-if="meta?.length" class="ks-drawer-meta">
             <span v-for="m in meta" :key="m.label" class="ks-meta-item">
               <span class="ks-meta-label">{{ m.label }}</span>
               <span class="ks-meta-value">{{ m.value || '-' }}</span>

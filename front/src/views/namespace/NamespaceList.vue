@@ -90,7 +90,7 @@
               <el-button size="small" class="btn-edit" plain @click="handleEdit(row)">
                 编辑
               </el-button>
-              <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
+              <el-dropdown trigger="click" @command="(command: string) => handleMoreAction(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -259,14 +259,13 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   Plus,
   Search,
   Refresh,
   MoreFilled,
-  Document,
-  Edit
+  Document
 } from '@element-plus/icons-vue'
 import { 
   namespaceApi, 
@@ -367,12 +366,10 @@ const fetchNamespaceList = async () => {
     }
     
     const response = await namespaceApi.getList(params)
-    console.log('命名空间列表API响应:', response)
     
     if (response.code === 200 && response.data) {
       namespaceList.value = response.data.items || []
       pagination.total = response.data.total || 0
-      console.log('解析后的命名空间列表:', namespaceList.value)
     }
   } catch (error: any) {
     console.error('获取命名空间列表失败:', error)
@@ -386,11 +383,9 @@ const fetchNamespaceList = async () => {
 const fetchClusterList = async () => {
   try {
     const response = await clusterApi.getClusters({ page: 1, pageSize: 10000 })
-    console.log('集群列表API响应:', response)
     
     if (response.code === 200 && response.data) {
       clusterList.value = response.data.items || []
-      console.log('解析后的集群列表:', clusterList.value)
     }
   } catch (error: any) {
     console.error('获取集群列表失败:', error)
@@ -761,8 +756,6 @@ onMounted(() => {
 .namespace-form {
   padding: 0 20px;
 }
-
-
 
 .dialog-footer {
   text-align: right;

@@ -69,7 +69,7 @@
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-main" @click="handleViewDetail(row)">详情</el-button>
-              <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
+              <el-dropdown trigger="click" @command="(command: string) => handleMoreAction(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -174,8 +174,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
 import { endpointSliceApi, type EndpointSliceVO, type EndpointSliceQueryDTO } from '@/api/endpointslice'
-import { clusterApi } from '@/api/cluster'
-import { namespaceApi } from '@/api/namespace'
+
 import { useClusterStore } from '@/stores/cluster'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -212,7 +211,7 @@ const viewYamlForm = reactive({
 })
 
 // 搜索表单
-const searchForm = reactive<EndpointSliceQueryDTO>({
+const searchForm = reactive<Omit<EndpointSliceQueryDTO, 'clusterId'>>({
   namespace: '',
   name: '',
   page: 1,

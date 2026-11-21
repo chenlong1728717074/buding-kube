@@ -53,7 +53,7 @@
       >
         <el-table-column prop="name" label="名称" min-width="120" header-align="center" align="center">
           <template #default="{ row }">
-            <el-link type="primary" @click="handleViewDetail(row)" :title="row.describe || ''">
+            <el-link type="primary" @click="handleDetail(row)" :title="row.describe || ''">
               {{ row.name }}
             </el-link>
           </template>
@@ -100,7 +100,7 @@
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-main" @click="handleDetail(row)">详情</el-button>
-              <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
+              <el-dropdown trigger="click" @command="(command: string) => handleMoreAction(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -199,15 +199,13 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
-import { serviceApi, type ServiceVO, type ServiceQueryDTO, type ServiceBaseDTO } from '@/api/service'
-import { clusterApi } from '@/api/cluster'
-import { namespaceApi } from '@/api/namespace'
+import { serviceApi, type ServiceVO, type ServiceQueryDTO } from '@/api/service'
+
 import { useClusterStore } from '@/stores/cluster'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import '@/assets/styles/config-editor.css'
-
 
 // 路由
 const router = useRouter()
@@ -238,7 +236,7 @@ const viewYamlForm = reactive({
 const namespaceFetcher = computed(() => useNamespaceFetcher(clusterId.value))
 
 // 搜索表单
-const searchForm = reactive<ServiceQueryDTO>({
+const searchForm = reactive<Omit<ServiceQueryDTO, 'clusterId'>>({
   namespace: '',
   name: '',
   page: 1,
@@ -271,14 +269,11 @@ const fetchServiceList = async () => {
     }
     
     const response = await serviceApi.getServices(params)
-    console.log('Service API响应:', response)
     if (response.code === 200) {
       serviceList.value = response.data.items || []
       pagination.total = response.data.total || 0
       // 调试：检查第一个项目的yaml字段
       if (response.data.items && response.data.items.length > 0) {
-        console.log('第一个Service的yaml字段:', response.data.items[0].yaml ? '存在' : '不存在')
-        console.log('第一个Service数据:', response.data.items[0])
       }
     }
   } catch (error) {

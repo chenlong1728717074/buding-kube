@@ -51,7 +51,7 @@
       >
         <el-table-column prop="name" label="名称" min-width="120" header-align="center" align="center">
           <template #default="{ row }">
-            <el-link type="primary" @click="handleViewDetail(row)" :title="row.describe || ''">
+            <el-link type="primary" @click="handleDetail(row)" :title="row.describe || ''">
               {{ row.name }}
             </el-link>
           </template>
@@ -97,7 +97,7 @@
               <el-button size="small" type="primary" class="btn-main" @click="handleDetail(row)">
                 详情
               </el-button>
-              <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
+              <el-dropdown trigger="click" @command="(command: string) => handleMoreAction(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -202,7 +202,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
 import { cronJobApi, type CronJobVO, type CronJobQueryDTO } from '@/api/cronjob'
-import { clusterApi } from '@/api/cluster'
+
 import { useClusterStore } from '@/stores/cluster'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -239,7 +239,7 @@ const viewYamlForm = reactive({
 })
 
 // 搜索表单
-const searchForm = reactive<CronJobQueryDTO>({
+const searchForm = reactive<Omit<CronJobQueryDTO, 'clusterId'>>({
   namespace: '',
   name: '',
   page: 1,
@@ -308,8 +308,6 @@ const handleCurrentChange = (page: number) => {
   pagination.page = page
   fetchCronJobList()
 }
-
-
 
 // 跳转到命名空间详情
 const handleNamespaceDetail = (row: CronJobVO) => {

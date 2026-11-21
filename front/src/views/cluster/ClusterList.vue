@@ -63,7 +63,7 @@
           <div class="cluster-icon">
             <el-icon :size="24"><Monitor /></el-icon>
           </div>
-          <el-dropdown trigger="click" @command="(cmd) => handleCommand(cmd, cluster)" @click.stop>
+          <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, cluster)" @click.stop>
             <el-button text circle class="more-btn" @click.stop>
               <el-icon><MoreFilled /></el-icon>
             </el-button>
@@ -300,8 +300,8 @@ const loadClusters = async () => {
     // 正确解析后端返回的数据
     if (response && response.data) {
       // 后端返回的是 items 而不是 list
-      const { items, list, total: totalCount } = response.data
-      const clusterList = items || list || []
+      const { items, total: totalCount } = response.data
+      const clusterList = items || []
       
       clusters.value = clusterList.map((cluster: any) => ({
         id: cluster.id || cluster.name,

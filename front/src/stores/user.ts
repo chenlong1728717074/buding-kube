@@ -27,14 +27,6 @@ export const useUserStore = defineStore('user', () => {
     return role === UserRole.ADMIN || role === 2 || isSuperAdmin.value
   })
 
-  const canManageUser = computed(() => {
-    return isAdmin.value
-  })
-
-  const canDeleteUser = computed(() => {
-    return isSuperAdmin.value
-  })
-
   // 用户登录
   const login = async (loginData: LoginDTO): Promise<boolean> => {
     try {
@@ -46,7 +38,8 @@ export const useUserStore = defineStore('user', () => {
         
         // 保存token和用户信息
         token.value = userData.token || ''
-        userInfo.value = userData
+        // 登录接口返回的是 LoginVO(数字角色), 与用户列表的 UserVO(字符串角色)兼容存取
+        userInfo.value = userData as unknown as UserVO
         sessionStorage.setItem('token', token.value)
         sessionStorage.setItem('userInfo', JSON.stringify(userData))
         localStorage.removeItem('token')
@@ -110,59 +103,21 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 获取当前用户信息（从服务器刷新）
-  const getCurrentUser = async (): Promise<void> => {
-    try {
-      if (!token.value) return
-      
-      const response = await loginApi.getCurrentUser()
-      if (response.code === 200 && response.data) {
-        userInfo.value = response.data
-        sessionStorage.setItem('userInfo', JSON.stringify(response.data))
-      }
-    } catch (error) {
-      console.error('获取用户信息失败:', error)
-      // 如果获取用户信息失败，可能token已过期，清除本地数据
-      clearUserData()
-    }
-  }
-
-  // 刷新token
-  const refreshToken = async (): Promise<boolean> => {
-    try {
-      const response = await loginApi.refreshToken()
-      if (response.code === 200 && response.data?.token) {
-        token.value = response.data.token
-        sessionStorage.setItem('token', response.data.token)
-        return true
-      }
-      return false
-    } catch (error) {
-      console.error('刷新token失败:', error)
-      clearUserData()
-      return false
-    }
-  }
-
   return {
     // 状态
     token,
     userInfo,
     loading,
-    
+
     // 计算属性
     isLoggedIn,
     isSuperAdmin,
     isAdmin,
-    canManageUser,
-    canDeleteUser,
-    
+
     // 方法
     login,
     logout,
     clearUserData,
-    initUserInfo,
-    getCurrentUser,
-    refreshToken
+    initUserInfo
   }
 })

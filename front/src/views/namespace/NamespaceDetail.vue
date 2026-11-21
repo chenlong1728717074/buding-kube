@@ -217,13 +217,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { 
   ArrowLeft,
   Edit,
   Document,
-  Delete,
-  CopyDocument
+  Delete
 } from '@element-plus/icons-vue'
 import { namespaceApi, type NamespaceVO, type NamespaceBaseDTO } from '@/api/namespace'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
@@ -302,7 +301,7 @@ const confirmDeleteNamespace = async () => {
   try {
     const params: NamespaceBaseDTO = {
       clusterId: route.query.clusterId as string,
-      namespace: namespaceInfo.value.name
+      namespace: namespaceInfo.value?.name || ''
     }
     await namespaceApi.delete(params)
     ElMessage.success('删除成功')

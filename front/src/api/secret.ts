@@ -78,6 +78,10 @@ export const secretApi = {
   getInfo(params: SecretBaseDTO): Promise<ApiResponse<SecretVO>> {
     return request.get('/secret', { params })
   },
+  // 应用YAML创建Secret
+  apply(data: { clusterId: string; namespace?: string; yaml: string }): Promise<ApiResponse<void>> {
+    return request.post('/secret/apply', data)
+  },
   add(data: SecretCreateDTO): Promise<ApiResponse<void>> {
     return request.post('/secret/add', data)
   },

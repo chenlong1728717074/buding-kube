@@ -1,5 +1,5 @@
 import { request } from '@/utils/request'
-import type { ApiResponse, PageResponse } from './types'
+import type { ApiResponse, PageResponse } from '@/utils/request'
 
 // Ingress查询参数
 export interface IngressQueryDTO {

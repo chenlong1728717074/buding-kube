@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios'
+import axios, { type AxiosInstance, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
@@ -9,16 +9,13 @@ export interface ApiResponse<T = any> {
   data: T
 }
 
-// 分页响应格式
+// 分页响应格式(与后端 vo.PageResponse 字段一一对应)
 export interface PageResponse<T = any> {
-  code: number
-  msg: string
-  data: {
-    list: T[]
-    total: number
-    page: number
-    size: number
-  }
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPage: number
 }
 
 // 创建axios实例
@@ -58,7 +55,7 @@ export const redirectToLogin = async (message?: string) => {
 
 // 请求拦截器
 request.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     // 添加token到请求头
     const token = sessionStorage.getItem('token') || localStorage.getItem('token')
     if (token && config.headers) {
@@ -136,26 +133,6 @@ request.interceptors.response.use(
 
 export default request
 
-// 导出request实例
+// 导出request实例(job/cronjob/service 等 api 文件使用具名导入)
 export { request }
 
-// 导出常用的请求方法
-export const get = <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-  return request.get(url, config)
-}
-
-export const post = <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
-  return request.post(url, data, config)
-}
-
-export const put = <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
-  return request.put(url, data, config)
-}
-
-export const del = <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> => {
-  return request.delete(url, config)
-}
-
-export const patch = <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
-  return request.patch(url, data, config)
-}

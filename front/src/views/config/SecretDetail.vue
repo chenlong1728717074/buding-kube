@@ -239,7 +239,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, EditPen, Document, Setting, Delete, Key } from '@element-plus/icons-vue'
+import { ArrowLeft, EditPen, Document, Setting, Delete } from '@element-plus/icons-vue'
 import { secretApi, type SecretVO } from '@/api/secret'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -525,7 +525,6 @@ onMounted(() => {
   fetchDetail()
 })
 </script>
-
 
 <style scoped>
 .secret-detail {

@@ -117,7 +117,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled } from '@element-plus/icons-vue'
-import { clusterApi, type ClusterVO } from '@/api/cluster'
+import { type ClusterVO } from '@/api/cluster'
 import { storageClassApi, type StorageClassVO, type StorageClassPageQueryDTO } from '@/api/storageclass'
 import { useClusterStore } from '@/stores/cluster'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -131,7 +131,7 @@ const loading = ref(false)
 const items = ref<StorageClassVO[]>([])
 const clusterList = ref<ClusterVO[]>([])
 
-const searchForm = reactive<StorageClassPageQueryDTO>({
+const searchForm = reactive<Omit<StorageClassPageQueryDTO, 'clusterId'>>({
   page: 1,
   pageSize: 20,
   keyword: '',

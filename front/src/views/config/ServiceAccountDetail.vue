@@ -206,7 +206,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, EditPen, Document, Delete, User } from '@element-plus/icons-vue'
+import { ArrowLeft, EditPen, Document, Delete } from '@element-plus/icons-vue'
 import { serviceAccountApi, type ServiceAccountVO } from '@/api/serviceaccount'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -374,7 +374,6 @@ onMounted(() => {
   fetchDetailFromList()
 })
 </script>
-
 
 <style scoped>
 .serviceaccount-detail {

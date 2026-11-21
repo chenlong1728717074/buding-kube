@@ -1,5 +1,5 @@
 import { request } from '@/utils/request'
-import type { ApiResponse, PageResponse } from '@/types/api'
+import type { ApiResponse, PageResponse } from '@/utils/request'
 
 // Service查询参数
 export interface ServiceQueryDTO {
@@ -40,11 +40,6 @@ export const serviceApi = {
   // 获取Service列表
   getServices: (params: ServiceQueryDTO): Promise<ApiResponse<PageResponse<ServiceVO>>> => {
     return request.get('/service/list', { params })
-  },
-
-  // 获取Service详情
-  getServiceInfo: (params: ServiceBaseDTO): Promise<ApiResponse<ServiceVO>> => {
-    return request.get('/service', { params })
   },
 
   // 删除Service

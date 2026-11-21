@@ -213,14 +213,14 @@ const exitFullscreen = () => {
 // 折叠所有代码
 const foldAllCode = () => {
   if (editorView.value) {
-    foldAll(editorView.value)
+    foldAll(editorView.value as any)
   }
 }
 
 // 展开所有代码
 const unfoldAllCode = () => {
   if (editorView.value) {
-    unfoldAll(editorView.value)
+    unfoldAll(editorView.value as any)
   }
 }
 

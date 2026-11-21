@@ -1,5 +1,4 @@
 import request, { type ApiResponse, type PageResponse } from '@/utils/request'
-
 // 用户角色枚举
 export enum UserRole {
   SUPER_ADMIN = 'super',
@@ -82,22 +81,6 @@ export interface ChangePasswordDTO {
   confirmPassword: string
 }
 
-// API响应格式
-export interface ApiResponse<T = any> {
-  code: number
-  msg: string
-  data: T
-}
-
-// 分页响应格式
-export interface PageResponse<T = any> {
-  items: T[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
-}
-
 // 用户管理相关API
 export const userApi = {
   // 获取用户列表
@@ -105,13 +88,8 @@ export const userApi = {
     return request.get('/user/list', { params })
   },
 
-  // 根据用户名获取用户
-  getUserById: (username: string): Promise<ApiResponse<UserVO>> => {
-    return request.get(`/user/${username}`)
-  },
-
-  // 获取当前用户信息
-  getCurrentUser: (): Promise<ApiResponse<UserVO>> => {
+  // 获取当前登录用户的个人信息
+  getProfile: (): Promise<ApiResponse<UserVO>> => {
     return request.get('/user/profile')
   },
 
@@ -145,29 +123,14 @@ export const userApi = {
     return request.post(`/user/resetPassword/${data.username}`, { password: data.password || '' })
   },
 
-  // 更新用户资料
-  updateProfile: (data: UpdateUserDTO): Promise<ApiResponse<UserVO>> => {
+  // 更新个人资料(仅本人可改基本资料字段)
+  updateProfile: (data: { realName?: string; email?: string; phone?: string }): Promise<ApiResponse<UserVO>> => {
     return request.put('/user/profile', data)
   },
 
   // 修改密码
   changePassword: (data: ChangePasswordDTO): Promise<ApiResponse<null>> => {
     return request.put('/auth/changePassword', data)
-  },
-
-  // 发送邮箱验证
-  sendEmailVerification: (): Promise<ApiResponse<null>> => {
-    return request.post('/user/verify-email')
-  },
-
-  // 检查用户名是否可用
-  checkUsername: (username: string): Promise<ApiResponse<{ available: boolean }>> => {
-    return request.get(`/user/check-username`, { params: { username } })
-  },
-
-  // 检查邮箱是否可用
-  checkEmail: (email: string): Promise<ApiResponse<{ available: boolean }>> => {
-    return request.get(`/user/check-email`, { params: { email } })
   }
 }
 

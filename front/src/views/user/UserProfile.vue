@@ -140,23 +140,6 @@
           <div class="security-item">
             <div class="security-info">
               <div class="security-title">
-                <el-icon><Message /></el-icon>
-                邮箱验证
-              </div>
-              <div class="security-desc">
-                当前邮箱：{{ userInfo.email }}
-                <el-tag v-if="userInfo.emailVerified" type="success" size="small">已验证</el-tag>
-                <el-tag v-else type="warning" size="small">未验证</el-tag>
-              </div>
-            </div>
-            <el-button v-if="!userInfo.emailVerified" @click="handleVerifyEmail">
-              验证邮箱
-            </el-button>
-          </div>
-          
-          <div class="security-item">
-            <div class="security-info">
-              <div class="security-title">
                 <el-icon><Phone /></el-icon>
                 手机绑定
               </div>
@@ -240,8 +223,7 @@ import {
   Camera, 
   Lock, 
   Message, 
-  Phone, 
-  Refresh
+  Phone
 } from '@element-plus/icons-vue'
 import { userApi } from '@/api/user'
 import { useUserStore } from '@/stores/user'
@@ -291,8 +273,6 @@ const formRules = {
   ]
 }
 
-
-
 // 修改密码对话框
 const passwordDialogVisible = ref(false)
 const passwordForm = reactive({
@@ -333,13 +313,33 @@ const uploadHeaders = {
 
 // 获取用户信息
 const fetchUserInfo = async () => {
-  ElMessage.info('个人信息功能暂未开放')
-  // 使用当前登录用户的基本信息
+  // 优先从后端拉取, 失败时回退到本地缓存的登录信息
+  try {
+    const res = await userApi.getProfile()
+    if (res.code === 200 && res.data) {
+      const u = res.data
+      Object.assign(userInfo, {
+        id: u.username || '',
+        username: u.username || '',
+        realName: u.realName || '',
+        email: u.email || '',
+        role: u.role || '',
+        status: u.status || '',
+        department: u.department || '',
+        phone: u.phone || ''
+      })
+      Object.assign(originalUserInfo, userInfo)
+      return
+    }
+  } catch {
+    // 回退到本地缓存
+  }
   const currentUser = userStore.userInfo
   if (currentUser) {
     Object.assign(userInfo, {
-      id: currentUser.id || '',
+      id: currentUser.username || '',
       username: currentUser.username || '',
+      realName: currentUser.realName || '',
       email: currentUser.email || '',
       role: currentUser.role || '',
       status: currentUser.status || '',
@@ -349,8 +349,6 @@ const fetchUserInfo = async () => {
     Object.assign(originalUserInfo, userInfo)
   }
 }
-
-
 
 // 编辑模式
 const handleEdit = () => {
@@ -369,21 +367,29 @@ const handleCancel = () => {
 // 保存
 const handleSave = async () => {
   if (!formRef.value) return
-  
+
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
+  saveLoading.value = true
+
   try {
-    await formRef.value.validate()
-    saveLoading.value = true
-    
-    const res = await userApi.updateProfile(userInfo)
+    const res = await userApi.updateProfile({
+      realName: userInfo.realName,
+      email: userInfo.email,
+      phone: userInfo.phone
+    })
     if (res.code === 200) {
       ElMessage.success('保存成功')
       editMode.value = false
       Object.assign(originalUserInfo, userInfo)
-      // 更新store中的用户信息
-      userStore.updateUserInfo(userInfo)
+      // 同步本地登录缓存中的用户信息
+      if (userStore.userInfo) {
+        userStore.userInfo = { ...userStore.userInfo, realName: userInfo.realName, email: userInfo.email, phone: userInfo.phone }
+        sessionStorage.setItem('userInfo', JSON.stringify(userStore.userInfo))
+      }
     }
   } catch (error) {
-    console.error('表单验证失败:', error)
+    console.error('保存个人信息失败:', error)
   } finally {
     saveLoading.value = false
   }
@@ -433,7 +439,8 @@ const handlePasswordSubmit = async () => {
     
     const res = await userApi.changePassword({
       currentPassword: passwordForm.currentPassword,
-      newPassword: passwordForm.newPassword
+      newPassword: passwordForm.newPassword,
+      confirmPassword: passwordForm.confirmPassword
     })
     
     if (res.code === 200) {
@@ -447,24 +454,10 @@ const handlePasswordSubmit = async () => {
   }
 }
 
-// 验证邮箱
-const handleVerifyEmail = async () => {
-  try {
-    const res = await userApi.sendEmailVerification()
-    if (res.code === 200) {
-      ElMessage.success('验证邮件已发送，请查收')
-    }
-  } catch (error) {
-    ElMessage.error('发送验证邮件失败')
-  }
-}
-
 // 绑定手机
 const handleBindPhone = () => {
   ElMessage.info('手机绑定功能开发中')
 }
-
-
 
 // 获取角色类型
 const getRoleType = (role: string) => {

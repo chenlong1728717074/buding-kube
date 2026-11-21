@@ -22,6 +22,7 @@ export interface PodInfoVO {
   nodeName: string
   hostIP: string
   podIP: string
+  restartCount?: number
   yaml: string
   containers: PodContainerVO[]
   annotations: Record<string, string>
@@ -73,7 +74,7 @@ export interface EventVO {
 // Pod查询参数
 export interface PodQueryDTO {
   clusterId: string
-  namespace: string
+  namespace?: string
   status?: string
   page: number
   pageSize: number

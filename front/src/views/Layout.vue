@@ -270,13 +270,9 @@ import { useUserStore } from '@/stores/user'
 import { useClusterStore } from '@/stores/cluster'
 import {
   House,
-  Monitor,
-  User,
-  Avatar,
+  Monitor,Avatar,
   Bell,
-  ArrowDown,
-  ArrowRight,
-  List,
+  ArrowDown,List,
   UserFilled,
   Box,
   Operation,
@@ -322,8 +318,8 @@ const loadClusterList = async () => {
   try {
     const response = await clusterApi.getClusters({ page: 1, pageSize: 100 })
     // 后端返回的是 items 而不是 list
-    const { items, list } = response.data
-    const clusterData = items || list || []
+    const { items } = response.data
+    const clusterData = items || []
     clusterList.value = clusterData.map((cluster: any) => ({
       id: cluster.id || cluster.name,
       name: cluster.alias || cluster.name,
@@ -407,9 +403,7 @@ const handleCommand = (command: string) => {
       ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' })
         .then(async () => {
           await userStore.logout()
-          const hour = new Date().getHours()
-          const greet = hour < 12 ? '期待你下次回来' : hour < 18 ? '期待你下次回来' : '期待你下次回来'
-          ElNotification({ message: `${greet}`, type: 'success', duration: 2500 })
+          ElNotification({ message: '期待你下次回来', type: 'success', duration: 2500 })
         })
         .catch(() => {})
       break

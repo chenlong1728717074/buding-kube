@@ -112,7 +112,7 @@
               <el-button size="small" class="btn-edit" plain @click="handleEdit(row)">
                 编辑
               </el-button>
-              <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
+              <el-dropdown trigger="click" @command="(command: string) => handleMoreAction(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -270,7 +270,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled, Plus, Document } from '@element-plus/icons-vue'
 import { statefulSetApi, type StatefulSetVO, type StatefulSetQueryDTO } from '@/api/statefulset'
-import { clusterApi, type ClusterVO } from '@/api/cluster'
+import { clusterApi } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -348,7 +348,6 @@ const fetchNamespaceList = async () => {
     }
 
     const response = await namespaceApi.getList(params)
-    console.log('命名空间列表API响应:', response)
 
     if (response.code === 200 && response.data) {
       namespaceList.value = response.data.items || []
@@ -506,7 +505,7 @@ const handleSaveEdit = async () => {
       editDialogVisible.value = false
       fetchStatefulSetList()
     } else {
-      ElMessage.error(response.message || '修改失败')
+      ElMessage.error(response.msg || '修改失败')
     }
   } catch (error: any) {
     console.error('修改StatefulSet失败:', error)
@@ -550,7 +549,7 @@ const handleApplyYaml = async () => {
       yamlDialogVisible.value = false
       fetchStatefulSetList()
     } else {
-      ElMessage.error(response.message || '应用失败')
+      ElMessage.error(response.msg || '应用失败')
     }
   } catch (error: any) {
     console.error('应用YAML失败:', error)
@@ -616,7 +615,7 @@ const handleApplyEditYaml = async () => {
       viewYamlDialogVisible.value = false
       fetchStatefulSetList()
     } else {
-      ElMessage.error(response.message || '应用失败')
+      ElMessage.error(response.msg || '应用失败')
     }
   } catch (error: any) {
     console.error('应用YAML失败:', error)
@@ -651,7 +650,7 @@ const handleDelete = async (row: StatefulSetVO) => {
       ElMessage.success('删除成功')
       fetchStatefulSetList()
     } else {
-      ElMessage.error(response.message || '删除失败')
+      ElMessage.error(response.msg || '删除失败')
     }
   } catch (error: any) {
     if (error !== 'cancel') {
@@ -685,7 +684,7 @@ const handleRestart = async (row: StatefulSetVO) => {
       ElMessage.success('滚动重启成功')
       fetchStatefulSetList()
     } else {
-      ElMessage.error(response.message || '滚动重启失败')
+      ElMessage.error(response.msg || '滚动重启失败')
     }
   } catch (error: any) {
     if (error !== 'cancel') {

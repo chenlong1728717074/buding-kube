@@ -117,7 +117,7 @@ const clusterId = computed(() => clusterStore.currentClusterId)
 const loading = ref(false)
 const items = ref<PVVO[]>([])
 
-const searchForm = reactive<PVQueryDTO>({
+const searchForm = reactive<Omit<PVQueryDTO, 'clusterId'>>({
   page: 1,
   pageSize: 20,
   keyword: ''
@@ -151,7 +151,7 @@ const getStatusType = (phase?: string) => {
     Failed: 'danger',
     Pending: 'warning'
   }
-  return (map[phase] as any) || 'info'
+  return (phase && map[phase]) || 'info'
 }
 
 const formatDate = (dateString?: string) => {

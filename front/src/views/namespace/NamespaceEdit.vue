@@ -74,7 +74,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { namespaceApi } from '@/api/namespace'
 import { clusterApi } from '@/api/cluster'
-import type { NamespaceVO, NamespaceBaseDTO, UpdateNamespaceDTO } from '@/api/namespace'
+import type { NamespaceVO, NamespaceBaseDTO, NamespaceCreateDTO } from '@/api/namespace'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 
 const route = useRoute()
@@ -114,7 +114,6 @@ const fetchNamespaceDetail = async () => {
     }
     
     const response = await namespaceApi.getInfo(params)
-    console.log('命名空间详情API响应:', response)
     
     if (response.code === 200 && response.data) {
       namespaceInfo.value = response.data
@@ -141,8 +140,7 @@ const fetchNamespaceDetail = async () => {
 // 获取集群名称
 const fetchClusterName = async (clusterId: string) => {
   try {
-    const response = await clusterApi.getClusters()
-    console.log('集群列表API响应:', response)
+    const response = await clusterApi.getClusters({ page: 1, pageSize: 100 })
     
     if (response.code === 200 && response.data && response.data.items) {
       const cluster = response.data.items.find((item: any) => item.id === clusterId)
@@ -188,7 +186,7 @@ const handleSubmit = async () => {
     
     submitLoading.value = true
     
-    const updateData: UpdateNamespaceDTO = {
+    const updateData: NamespaceCreateDTO = {
       clusterId: namespaceForm.clusterId,
       namespace: namespaceForm.namespace,
       alias: namespaceForm.alias,

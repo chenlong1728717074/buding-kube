@@ -93,7 +93,7 @@
               <el-button size="small" type="primary" class="btn-main" @click="handleDetail(row)">
                 详情
               </el-button>
-              <el-dropdown trigger="click" @command="(command) => handleMoreAction(command, row)">
+              <el-dropdown trigger="click" @command="(command: string) => handleMoreAction(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -199,11 +199,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
 import { ingressApi, type IngressVO, type IngressQueryDTO } from '@/api/ingress'
 import { clusterApi } from '@/api/cluster'
-import { namespaceApi } from '@/api/namespace'
+
 import { useClusterStore } from '@/stores/cluster'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
-import { useClusterFetcher, useNamespaceFetcher, clusterSelectConfig, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
+import { useNamespaceFetcher,namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import '@/assets/styles/config-editor.css'
 
 // 路由
@@ -235,7 +235,7 @@ const viewYamlForm = reactive({
 })
 
 // 搜索表单
-const searchForm = reactive<IngressQueryDTO>({
+const searchForm = reactive<Omit<IngressQueryDTO, 'clusterId'>>({
   namespace: '',
   name: '',
   page: 1,

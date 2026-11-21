@@ -66,12 +66,5 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['vue', 'vue-router', 'pinia', 'element-plus', '@element-plus/icons-vue', 'axios']
-  },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: `@use "@/assets/styles/variables.scss" as *;`
-      }
-    }
   }
 })

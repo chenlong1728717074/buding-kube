@@ -23,18 +23,6 @@ export interface LoginVO {
   }
 }
 
-// 刷新Token DTO
-export interface RefreshTokenDTO {
-  refreshToken: string
-}
-
-// API响应格式
-export interface ApiResponse<T = any> {
-  code: number
-  msg: string
-  data: T
-}
-
 // 认证相关API
 export const loginApi = {
   // 用户登录
@@ -45,31 +33,6 @@ export const loginApi = {
   // 用户登出
   logout: (): Promise<ApiResponse<null>> => {
     return request.post('/auth/logout')
-  },
-
-  // 刷新token
-  refreshToken: (data?: RefreshTokenDTO): Promise<ApiResponse<{ token: string; refreshToken?: string }>> => {
-    return request.post('/auth/refresh', data)
-  },
-
-  // 获取验证码
-  getCaptcha: (): Promise<ApiResponse<{ captchaId: string; captchaImage: string }>> => {
-    return request.get('/auth/captcha')
-  },
-
-  // 验证token有效性
-  verifyToken: (): Promise<ApiResponse<{ valid: boolean }>> => {
-    return request.get('/auth/verify')
-  },
-
-  // 忘记密码 - 发送重置邮件
-  forgotPassword: (email: string): Promise<ApiResponse<null>> => {
-    return request.post('/auth/forgot-password', { email })
-  },
-
-  // 重置密码（通过邮件链接）
-  resetPasswordByEmail: (data: { token: string; newPassword: string }): Promise<ApiResponse<null>> => {
-    return request.post('/auth/reset-password', data)
   }
 }
 

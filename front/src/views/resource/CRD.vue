@@ -63,7 +63,7 @@
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-main" @click="openDetail(row)">详情</el-button>
-              <el-dropdown trigger="click" @command="(cmd) => handleRowAction(cmd, row)">
+              <el-dropdown trigger="click" @command="(cmd: string) => handleRowAction(cmd, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>

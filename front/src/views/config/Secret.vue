@@ -62,7 +62,7 @@
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-main" @click="openDetail(row)">详情</el-button>
-              <el-dropdown trigger="click" @command="(cmd) => handleRowAction(cmd, row)">
+              <el-dropdown trigger="click" @command="(cmd: string) => handleRowAction(cmd, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
@@ -126,7 +126,7 @@
         <div class="dialog-header">
           <h3 class="dialog-title">创建 Secret</h3>
           <div class="dialog-actions">
-            <el-switch v-model="createYamlMode" active-text="编辑 YAML" @change="(v) => v && buildCreateYaml()" />
+            <el-switch v-model="createYamlMode" active-text="编辑 YAML" @change="(v: any) => v && buildCreateYaml()" />
           </div>
         </div>
       </template>
@@ -412,7 +412,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, MoreFilled, Plus, Document, Check, WarningFilled } from '@element-plus/icons-vue'
 import { secretApi, type SecretVO, type SecretPageQueryDTO } from '@/api/secret'
-import { clusterApi, type ClusterVO } from '@/api/cluster'
+import { type ClusterVO } from '@/api/cluster'
 import { namespaceApi, type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
@@ -421,7 +421,6 @@ import KVEditorPane from '@/components/KVEditorPane.vue'
 import '@/assets/styles/config-editor.css'
 
 type KvRow = { key: string; value: string }
-
 
 // 集群上下文
 const clusterStore = useClusterStore()
@@ -432,7 +431,7 @@ const loading = ref(false)
 const secrets = ref<SecretVO[]>([])
 const selectedRows = ref<SecretVO[]>([])
 
-const searchForm = reactive<SecretPageQueryDTO>({
+const searchForm = reactive<Omit<SecretPageQueryDTO, 'clusterId'>>({
   namespace: '',
   page: 1,
   pageSize: 20,
