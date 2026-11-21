@@ -6,7 +6,7 @@
         <div class="logo-icon">
           <img :src="logoK8sWhite" alt="Kubernetes" />
         </div>
-        <h2 v-if="!isCollapsed">Buding</h2>
+        <h2 v-if="!isCollapsed">Kubernetes</h2>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -503,7 +503,8 @@ onUnmounted(() => {
   height: 60px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-left: 16px;
   gap: 10px;
   background: #ffffff;
   border-bottom: 1px solid rgba(59,130,246,0.16);
