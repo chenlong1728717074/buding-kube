@@ -285,6 +285,7 @@ const onSubmit = async () => {
 .card-head {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   margin-bottom: 4.5vh;
 }
