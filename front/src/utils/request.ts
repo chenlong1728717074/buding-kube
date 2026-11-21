@@ -32,6 +32,34 @@ const request: AxiosInstance = axios.create({
 
 let redirectingToLogin = false
 
+// UI 版式检查用 mock 开关: 仅当构建时设置 VITE_UI_MOCK=1 才生效, 正常构建不含此逻辑路径
+const uiMockEnabled = import.meta.env.VITE_UI_MOCK === '1'
+const uiMockHandler = (config: AxiosRequestConfig) => {
+  const url = config.url || ''
+  if (url.includes('/user/list')) {
+    return Promise.resolve({
+      data: {
+        code: 200,
+        msg: 'ok',
+        data: {
+          items: [
+            { username: 'admin', realName: '管理员', email: '', role: 'super', status: 'active', enabled: true, department: '', phone: '', creationTimestamp: '2026-11-21T17:06:21Z' },
+            { username: 'zhangsan', realName: '张三', email: 'zhangsan@example.com', role: 'admin', status: 'active', enabled: true, department: '研发部', phone: '13800138000', creationTimestamp: '2026-11-20T09:00:00Z' },
+            { username: 'lisi', realName: '李四', email: '', role: 'normal', status: 'inactive', enabled: false, department: '运维部', phone: '', creationTimestamp: '2026-11-19T08:00:00Z' }
+          ],
+          total: 3,
+          page: 1,
+          size: 10
+        }
+      }
+    })
+  }
+  if (url.includes('/user')) {
+    return Promise.resolve({ data: { code: 200, msg: 'ok' } })
+  }
+  return Promise.reject(new Error('mock: ' + url))
+}
+
 export const clearAuthStorage = () => {
   sessionStorage.removeItem('token')
   sessionStorage.removeItem('userInfo')
@@ -54,6 +82,9 @@ export const redirectToLogin = async (message?: string) => {
 // 请求拦截器
 request.interceptors.request.use(
   (config: AxiosRequestConfig) => {
+    if (uiMockEnabled) {
+      return uiMockHandler(config) as any
+    }
     // 添加token到请求头
     const token = sessionStorage.getItem('token') || localStorage.getItem('token')
     if (token && config.headers) {

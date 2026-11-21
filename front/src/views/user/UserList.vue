@@ -1,125 +1,120 @@
 <template>
   <div class="user-list-container">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">用户管理</h1>
-        <p class="page-description">管理系统用户账户和权限</p>
+    <!-- 头部横幅 -->
+    <el-card class="hero-card" shadow="never">
+      <div class="hero-content">
+        <div class="hero-icon-block">
+          <el-icon :size="30"><UserFilled /></el-icon>
+        </div>
+        <div class="hero-text">
+          <h1 class="hero-title">用户管理</h1>
+          <p class="hero-desc">管理系统用户账号、角色权限和状态</p>
+        </div>
+        <div class="hero-decoration">
+          <div class="hero-shield">
+            <el-icon :size="34"><Lock /></el-icon>
+          </div>
+        </div>
       </div>
-      <div class="header-right">
-        <el-button type="primary" size="large" @click="handleAdd">
-          <el-icon><Plus /></el-icon>
-          新增用户
-        </el-button>
-      </div>
-    </div>
+    </el-card>
 
     <!-- 统计卡片 -->
     <div class="stats-grid">
-      <el-card class="stat-card" shadow="never">
-        <div class="stat-label">总用户</div>
-        <div class="stat-value">{{ pagination.total }}</div>
+      <el-card class="stat-card stat-blue" shadow="never">
+        <div class="stat-icon-block icon-blue"><el-icon :size="30"><UserFilled /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-label">总用户数</div>
+          <div class="stat-value">{{ pagination.total }}</div>
+        </div>
       </el-card>
-      <el-card class="stat-card" shadow="never">
-        <div class="stat-label">当前页启用</div>
-        <div class="stat-value text-success">{{ activeCount }}</div>
+      <el-card class="stat-card stat-green" shadow="never">
+        <div class="stat-icon-block icon-green"><el-icon :size="30"><CircleCheckFilled /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-label">正常用户</div>
+          <div class="stat-value">{{ activeCount }}</div>
+        </div>
       </el-card>
-      <el-card class="stat-card" shadow="never">
-        <div class="stat-label">当前页禁用</div>
-        <div class="stat-value text-danger">{{ inactiveCount }}</div>
+      <el-card class="stat-card stat-red" shadow="never">
+        <div class="stat-icon-block icon-red"><el-icon :size="30"><CircleCloseFilled /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-label">禁用用户</div>
+          <div class="stat-value">{{ inactiveCount }}</div>
+        </div>
       </el-card>
-      <el-card class="stat-card" shadow="never">
-        <div class="stat-label">当前页管理员</div>
-        <div class="stat-value text-warning">{{ adminCount }}</div>
+      <el-card class="stat-card stat-purple" shadow="never">
+        <div class="stat-icon-block icon-purple"><el-icon :size="30"><Medal /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-label">管理员</div>
+          <div class="stat-value">{{ adminCount }}</div>
+        </div>
       </el-card>
     </div>
 
-    <!-- 搜索和筛选区域 -->
+    <!-- 搜索与批量操作工具栏 -->
     <el-card class="filter-card" shadow="never">
       <div class="filter-content">
         <div class="filter-left">
-          <el-form :model="searchForm" inline>
-            <el-form-item label="角色">
-              <el-select 
-                v-model="searchForm.role" 
-                placeholder="选择角色" 
-                clearable
-                style="width: 140px;"
-                @change="handleSearch"
-                @clear="handleSearch"
-              >
-                <el-option label="超级管理员" value="super" />
-                <el-option label="管理员" value="admin" />
-                <el-option label="普通用户" value="normal" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="状态">
-              <el-select 
-                v-model="searchForm.status" 
-                placeholder="选择状态" 
-                clearable
-                style="width: 120px;"
-                @change="handleSearch"
-                @clear="handleSearch"
-              >
-                <el-option label="正常" value="active" />
-                <el-option label="禁用" value="inactive" />
-              </el-select>
-            </el-form-item>
-          </el-form>
+          <el-input
+            v-model="searchForm.keyword"
+            placeholder="请输入用户名或邮箱"
+            :prefix-icon="Search"
+            clearable
+            style="width: 220px"
+            @keyup.enter="handleSearch"
+            @clear="handleSearch"
+          />
+          <el-select
+            v-model="searchForm.role"
+            placeholder="全部角色"
+            clearable
+            style="width: 130px"
+            @change="handleSearch"
+            @clear="handleSearch"
+          >
+            <el-option label="超级管理员" value="super" />
+            <el-option label="管理员" value="admin" />
+            <el-option label="普通用户" value="normal" />
+          </el-select>
+          <el-select
+            v-model="searchForm.status"
+            placeholder="全部状态"
+            clearable
+            style="width: 130px"
+            @change="handleSearch"
+            @clear="handleSearch"
+          >
+            <el-option label="正常" value="active" />
+            <el-option label="禁用" value="inactive" />
+          </el-select>
         </div>
         <div class="filter-right">
-          <el-button type="primary" @click="handleSearch">
-            <el-icon><Search /></el-icon>
-            搜索
+          <el-button type="primary" @click="handleAdd">
+            <el-icon><Plus /></el-icon>
+            新增用户
           </el-button>
-          <el-button @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            重置
+          <el-button :disabled="selectedUsers.length !== 1" @click="handleToolbarEdit">
+            <el-icon><EditPen /></el-icon>
+            编辑
+          </el-button>
+          <el-button :disabled="selectedUsers.length === 0" @click="handleBatchDisable">
+            <el-icon><CircleClose /></el-icon>
+            禁用
+          </el-button>
+          <el-button :disabled="selectedUsers.length === 0" @click="handleBatchDelete">
+            <el-icon><Delete /></el-icon>
+            删除
           </el-button>
         </div>
       </div>
-      <transition name="filter-fade">
-        <div v-if="searchForm.role || searchForm.status" class="active-filters">
-          <span class="active-filters-label">已筛选：</span>
-          <el-tag v-if="searchForm.role" closable @close="removeFilter('role')">
-            角色: {{ getRoleText(searchForm.role) }}
-          </el-tag>
-          <el-tag v-if="searchForm.status" closable @close="removeFilter('status')">
-            状态: {{ getStatusText(searchForm.status) }}
-          </el-tag>
-          <el-button link type="primary" class="clear-filter-btn" @click="handleReset">清空筛选</el-button>
-        </div>
-      </transition>
     </el-card>
 
     <!-- 用户列表卡片 -->
     <el-card class="table-card" shadow="never">
-      <!-- 表格工具栏 -->
-      <div class="table-toolbar">
-        <div class="toolbar-left">
-          <span class="table-title">用户列表</span>
-          <el-tag class="count-tag">{{ pagination.total }}</el-tag>
-        </div>
-        <div class="toolbar-right">
-          <el-button 
-            :disabled="selectedUsers.length === 0" 
-            @click="handleBatchDelete"
-            type="danger"
-          >
-            <el-icon><Delete /></el-icon>
-            批量删除 ({{ selectedUsers.length }})
-          </el-button>
-          <el-button @click="fetchUserList" circle>
-            <el-icon><Refresh /></el-icon>
-          </el-button>
-        </div>
-      </div>
       
       <!-- 用户表格 -->
-      <el-table 
-        v-loading="loading" 
-        :data="userList" 
+      <el-table
+        v-loading="loading"
+        :data="displayList"
         stripe
         class="user-table"
         :row-class-name="tableRowClassName"
@@ -188,7 +183,7 @@
           </template>
         </el-table-column>
         
-        <el-table-column label="操作" width="280" fixed="right" align="center" header-align="center">
+        <el-table-column label="操作" width="220" fixed="right" align="center" header-align="center">
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button size="small" type="primary" class="btn-edit" @click="handleEdit(row)">
@@ -202,12 +197,11 @@
                 plain
                 @click="handleToggleStatus(row)"
               >
-                <el-icon><Switch /></el-icon>
                 {{ isUserEnabled(row) ? '禁用' : '启用' }}
               </el-button>
               <el-dropdown trigger="click" @command="(command) => handleMoreActions(command, row)">
-                <el-button size="small" text circle class="more-btn">
-                  <el-icon><MoreFilled /></el-icon>
+                <el-button size="small" class="more-text-btn">
+                  更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
@@ -219,13 +213,13 @@
                       <el-icon><Lock /></el-icon>
                       权限管理
                     </el-dropdown-item>
+                    <el-dropdown-item command="delete" divided>
+                      <el-icon><Delete /></el-icon>
+                      <span style="color: var(--el-color-danger);">删除用户</span>
+                    </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
-              <el-button size="small" type="danger" plain class="btn-danger" @click="handleDelete(row)">
-                <el-icon><Delete /></el-icon>
-                删除
-              </el-button>
             </div>
           </template>
         </el-table-column>
@@ -374,11 +368,17 @@ import {
   Search,
   Refresh,
   Delete,
+  ArrowDown,
   MoreFilled,
   Edit,
   Switch,
   Key,
   Lock,
+  EditPen,
+  CircleClose,
+  UserFilled,
+  CircleCheckFilled,
+  Medal,
   SuccessFilled,
   CircleCloseFilled,
   WarningFilled,
@@ -400,6 +400,7 @@ const submitLoading = ref(false)
 
 // 搜索表单
 const searchForm = reactive({
+  keyword: '',
   role: undefined as string | undefined,
   status: undefined as string | undefined
 })
@@ -408,9 +409,9 @@ const searchForm = reactive({
 const userList = ref<UserVO[]>([])
 const selectedUsers = ref<UserVO[]>([])
 
-const activeCount = computed(() => userList.value.filter(u => u.status === 'active').length)
-const inactiveCount = computed(() => userList.value.filter(u => u.status === 'inactive').length)
-const adminCount = computed(() => userList.value.filter(u => ['super', 'admin', '1', '2'].includes(String(u.role))).length)
+const activeCount = computed(() => displayList.value.filter(u => u.status === 'active').length)
+const inactiveCount = computed(() => displayList.value.filter(u => u.status === 'inactive').length)
+const adminCount = computed(() => displayList.value.filter(u => ['super', 'admin', '1', '2'].includes(String(u.role))).length)
 
 // 分页
 const pagination = reactive({
@@ -601,12 +602,23 @@ const handleSearch = () => {
 // 重置
 const handleReset = () => {
   Object.assign(searchForm, {
+    keyword: '',
     role: undefined,
     status: undefined
   })
   pagination.page = 1
   fetchUserList()
 }
+
+// 关键词过滤(用户名/邮箱, 当前页内模糊匹配)
+const displayList = computed(() => {
+  const kw = (searchForm.keyword || '').trim().toLowerCase()
+  if (!kw) return userList.value
+  return userList.value.filter(u =>
+    String(u.username || '').toLowerCase().includes(kw) ||
+    String(u.email || '').toLowerCase().includes(kw)
+  )
+})
 
 const removeFilter = (key: 'role' | 'status') => {
   searchForm[key] = undefined
@@ -779,6 +791,40 @@ const handleBatchDelete = () => {
   batchDeleteDialogVisible.value = true
 }
 
+// 工具栏: 编辑选中用户(仅支持单选)
+const handleToolbarEdit = () => {
+  if (selectedUsers.value.length !== 1) {
+    ElMessage.warning('请选择一个要编辑的用户')
+    return
+  }
+  handleEdit(selectedUsers.value[0])
+}
+
+// 工具栏: 批量禁用选中用户
+const handleBatchDisable = async () => {
+  const targets = selectedUsers.value.filter(u => isUserEnabled(u))
+  if (targets.length === 0) {
+    ElMessage.warning('选中的用户中没有可禁用的账号')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定要禁用选中的 ${targets.length} 个用户吗？`,
+      '批量禁用',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    )
+    for (const u of targets) {
+      await userApi.toggleUserEnable({ username: u.username, enable: false })
+    }
+    ElMessage.success('禁用成功')
+    fetchUserList()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error('禁用失败')
+    }
+  }
+}
+
 const confirmBatchDeleteUsers = async () => {
   if (selectedUsers.value.length === 0) return
   batchDeleteLoading.value = true
@@ -887,61 +933,136 @@ onMounted(() => {
   min-height: 100vh;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+/* 头部横幅: 浅蓝渐变 + 图标块 + 标题 + 右侧盾形装饰 */
+.hero-card {
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(115deg, #e8f1fd 0%, #ddeafb 55%, #cfe0f8 100%);
+  overflow: hidden;
 }
 
-.header-left {
-  flex: 1;
-}
-
-.page-title {
-  margin: 0 0 8px 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.page-description {
-  margin: 0;
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
-.header-right {
+.hero-content {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
+  position: relative;
 }
 
+.hero-icon-block {
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.28);
+  flex-shrink: 0;
+}
+
+.hero-text {
+  min-width: 0;
+}
+
+.hero-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: #16325c;
+}
+
+.hero-desc {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #5b7396;
+}
+
+.hero-decoration {
+  margin-left: auto;
+  padding-right: 24px;
+  display: flex;
+}
+
+.hero-shield {
+  width: 84px;
+  height: 84px;
+  border-radius: 22px 22px 40px 40px;
+  background: rgba(255, 255, 255, 0.45);
+  color: #7ea6e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(8deg);
+}
+
+/* 统计卡片: 图标 + 标签 + 数值, 右下角波浪装饰 */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .stat-card {
   border: none;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.stat-card :deep(.el-card__body) {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  position: relative;
+}
+
+.stat-card::after {
+  content: '';
+  position: absolute;
+  right: -30px;
+  bottom: -34px;
+  width: 130px;
+  height: 80px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.stat-blue::after { background: rgba(59, 130, 246, 0.08); }
+.stat-green::after { background: rgba(16, 185, 129, 0.08); }
+.stat-red::after { background: rgba(239, 68, 68, 0.08); }
+.stat-purple::after { background: rgba(139, 92, 246, 0.08); }
+
+.stat-icon-block {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-blue { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
+.icon-green { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.icon-red { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+.icon-purple { background: rgba(139, 92, 246, 0.12); color: #8b5cf6; }
+
+.stat-info {
+  position: relative;
+  z-index: 1;
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 13px;
   color: #64748b;
-  margin-bottom: 8px;
 }
 
 .stat-value {
-  font-size: 24px;
+  margin-top: 6px;
+  font-size: 26px;
   line-height: 1;
   font-weight: 700;
   color: #1e293b;
@@ -952,16 +1073,29 @@ onMounted(() => {
 .text-warning { color: var(--page-warning); }
 
 .filter-card {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   border: none;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
 }
 
 .filter-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.filter-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .active-filters {
@@ -1023,15 +1157,6 @@ onMounted(() => {
   border: none;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-}
-
-.table-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
 }
 
 :deep(.filter-card .el-card__body),
@@ -1134,10 +1259,19 @@ onMounted(() => {
   color: var(--page-text-sub);
 }
 
+/* 分页: 总数居左, 页码/每页/跳转居右(与原型一致) */
 .pagination-wrapper {
-  display: flex;
-  justify-content: center;
   margin-top: 20px;
+}
+
+.pagination-wrapper :deep(.el-pagination) {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.pagination-wrapper :deep(.el-pagination__total) {
+  margin-right: auto;
 }
 
 .user-form {
