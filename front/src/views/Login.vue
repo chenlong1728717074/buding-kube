@@ -30,7 +30,15 @@
 
       <!-- 登录卡片 -->
       <section class="login-card">
-        <h2 class="card-title">登录</h2>
+        <div class="card-head">
+          <div class="card-logo">
+            <img :src="logoK8sWhite" alt="Kubernetes" />
+          </div>
+          <div class="card-head-text">
+            <h2 class="card-title">登录</h2>
+            <p class="card-welcome">欢迎使用 BuDing Kube 管理平台</p>
+          </div>
+        </div>
 
         <el-form
           :model="loginForm"
@@ -68,17 +76,16 @@
             class="login-btn"
             @click="onSubmit"
           >
-            <el-icon v-if="!loading" class="login-btn-icon"><SwitchButton /></el-icon>
+            <el-icon v-if="!loading" class="login-btn-icon"><Promotion /></el-icon>
             <span>{{ loading ? '登录中...' : '登录' }}</span>
           </el-button>
         </el-form>
 
-        <el-divider class="card-divider" />
+        <el-divider class="card-divider">或</el-divider>
 
         <div class="demo-section">
           <div class="demo-label">演示账号</div>
           <div class="demo-value" @click="fillDemo">admin / 123456</div>
-          <div class="demo-notice">演示环境部分功能未开放</div>
         </div>
       </section>
     </main>
@@ -92,9 +99,10 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElNotification } from 'element-plus'
-import { User, Lock, SwitchButton } from '@element-plus/icons-vue'
+import { User, Lock, Promotion } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import logoK8s from '@/assets/logo-k8s.svg'
+import logoK8sWhite from '@/assets/logo-k8s-white.svg'
 import heroImg from '@/assets/images/login3d.jpg'
 
 const router = useRouter()
@@ -268,12 +276,46 @@ const onSubmit = async () => {
   padding: 4.8vh 2.9vw 3.4vh;
 }
 
+/* 卡片头部: 圆形蓝底白舵轮 logo + 标题 + 欢迎语 */
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 4vh;
+}
+
+.card-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 8px 18px rgba(59, 130, 246, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-logo img {
+  width: 38px;
+  height: 38px;
+}
+
+.card-head-text {
+  min-width: 0;
+}
+
 .card-title {
-  margin: 0 0 3.6vh;
-  text-align: center;
-  font-size: clamp(24px, 1.7vw, 28px);
+  margin: 0;
+  font-size: 24px;
   font-weight: 700;
   color: #1f2937;
+}
+
+.card-welcome {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #9ca3af;
 }
 
 .login-form :deep(.el-input__wrapper) {
@@ -316,7 +358,12 @@ const onSubmit = async () => {
 }
 
 .card-divider {
-  margin: 3.4vh 0 2.2vh;
+  margin: 3.2vh 0 2.2vh;
+}
+
+.card-divider :deep(.el-divider__text) {
+  font-size: 12px;
+  color: #9ca3af;
 }
 
 /* 演示信息 */
@@ -340,12 +387,6 @@ const onSubmit = async () => {
 
 .demo-value:hover {
   text-decoration: underline;
-}
-
-.demo-notice {
-  margin-top: 1.4vh;
-  font-size: 12px;
-  color: #b6c2d4;
 }
 
 /* 底部 */
