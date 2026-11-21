@@ -214,33 +214,34 @@ const onSubmit = async () => {
   letter-spacing: 0.5px;
 }
 
-/* 主体: 不创建堆叠上下文, 保证 3D 图 multiply 混合能与页面渐变背景融合 */
+/* 主体: 不创建堆叠上下文, 保证 3D 图 multiply 混合能与页面渐变背景融合
+   横向按原型: 左缘 6.9vw(大图), 标题 12.6vw, 卡片右缘 14.5vw, 卡片与大图间距 3vw */
 .login-main {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 3.5vw;
-  padding: 0 9vw 1vh 7vw;
+  gap: 3vw;
+  padding: 0 14.5vw 1vh 6.9vw;
 }
 
-/* 左侧介绍: 原型标题 x≈210(12.6%), 大图 x≈115(6.9%) 宽≈755(45vw) */
+/* 左侧介绍: 标题在 intro 内缩进 5.7vw 到 12.6vw */
 .intro {
   flex: 1 1 auto;
   min-width: 0;
 }
 
 .intro-title {
-  margin: 0 0 0 5.2vw;
-  font-size: clamp(30px, 2.75vw, 46px);
-  line-height: 1.42;
+  margin: 0 0 0 5.7vw;
+  font-size: clamp(30px, 2.7vw, 46px);
+  line-height: 1.3;
   font-weight: 700;
   color: #16325c;
   letter-spacing: 1px;
 }
 
 .intro-desc {
-  margin: 1.8vh 0 0 5.2vw;
-  font-size: clamp(13px, 1vw, 16px);
+  margin: 2vh 0 0 5.7vw;
+  font-size: clamp(13px, 0.95vw, 16px);
   color: #5b7396;
 }
 
@@ -249,14 +250,13 @@ const onSubmit = async () => {
   height: 4px;
   border-radius: 2px;
   background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  margin: 2.2vh 0 0 5.2vw;
+  margin: 2.4vh 0 0 5.7vw;
 }
 
 .intro-hero {
   display: block;
-  width: 44vw;
-  max-width: 780px;
-  margin: -1vh 0 0 -1.8vw;
+  width: 45.3vw;
+  margin: 3.2vh 0 0 0;
   mix-blend-mode: multiply;
   animation: hero-float 6s ease-in-out infinite;
 }
@@ -266,14 +266,19 @@ const onSubmit = async () => {
   50% { transform: translateY(-10px); }
 }
 
-/* 登录卡片: 原型宽≈505px(30.3vw), 距右≈14vw */
+/* 登录卡片: 原型宽≈505px(30.3vw), 高≈535px(56.7vh), 右缘距 14.5vw */
 .login-card {
-  width: clamp(400px, 30.5vw, 520px);
+  width: clamp(440px, 30.3vw, 520px);
+  min-height: 56.5vh;
   flex-shrink: 0;
   background: #ffffff;
   border-radius: 18px;
   box-shadow: 0 20px 60px rgba(59, 130, 246, 0.16);
-  padding: 4.8vh 2.9vw 3.4vh;
+  padding: 6vh 2.3vw 4.5vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* 卡片头部: 圆形蓝底白舵轮 logo + 标题 + 欢迎语 */
@@ -281,7 +286,7 @@ const onSubmit = async () => {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 4vh;
+  margin-bottom: 4.5vh;
 }
 
 .card-logo {
@@ -333,17 +338,17 @@ const onSubmit = async () => {
 }
 
 .login-form :deep(.el-input__inner) {
-  height: 44px;
+  height: 48px;
 }
 
 .login-form :deep(.el-form-item) {
-  margin-bottom: 2.6vh;
+  margin-bottom: 3.2vh;
 }
 
 .login-btn {
   width: 100%;
-  height: 52px;
-  margin-top: 1.4vh;
+  height: 54px;
+  margin-top: 1.6vh;
   border-radius: 12px;
   font-size: 16px;
   letter-spacing: 4px;
@@ -358,7 +363,7 @@ const onSubmit = async () => {
 }
 
 .card-divider {
-  margin: 3.2vh 0 2.2vh;
+  margin: 4vh 0 2.6vh;
 }
 
 .card-divider :deep(.el-divider__text) {
