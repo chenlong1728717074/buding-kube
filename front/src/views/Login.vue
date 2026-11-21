@@ -1,71 +1,90 @@
 <template>
-  <div class="login-container">
-    <div class="login-background"></div>
-    
-    <div class="login-content">
-      <!-- 顶部品牌 -->
-      <div class="brand-header">
-        <h1 class="brand-title">Buding k8s多集群管理平台</h1>
-        <p class="brand-desc">统一管理多个 Kubernetes 集群，简化运维操作</p>
+  <div class="login-page">
+    <!-- 背景装饰波浪 -->
+    <svg class="wave wave-left" viewBox="0 0 900 600" preserveAspectRatio="none">
+      <path d="M0,480 C220,380 420,520 640,440 C760,396 850,420 900,380 L900,600 L0,600 Z" fill="#d8e8fb" opacity="0.55" />
+      <path d="M0,540 C240,460 460,580 700,500 C800,468 870,480 900,450 L900,600 L0,600 Z" fill="#cfe0f8" opacity="0.5" />
+    </svg>
+    <svg class="wave wave-right" viewBox="0 0 900 600" preserveAspectRatio="none">
+      <path d="M0,300 C180,240 380,340 560,280 C720,226 830,260 900,220 L900,0 L0,0 Z" fill="#e3eefc" opacity="0.6" />
+      <path d="M0,180 C200,120 400,220 620,160 C760,120 850,150 900,110 L900,0 L0,0 Z" fill="#d5e5fa" opacity="0.45" />
+    </svg>
+
+    <!-- 顶部品牌 -->
+    <header class="brand-header">
+      <div class="brand-logo">
+        <img :src="logoK8s" alt="Kubernetes" />
       </div>
+      <span class="brand-name">BuDing Kube</span>
+    </header>
+
+    <!-- 主体 -->
+    <main class="login-main">
+      <!-- 左侧介绍 -->
+      <section class="intro">
+        <h1 class="intro-title">BuDing Kube<br />多集群管理平台</h1>
+        <p class="intro-desc">统一管理多个 Kubernetes 集群，简化运维操作</p>
+        <div class="intro-bar"></div>
+        <img class="intro-hero" :src="heroImg" alt="多集群管理" />
+      </section>
 
       <!-- 登录卡片 -->
-      <div class="login-card">
-        <div class="card-title">登录</div>
-        
-        <el-form 
-          :model="loginForm" 
-          :rules="rules" 
-          ref="formRef" 
+      <section class="login-card">
+        <h2 class="card-title">登录</h2>
+
+        <el-form
+          :model="loginForm"
+          :rules="rules"
+          ref="formRef"
           class="login-form"
           @keyup.enter="onSubmit"
         >
           <el-form-item prop="username">
             <el-input
               v-model="loginForm.username"
-              placeholder="用户名"
+              placeholder="请输入用户名"
               :prefix-icon="User"
               size="large"
               autocomplete="username"
             />
           </el-form-item>
-          
+
           <el-form-item prop="password">
             <el-input
               v-model="loginForm.password"
               type="password"
-              placeholder="密码"
+              placeholder="请输入密码"
               :prefix-icon="Lock"
               size="large"
               show-password
               autocomplete="current-password"
             />
           </el-form-item>
-          
-          <el-form-item class="submit-item">
-            <el-button
-              type="primary"
-              :loading="loading"
-              @click="onSubmit"
-              size="large"
-              class="login-btn"
-            >
-              {{ loading ? '登录中...' : '登 录' }}
-            </el-button>
-          </el-form-item>
+
+          <el-button
+            type="primary"
+            :loading="loading"
+            size="large"
+            class="login-btn"
+            @click="onSubmit"
+          >
+            <el-icon v-if="!loading" class="login-btn-icon"><SwitchButton /></el-icon>
+            <span>{{ loading ? '登录中...' : '登录' }}</span>
+          </el-button>
         </el-form>
-        
-        <!-- 演示信息 -->
+
+        <el-divider class="card-divider" />
+
         <div class="demo-section">
           <div class="demo-label">演示账号</div>
-          <div class="demo-value">admin / 123456</div>
+          <div class="demo-value" @click="fillDemo">admin / 123456</div>
           <div class="demo-notice">演示环境部分功能未开放</div>
         </div>
-      </div>
-      
-      <!-- 底部 -->
-      <div class="footer">© 2024 Buding · 统一管理多个 Kubernetes 集群</div>
-    </div>
+      </section>
+    </main>
+
+    <!-- 底部 -->
+    <footer class="page-footer">© 2026 BuDing · 统一管理多个 Kubernetes 集群</footer>
   </div>
 </template>
 
@@ -73,8 +92,10 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElNotification } from 'element-plus'
-import { Monitor, User, Lock } from '@element-plus/icons-vue'
+import { User, Lock, SwitchButton } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import logoK8s from '@/assets/logo-k8s.svg'
+import heroImg from '@/assets/images/modern-soft-3d-isometric.jpg'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -85,6 +106,12 @@ const formRef = ref()
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+}
+
+// 一键填充演示账号
+const fillDemo = () => {
+  loginForm.value.username = 'admin'
+  loginForm.value.password = '123456'
 }
 
 const onSubmit = async () => {
@@ -116,177 +143,250 @@ const onSubmit = async () => {
 </script>
 
 <style scoped>
-.login-container {
-  min-height: 100vh;
+.login-page {
   position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f2f7fe 0%, #e8f1fd 45%, #dbeafc 100%);
+}
+
+/* 背景波浪 */
+.wave {
+  position: absolute;
+  width: 55%;
+  height: 60%;
+  pointer-events: none;
+}
+
+.wave-left {
+  left: -60px;
+  bottom: -40px;
+}
+
+.wave-right {
+  right: -80px;
+  top: -60px;
+  transform: rotate(180deg);
+}
+
+/* 顶部品牌 */
+.brand-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 26px 56px 0;
+}
+
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.login-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(180deg, #f5faff 0%, #fbfdff 100%);
-  z-index: 0;
+.brand-logo img {
+  width: 30px;
+  height: 30px;
 }
 
-.login-content {
+.brand-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e3a5f;
+  letter-spacing: 0.5px;
+}
+
+/* 主体 */
+.login-main {
   position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 380px;
-  padding: 20px;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 72px;
+  padding: 24px 56px;
 }
 
-/* 品牌区域 */
-.brand-header {
-  text-align: center;
-  margin-bottom: 32px;
+/* 左侧介绍 */
+.intro {
+  max-width: 560px;
 }
 
-.brand-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1e3a8a;
-  margin: 0 0 8px 0;
-}
-
-.brand-desc {
-  font-size: 14px;
-  color: #64748b;
+.intro-title {
   margin: 0;
+  font-size: 42px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #16325c;
+  letter-spacing: 1px;
+}
+
+.intro-desc {
+  margin: 14px 0 0;
+  font-size: 16px;
+  color: #5b7396;
+}
+
+.intro-bar {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  margin: 18px 0 8px;
+}
+
+.intro-hero {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  mix-blend-mode: multiply;
+  filter: drop-shadow(0 18px 30px rgba(59, 130, 246, 0.16));
+  animation: hero-float 6s ease-in-out infinite;
+}
+
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 /* 登录卡片 */
 .login-card {
+  width: 440px;
+  flex-shrink: 0;
   background: #ffffff;
-  border-radius: 18px;
-  padding: 32px 28px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(59, 130, 246, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 18px 50px rgba(59, 130, 246, 0.14);
+  padding: 44px 44px 32px;
 }
 
 .card-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 24px;
+  margin: 0 0 28px;
   text-align: center;
-}
-
-/* 表单 */
-.login-form :deep(.el-form-item) {
-  margin-bottom: 18px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f2937;
 }
 
 .login-form :deep(.el-input__wrapper) {
   border-radius: 10px;
-  padding: 2px 14px;
-  box-shadow: 0 0 0 1px #e5e7eb;
+  padding: 4px 14px;
+  box-shadow: 0 0 0 1px #d9e4f2 inset;
 }
 
 .login-form :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px #d1d5db;
+  box-shadow: 0 0 0 1px #93b8ee inset;
 }
 
 .login-form :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 1.5px #3b82f6 inset;
 }
 
 .login-form :deep(.el-input__inner) {
-  height: 42px;
-  font-size: 14px;
+  height: 40px;
 }
 
-.login-form :deep(.el-input__prefix) {
-  color: #9ca3af;
+.login-form :deep(.el-form-item) {
+  margin-bottom: 22px;
 }
 
-/* 修复浏览器自动填充样式 */
-.login-form :deep(.el-input__inner:-webkit-autofill),
-.login-form :deep(.el-input__inner:-webkit-autofill:hover),
-.login-form :deep(.el-input__inner:-webkit-autofill:focus) {
-  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
-  -webkit-text-fill-color: #1f2937 !important;
-  transition: background-color 5000s ease-in-out 0s;
-}
-
-.submit-item {
-  margin-bottom: 0 !important;
-  margin-top: 8px;
-}
-
-/* 登录按钮 */
 .login-btn {
   width: 100%;
-  height: 44px;
-  font-size: 15px;
-  font-weight: 500;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-  border: none;
+  height: 48px;
+  margin-top: 6px;
+  border-radius: 12px;
+  font-size: 16px;
+  letter-spacing: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.login-btn:hover,
-.login-btn:focus {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+.login-btn-icon {
+  font-size: 17px;
+}
+
+.card-divider {
+  margin: 26px 0 18px;
 }
 
 /* 演示信息 */
 .demo-section {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid #f3f4f6;
   text-align: center;
 }
 
 .demo-label {
-  font-size: 12px;
+  font-size: 13px;
   color: #9ca3af;
-  margin-bottom: 8px;
 }
 
 .demo-value {
-  font-size: 14px;
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 700;
   color: #3b82f6;
-  font-family: 'SF Mono', Monaco, Consolas, monospace;
-  margin-bottom: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.demo-value:hover {
+  text-decoration: underline;
 }
 
 .demo-notice {
+  margin-top: 12px;
   font-size: 12px;
-  color: #9ca3af;
+  color: #b6c2d4;
 }
 
 /* 底部 */
-.footer {
-  margin-top: 32px;
+.page-footer {
+  position: relative;
+  z-index: 2;
   text-align: center;
-  font-size: 12px;
-  color: #9ca3af;
+  padding: 18px 0 22px;
+  font-size: 13px;
+  color: #8ba3c7;
 }
 
-/* 响应式 */
-@media (max-width: 480px) {
-  .login-content {
-    padding: 16px;
+/* 响应式: 窄屏隐藏大图, 卡片自适应 */
+@media (max-width: 1080px) {
+  .login-main {
+    flex-direction: column;
+    gap: 36px;
+    padding: 24px 24px 40px;
+  }
+
+  .intro {
+    text-align: center;
+    max-width: 100%;
+  }
+
+  .intro-bar {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .intro-hero {
+    display: none;
   }
 
   .login-card {
-    padding: 24px 20px;
-    border-radius: 16px;
+    width: 100%;
+    max-width: 460px;
   }
 
-  .brand-title {
-    font-size: 20px;
-  }
-
-  .brand-desc {
-    font-size: 13px;
+  .brand-header {
+    padding: 20px 24px 0;
   }
 }
 </style>
