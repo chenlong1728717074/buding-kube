@@ -2,12 +2,12 @@
   <div class="login-page">
     <!-- 背景装饰波浪 -->
     <svg class="wave wave-left" viewBox="0 0 900 600" preserveAspectRatio="none">
-      <path d="M0,480 C220,380 420,520 640,440 C760,396 850,420 900,380 L900,600 L0,600 Z" fill="#d8e8fb" opacity="0.55" />
-      <path d="M0,540 C240,460 460,580 700,500 C800,468 870,480 900,450 L900,600 L0,600 Z" fill="#cfe0f8" opacity="0.5" />
+      <path d="M0,480 C220,380 420,520 640,440 C760,396 850,420 900,380 L900,600 L0,600 Z" fill="#d8e8fb" opacity="0.5" />
+      <path d="M0,540 C240,460 460,580 700,500 C800,468 870,480 900,450 L900,600 L0,600 Z" fill="#cfe0f8" opacity="0.45" />
     </svg>
     <svg class="wave wave-right" viewBox="0 0 900 600" preserveAspectRatio="none">
-      <path d="M0,300 C180,240 380,340 560,280 C720,226 830,260 900,220 L900,0 L0,0 Z" fill="#e3eefc" opacity="0.6" />
-      <path d="M0,180 C200,120 400,220 620,160 C760,120 850,150 900,110 L900,0 L0,0 Z" fill="#d5e5fa" opacity="0.45" />
+      <path d="M0,300 C180,240 380,340 560,280 C720,226 830,260 900,220 L900,0 L0,0 Z" fill="#e3eefc" opacity="0.55" />
+      <path d="M0,180 C200,120 400,220 620,160 C760,120 850,150 900,110 L900,0 L0,0 Z" fill="#d5e5fa" opacity="0.4" />
     </svg>
 
     <!-- 顶部品牌 -->
@@ -95,7 +95,7 @@ import { ElMessage, ElNotification } from 'element-plus'
 import { User, Lock, SwitchButton } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import logoK8s from '@/assets/logo-k8s.svg'
-import heroImg from '@/assets/images/modern-soft-3d-isometric.jpg'
+import heroImg from '@/assets/images/login3d.jpg'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -143,20 +143,22 @@ const onSubmit = async () => {
 </script>
 
 <style scoped>
+/* 版式按原型 1668x943 实测比例复现, 关键尺寸使用 vw/vh 保证同比例缩放 */
 .login-page {
   position: relative;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: linear-gradient(135deg, #f2f7fe 0%, #e8f1fd 45%, #dbeafc 100%);
+  background: linear-gradient(118deg, #f0f6fe 0%, #e9f2fd 40%, #dcebfc 100%);
 }
 
-/* 背景波浪 */
+/* 背景波浪: z-index:-1 沉到内容之下(与渐变背景融合, 且不遮卡片) */
 .wave {
   position: absolute;
-  width: 55%;
-  height: 60%;
+  z-index: -1;
+  width: 54%;
+  height: 58%;
   pointer-events: none;
 }
 
@@ -171,30 +173,30 @@ const onSubmit = async () => {
   transform: rotate(180deg);
 }
 
-/* 顶部品牌 */
+/* 顶部品牌: 原型 x≈55 y≈50, logo 44px */
 .brand-header {
   position: relative;
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 26px 56px 0;
+  gap: 12px;
+  padding: 3.4vh 3.3vw 0;
 }
 
 .brand-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: #ffffff;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.18);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .brand-logo img {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
 }
 
 .brand-name {
@@ -204,35 +206,33 @@ const onSubmit = async () => {
   letter-spacing: 0.5px;
 }
 
-/* 主体 */
+/* 主体: 不创建堆叠上下文, 保证 3D 图 multiply 混合能与页面渐变背景融合 */
 .login-main {
-  position: relative;
-  z-index: 2;
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 72px;
-  padding: 24px 56px;
+  gap: 3.5vw;
+  padding: 0 9vw 1vh 7vw;
 }
 
-/* 左侧介绍 */
+/* 左侧介绍: 原型标题 x≈210(12.6%), 大图 x≈115(6.9%) 宽≈755(45vw) */
 .intro {
-  max-width: 560px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .intro-title {
-  margin: 0;
-  font-size: 42px;
-  line-height: 1.3;
+  margin: 0 0 0 5.2vw;
+  font-size: clamp(30px, 2.75vw, 46px);
+  line-height: 1.42;
   font-weight: 700;
   color: #16325c;
   letter-spacing: 1px;
 }
 
 .intro-desc {
-  margin: 14px 0 0;
-  font-size: 16px;
+  margin: 1.8vh 0 0 5.2vw;
+  font-size: clamp(13px, 1vw, 16px);
   color: #5b7396;
 }
 
@@ -241,15 +241,15 @@ const onSubmit = async () => {
   height: 4px;
   border-radius: 2px;
   background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  margin: 18px 0 8px;
+  margin: 2.2vh 0 0 5.2vw;
 }
 
 .intro-hero {
   display: block;
-  width: 100%;
-  max-width: 560px;
+  width: 44vw;
+  max-width: 780px;
+  margin: -1vh 0 0 -1.8vw;
   mix-blend-mode: multiply;
-  filter: drop-shadow(0 18px 30px rgba(59, 130, 246, 0.16));
   animation: hero-float 6s ease-in-out infinite;
 }
 
@@ -258,20 +258,20 @@ const onSubmit = async () => {
   50% { transform: translateY(-10px); }
 }
 
-/* 登录卡片 */
+/* 登录卡片: 原型宽≈505px(30.3vw), 距右≈14vw */
 .login-card {
-  width: 440px;
+  width: clamp(400px, 30.5vw, 520px);
   flex-shrink: 0;
   background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 18px 50px rgba(59, 130, 246, 0.14);
-  padding: 44px 44px 32px;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(59, 130, 246, 0.16);
+  padding: 4.8vh 2.9vw 3.4vh;
 }
 
 .card-title {
-  margin: 0 0 28px;
+  margin: 0 0 3.6vh;
   text-align: center;
-  font-size: 26px;
+  font-size: clamp(24px, 1.7vw, 28px);
   font-weight: 700;
   color: #1f2937;
 }
@@ -291,17 +291,17 @@ const onSubmit = async () => {
 }
 
 .login-form :deep(.el-input__inner) {
-  height: 40px;
+  height: 44px;
 }
 
 .login-form :deep(.el-form-item) {
-  margin-bottom: 22px;
+  margin-bottom: 2.6vh;
 }
 
 .login-btn {
   width: 100%;
-  height: 48px;
-  margin-top: 6px;
+  height: 52px;
+  margin-top: 1.4vh;
   border-radius: 12px;
   font-size: 16px;
   letter-spacing: 4px;
@@ -316,7 +316,7 @@ const onSubmit = async () => {
 }
 
 .card-divider {
-  margin: 26px 0 18px;
+  margin: 3.4vh 0 2.2vh;
 }
 
 /* 演示信息 */
@@ -330,8 +330,8 @@ const onSubmit = async () => {
 }
 
 .demo-value {
-  margin-top: 6px;
-  font-size: 15px;
+  margin-top: 1vh;
+  font-size: clamp(15px, 1.1vw, 18px);
   font-weight: 700;
   color: #3b82f6;
   cursor: pointer;
@@ -343,7 +343,7 @@ const onSubmit = async () => {
 }
 
 .demo-notice {
-  margin-top: 12px;
+  margin-top: 1.4vh;
   font-size: 12px;
   color: #b6c2d4;
 }
@@ -353,7 +353,7 @@ const onSubmit = async () => {
   position: relative;
   z-index: 2;
   text-align: center;
-  padding: 18px 0 22px;
+  padding: 2vh 0 2.4vh;
   font-size: 13px;
   color: #8ba3c7;
 }
@@ -362,13 +362,18 @@ const onSubmit = async () => {
 @media (max-width: 1080px) {
   .login-main {
     flex-direction: column;
-    gap: 36px;
-    padding: 24px 24px 40px;
+    gap: 32px;
+    padding: 16px 24px 32px;
   }
 
   .intro {
     text-align: center;
-    max-width: 100%;
+  }
+
+  .intro-title,
+  .intro-desc,
+  .intro-bar {
+    margin-left: 0;
   }
 
   .intro-bar {
@@ -382,7 +387,7 @@ const onSubmit = async () => {
 
   .login-card {
     width: 100%;
-    max-width: 460px;
+    max-width: 480px;
   }
 
   .brand-header {
