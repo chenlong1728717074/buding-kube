@@ -220,7 +220,7 @@ const onSubmit = async () => {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 3vw;
+  gap: 7vw;
   padding: 0 14.5vw 1vh 6.9vw;
 }
 
@@ -268,13 +268,13 @@ const onSubmit = async () => {
 
 /* 登录卡片: 原型宽≈505px(30.3vw), 高≈535px(56.7vh), 右缘距 14.5vw */
 .login-card {
-  width: clamp(440px, 30.3vw, 520px);
+  width: clamp(380px, 24.5vw, 440px);
   min-height: 56.5vh;
   flex-shrink: 0;
   background: #ffffff;
   border-radius: 18px;
   box-shadow: 0 20px 60px rgba(59, 130, 246, 0.16);
-  padding: 6vh 2.3vw 4.5vh;
+  padding: 6vh 36px 4.5vh;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
