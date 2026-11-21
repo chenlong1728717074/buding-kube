@@ -40,3 +40,8 @@ type UpdateUserEnableDTO struct {
 type BatchDeleteUsersDTO struct {
 	Usernames []string `json:"usernames" binding:"required,min=1"`
 }
+
+// ResetPasswordDTO 重置用户密码参数(密码留空则使用默认密码 123456)
+type ResetPasswordDTO struct {
+	Password string `json:"password" example:"newPass123"`
+}

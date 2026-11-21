@@ -3,7 +3,10 @@
     <!-- 侧边栏 -->
     <el-aside :width="isCollapsed ? '72px' : '250px'" class="sidebar">
       <div class="logo" @click="goHome" style="cursor: pointer;">
-        <h2>{{ isCollapsed ? 'B' : 'BuDing Kube 管理平台' }}</h2>
+        <div class="logo-icon">
+          <img :src="logoK8sWhite" alt="Kubernetes" />
+        </div>
+        <h2 v-if="!isCollapsed">Buding</h2>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -303,6 +306,7 @@ import TagsView from '@/components/TagsView.vue'
 import { clusterApi } from '@/api/cluster'
 
 import { Fold, Expand } from '@element-plus/icons-vue'
+import logoK8sWhite from '@/assets/logo-k8s-white.svg'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
@@ -500,8 +504,27 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   background: #ffffff;
   border-bottom: 1px solid rgba(59,130,246,0.16);
+}
+
+.logo-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-icon img {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1);
 }
 
 .logo h2 {
@@ -509,6 +532,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .sidebar-menu {

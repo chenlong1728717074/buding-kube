@@ -3,7 +3,10 @@
     <!-- 顶部导航 -->
     <header class="header">
       <div class="header-left">
-        <h1 class="logo" @click="goHome">BuDing Kube</h1>
+        <h1 class="logo" @click="goHome">
+          <img :src="logoK8s" alt="Kubernetes" class="logo-img" />
+          BuDing Kube
+        </h1>
       </div>
       <div class="header-right">
         <div class="header-extras">
@@ -45,6 +48,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { Avatar, ArrowDown, Timer } from '@element-plus/icons-vue'
+import logoK8s from '@/assets/logo-k8s.svg'
 import { ElMessageBox, ElNotification } from 'element-plus'
 
 const router = useRouter()
@@ -149,6 +153,14 @@ onUnmounted(() => {
   margin: 0;
   cursor: pointer;
   transition: color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-img {
+  width: 26px;
+  height: 26px;
 }
 
 .logo:hover {

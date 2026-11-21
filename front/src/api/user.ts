@@ -72,6 +72,7 @@ export interface UpdateUserEnableDTO {
 // 重置密码DTO
 export interface ResetPasswordDTO {
   username: string
+  password?: string
 }
 
 // 修改密码DTO
@@ -139,9 +140,9 @@ export const userApi = {
     return request.put('/user/enable', data)
   },
 
-  // 重置用户密码
+  // 重置用户密码(password 留空则重置为 123456)
   resetPassword: (data: ResetPasswordDTO): Promise<ApiResponse<null>> => {
-    return request.post(`/user/resetPassword/${data.username}`)
+    return request.post(`/user/resetPassword/${data.username}`, { password: data.password || '' })
   },
 
   // 更新用户资料

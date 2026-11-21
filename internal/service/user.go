@@ -277,7 +277,8 @@ func (s *UserService) BatchDeleteUsers(usernames []string, currentUser *kube.Log
 }
 
 // ResetPassword 重置用户密码（默认重置为 123456）
-func (s *UserService) ResetPassword(name string, currentUser *kube.LoginUser) error {
+// ResetPassword 重置用户密码: newPassword 为空时使用默认密码 123456
+func (s *UserService) ResetPassword(name, newPassword string, currentUser *kube.LoginUser) error {
 	user, err := kube.GetUser(name)
 	if err != nil {
 		return err
@@ -287,7 +288,11 @@ func (s *UserService) ResetPassword(name string, currentUser *kube.LoginUser) er
 		return errors.New("权限不足")
 	}
 
-	hashedPassword, err := argon2id.CreateHash("123456", argon2id.DefaultParams)
+	if strings.TrimSpace(newPassword) == "" {
+		newPassword = "123456"
+	}
+
+	hashedPassword, err := argon2id.CreateHash(newPassword, argon2id.DefaultParams)
 	if err != nil {
 		return err
 	}

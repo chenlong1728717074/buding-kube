@@ -723,21 +723,27 @@ const handleMoreActions = (command: string, row: UserVO) => {
   }
 }
 
-// 重置密码（默认重置为 123456）
+// 重置密码（弹窗输入新密码, 留空则重置为 123456）
 const handleResetPassword = async (row: UserVO) => {
   try {
-    await ElMessageBox.confirm(
-      `确定要将用户 "${row.username}" 的密码重置为默认值 123456 吗？`,
-      '确认操作',
+    const { value } = await ElMessageBox.prompt(
+      `请输入用户 "${row.username}" 的新密码，留空则重置为 123456`,
+      '重置密码',
       {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
+        inputPlaceholder: '留空则为 123456',
+        inputType: 'password',
         type: 'warning'
       }
     )
 
-    await userApi.resetPassword({ username: row.username })
-    ElMessage.success('密码已重置为 123456')
+    await userApi.resetPassword({ username: row.username, password: value || '' })
+    if (value) {
+      ElMessage.success('密码已修改')
+    } else {
+      ElMessage.success('密码已重置为 123456')
+    }
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error('重置密码失败')

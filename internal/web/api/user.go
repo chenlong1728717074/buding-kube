@@ -108,7 +108,10 @@ func (api *UserApi) BatchDeleteUsers(ctx *gin.Context, req dto.BatchDeleteUsersD
 }
 
 func (api *UserApi) ResetPassword(ctx *gin.Context, name string) {
-	if err := api.srv.ResetPassword(name, api.CurrentUser(ctx)); err != nil {
+	// 密码通过可选请求体传入, 留空则使用默认密码 123456
+	var body dto.ResetPasswordDTO
+	_ = ctx.ShouldBindJSON(&body)
+	if err := api.srv.ResetPassword(name, body.Password, api.CurrentUser(ctx)); err != nil {
 		api.InternalError(ctx, "重置用户密码失败", err)
 		return
 	}
