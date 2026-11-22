@@ -163,7 +163,7 @@
             <span class="info-label">状态</span>
             <span class="info-status" :class="statusTextClass">
               <span class="status-dot" />
-              <span>{{ getStatusText(currentStatus) }}</span>
+              <span>{{ clusterStatusText(currentStatus) }}</span>
             </span>
           </div>
         </div>
@@ -452,6 +452,7 @@
 </template>
 
 <script setup lang="ts">
+import { clusterStatusText } from '@/utils/status'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
@@ -567,18 +568,6 @@ const podHealthText = computed(() => {
 const usageSourceLabel = computed(() =>
   usage.value.source === 'requests' ? '配额估算' : '实时数据'
 )
-
-const getStatusText = (status: string) => {
-  const statusMap: Record<string, string> = {
-    Active: '运行中',
-    Running: '运行中',
-    Pending: '等待中',
-    Unknown: '未知',
-    Error: '异常',
-    Failed: '失败'
-  }
-  return statusMap[status] || status
-}
 
 const formatPercent = (pct: number) => {
   const clamped = Math.min(100, Math.max(0, Number(pct) || 0))

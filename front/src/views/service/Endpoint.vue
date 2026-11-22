@@ -71,7 +71,7 @@
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" min-width="140" header-align="center" align="center">
           <template #default="{ row }">
-            {{ formatTime(row.createTime) }}
+            {{ formatDateTime(row.createTime) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right" header-align="center">
@@ -133,6 +133,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime } from '@/utils/format'
 import { fetchResourceYaml } from '@/api/resource'
 import PageHeader from '@/components/PageHeader.vue'
 import ListPagination from '@/components/ListPagination.vue'
@@ -215,9 +216,8 @@ const fetchEndpointList = async () => {
       endpointList.value = response.data.items || []
       pagination.total = response.data.total || 0
     }
-  } catch (error) {
-    console.error('获取Endpoint列表失败:', error)
-    ElMessage.error('获取Endpoint列表失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     loading.value = false
   }
@@ -262,11 +262,6 @@ const handleNamespaceDetail = (row: EndpointVO) => {
 }
 
 // 格式化时间
-const formatTime = (time: string) => {
-  if (!time) return '-'
-  return new Date(time).toLocaleString('zh-CN')
-}
-
 // 处理命名空间变化
 const handleNamespaceChange = (namespace: string) => {
   searchForm.namespace = namespace
@@ -329,9 +324,8 @@ const handleDelete = (row: EndpointVO) => {
       })
       ElMessage.success('删除成功')
       fetchEndpointList()
-    } catch (error) {
-      console.error('删除失败:', error)
-      ElMessage.error('删除失败')
+    } catch {
+      // 请求拦截器已提示错误
     }
   }).catch(() => {})
 }

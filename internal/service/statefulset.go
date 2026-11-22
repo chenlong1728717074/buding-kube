@@ -33,14 +33,14 @@ func GetSingletonStatefulSetService() *StatefulSetService {
 	return statefulSetSrv
 }
 
-func (s *StatefulSetService) List(query dto.WorkloadQueryDTO) ([]vo.WorkloadVO, error) {
+func (s *StatefulSetService) List(ctx context.Context, query dto.WorkloadQueryDTO) ([]vo.WorkloadVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
 	// 命名空间为空时查询所有命名空间
-	items, err := clientSet.AppsV1().StatefulSets(query.Namespace).List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"})
+	items, err := clientSet.AppsV1().StatefulSets(query.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取StatefulSet失败: %v", err)
 		return nil, err

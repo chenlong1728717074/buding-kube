@@ -18,8 +18,3 @@ type NamespacePageQueryBaseDTO struct {
 	PageQueryDTO
 	NamespaceBaseDTO
 }
-
-type NamespaceApplyDTO struct {
-	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`
-	Yaml      string `json:"yaml" binding:"required"`
-}

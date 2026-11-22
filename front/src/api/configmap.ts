@@ -49,12 +49,6 @@ export interface ConfigMapCreateDTO {
   labels?: Record<string, string>
 }
 
-export interface ConfigMapApplyDTO {
-  clusterId: string
-  namespace?: string
-  yaml: string
-}
-
 export interface ConfigMapVO {
   name: string
   namespace: string
@@ -64,7 +58,6 @@ export interface ConfigMapVO {
   annotations?: Record<string, string>
   labels?: Record<string, string>
   creationTimestamp?: string
-  yaml?: string
   // 数据条数; 列表接口只返回这个, 不返回 data / yaml
   dataCount?: number
 }
@@ -88,9 +81,6 @@ export const configMapApi = {
   },
   updateSetting(data: ConfigMapSettingUpdateDTO): Promise<ApiResponse<void>> {
     return request.put('/configMap/setting', data)
-  },
-  applyYaml(data: ConfigMapApplyDTO): Promise<ApiResponse<void>> {
-    return request.post('/configMap/apply', data)
   },
   delete(params: ConfigMapBaseDTO): Promise<ApiResponse<void>> {
     return request.delete('/configMap', { params })

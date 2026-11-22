@@ -32,13 +32,13 @@ func GetSingletonEndpointSliceService() *EndpointSliceService {
 	return endpointSliceSrv
 }
 
-func (s *EndpointSliceService) List(query dto.EndpointSlicePageQueryBaseDTO) ([]vo.EndpointSliceVO, error) {
+func (s *EndpointSliceService) List(ctx context.Context, query dto.EndpointSlicePageQueryBaseDTO) ([]vo.EndpointSliceVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	items, err := clientSet.DiscoveryV1().EndpointSlices(query.Namespace).List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"})
+	items, err := clientSet.DiscoveryV1().EndpointSlices(query.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取EndpointSlice失败: %v", err)
 		return nil, fmt.Errorf("获取EndpointSlice失败: %v", err)
@@ -57,13 +57,13 @@ func (s *EndpointSliceService) List(query dto.EndpointSlicePageQueryBaseDTO) ([]
 }
 
 // Delete 删除EndpointSlice(注意: 由控制器管理, 删除后可能被自动重建)
-func (s *EndpointSliceService) Delete(base dto.BaseDTO) error {
+func (s *EndpointSliceService) Delete(ctx context.Context, base dto.BaseDTO) error {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
 		return errors.New("获取集群失败")
 	}
-	if err := clientSet.DiscoveryV1().EndpointSlices(base.Namespace).Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+	if err := clientSet.DiscoveryV1().EndpointSlices(base.Namespace).Delete(ctx, base.Name, metav1.DeleteOptions{}); err != nil {
 		logs.Error("删除endpointslice失败: %v", err)
 		return fmt.Errorf("删除endpointslice失败: %v", err)
 	}

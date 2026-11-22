@@ -66,16 +66,16 @@
         <el-table-column prop="active" label="状态" min-width="100" header-align="center" align="center">
           <template #default="{ row }">
             <el-tag 
-              :type="getStatusType(row.active)"
+              :type="namespaceStatusType(row.active)"
               size="small"
             >
-              {{ getStatusText(row.active) }}
+              {{ namespaceStatusText(row.active) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="creationTimestamp" label="创建时间" min-width="160" :show-overflow-tooltip="true" header-align="center" align="center">
           <template #default="{ row }">
-            <span v-if="row.creationTimestamp">{{ formatDate(row.creationTimestamp) }}</span>
+            <span v-if="row.creationTimestamp">{{ formatDateTime(row.creationTimestamp) }}</span>
             <el-text v-else type="info">-</el-text>
           </template>
         </el-table-column>
@@ -166,6 +166,9 @@
 </template>
 
 <script setup lang="ts">
+import { namespaceStatusText, namespaceStatusType } from '@/utils/status'
+import { formatDateTime } from '@/utils/format'
+import { fetchResourceYaml, resourceApi } from '@/api/resource'
 import PageHeader from '@/components/PageHeader.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { tableHeaderClass, tableCellClass } from '@/utils/table'
@@ -182,8 +185,7 @@ import {
 import { 
   namespaceApi, 
   type NamespaceVO, 
-  type NamespacePageQueryDTO, 
-  type NamespaceApplyDTO,
+  type NamespacePageQueryDTO,
   type NamespaceBaseDTO
 } from '@/api/namespace'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
@@ -266,9 +268,8 @@ const fetchNamespaceList = async () => {
       namespaceList.value = response.data.items || []
       pagination.total = response.data.total || 0
     }
-  } catch (error: any) {
-    console.error('获取命名空间列表失败:', error)
-    ElMessage.error('获取命名空间列表失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     loading.value = false
   }
@@ -282,9 +283,8 @@ const fetchClusterList = async () => {
     if (response.code === 200 && response.data) {
       clusterList.value = response.data.items || []
     }
-  } catch (error: any) {
-    console.error('获取集群列表失败:', error)
-    ElMessage.error('获取集群列表失败')
+  } catch {
+    // 请求拦截器已提示错误
   }
 }
 
@@ -347,17 +347,12 @@ const handleApplyYaml = async () => {
   try {
     yamlSubmitLoading.value = true
     
-    const data: NamespaceApplyDTO = {
-      clusterId: clusterId.value,
-      yaml: yamlForm.yaml
-    }
-    
-    await namespaceApi.apply(data)
+    await resourceApi.apply({ kind: 'namespace', clusterId: clusterId.value, yaml: yamlForm.yaml })
     ElMessage.success('应用成功')
     yamlDialogVisible.value = false
     fetchNamespaceList()
-  } catch (error: any) {
-    ElMessage.error('应用失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     yamlSubmitLoading.value = false
   }
@@ -390,15 +385,10 @@ const handleViewYaml = async (row: NamespaceVO) => {
     viewYamlForm.clusterName = clusterStore.currentClusterName
     viewYamlForm.namespace = row.name
     
-    const params: NamespaceBaseDTO = {
-      clusterId: clusterId.value,
-      namespace: row.name
-    }
-    const response = await namespaceApi.getInfo(params)
-    viewYamlForm.yaml = response.data.yaml || '# YAML内容加载中...'
+    viewYamlForm.yaml = await fetchResourceYaml({ kind: 'namespace', clusterId: clusterId.value, name: row.name })
     viewYamlDialogVisible.value = true
-  } catch (error: any) {
-    ElMessage.error('获取YAML配置失败')
+  } catch {
+    // 请求拦截器已提示错误
   }
 }
 
@@ -452,8 +442,8 @@ const confirmDeleteNamespace = async () => {
     ElMessage.success('删除成功')
     deleteDialogVisible.value = false
     fetchNamespaceList()
-  } catch (error: any) {
-    ElMessage.error('删除失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     deleteLoading.value = false
   }
@@ -475,17 +465,13 @@ const handleApplyEditYaml = async () => {
   try {
     applyLoading.value = true
     
-    const data: NamespaceApplyDTO = {
-      clusterId: clusterId.value,
-      yaml: viewYamlForm.yaml
-    }
-    
-    await namespaceApi.apply(data)
+    if (!currentNamespace.value) return
+    await resourceApi.updateYaml({ kind: 'namespace', clusterId: clusterId.value, name: currentNamespace.value.name, yaml: viewYamlForm.yaml })
     ElMessage.success('应用成功')
     viewYamlDialogVisible.value = false
     fetchNamespaceList()
-  } catch (error: any) {
-    ElMessage.error('应用失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     applyLoading.value = false
   }
@@ -497,46 +483,7 @@ const handleYamlChange = (newYaml: string) => {
 }
 
 // 状态相关
-const getStatusType = (status: string) => {
-  switch (status) {
-    case 'Active':
-      return 'success'
-    case 'Terminating':
-      return 'warning'
-    default:
-      return 'danger'
-  }
-}
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'Active':
-      return '活跃'
-    case 'Terminating':
-      return '终止中'
-    default:
-      return status
-  }
-}
-
 // 格式化日期
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  try {
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return '-'
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  } catch (error) {
-    return '-'
-  }
-}
-
 // 页面加载时获取数据
 onMounted(() => {
   // 获取集群列表用于对话框（保留用于查看YAML时显示集群名称）

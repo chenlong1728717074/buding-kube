@@ -34,13 +34,13 @@ func GetSingletonEndpointService() *EndpointService {
 	return endpointSrv
 }
 
-func (s *EndpointService) List(query dto.EndpointPageQueryBaseDTO) ([]vo.EndpointVO, error) {
+func (s *EndpointService) List(ctx context.Context, query dto.EndpointPageQueryBaseDTO) ([]vo.EndpointVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	items, err := clientSet.CoreV1().Endpoints(query.Namespace).List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"})
+	items, err := clientSet.CoreV1().Endpoints(query.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取Endpoint失败: %v", err)
 		return nil, fmt.Errorf("获取Endpoint失败: %v", err)
@@ -59,13 +59,13 @@ func (s *EndpointService) List(query dto.EndpointPageQueryBaseDTO) ([]vo.Endpoin
 }
 
 // Delete 删除Endpoint(注意: 由控制器管理, 删除后可能被自动重建)
-func (s *EndpointService) Delete(base dto.BaseDTO) error {
+func (s *EndpointService) Delete(ctx context.Context, base dto.BaseDTO) error {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
 		return errors.New("获取集群失败")
 	}
-	if err := clientSet.CoreV1().Endpoints(base.Namespace).Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+	if err := clientSet.CoreV1().Endpoints(base.Namespace).Delete(ctx, base.Name, metav1.DeleteOptions{}); err != nil {
 		logs.Error("删除endpoint失败: %v", err)
 		return fmt.Errorf("删除endpoint失败: %v", err)
 	}

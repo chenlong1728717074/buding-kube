@@ -11,4 +11,8 @@ type EventQueryDTO struct {
 	Kind string `json:"kind" form:"kind"`
 	Name string `json:"name" form:"name"`
 	Uid  string `json:"uid" form:"uid"`
+	// All 返回全部事件; 默认只保留最近 1000 条
+	All bool `json:"all" form:"all"`
+	// Refresh 忽略翻页缓存重新查询
+	Refresh bool `json:"refresh" form:"refresh"`
 }

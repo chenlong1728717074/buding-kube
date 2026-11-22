@@ -25,21 +25,6 @@ const (
 	UserStateSuspended = "suspended"
 	UserStateExpired   = "expired"
 
-	// PermissionClusterCreate 权限定义
-	PermissionClusterCreate = "cluster:create"
-	PermissionClusterRead   = "cluster:read"
-	PermissionClusterUpdate = "cluster:update"
-	PermissionClusterDelete = "cluster:delete"
-	PermissionUserCreate    = "user:create"
-	PermissionUserRead      = "user:read"
-	PermissionUserUpdate    = "user:update"
-	PermissionUserDelete    = "user:delete"
-
-	// LabelRole 标签定义
-	LabelRole       = "role"
-	LabelDepartment = "department"
-	LabelUserConfig = "user-config"
-
 	SuperAdmin     string = "admin"
 	SuperAdminPass string = "123456"
 )
@@ -115,46 +100,10 @@ type UserSpec struct {
 	Attributes map[string]string `json:"attributes,omitempty"`
 }
 
-type UserQuota struct {
-	// 最大集群数
-	MaxClusters int `json:"maxClusters,omitempty"`
-
-	// 最大 CPU 核心数
-	MaxCPU string `json:"maxCPU,omitempty"`
-
-	// 最大内存
-	MaxMemory string `json:"maxMemory,omitempty"`
-
-	// 最大存储
-	MaxStorage string `json:"maxStorage,omitempty"`
-}
-
 // UserStatus 用户状态
 type UserStatus struct {
 	State     string       `json:"state,omitempty"`     // active/inactive/suspended/expired
 	LastLogin *metav1.Time `json:"lastLogin,omitempty"` // 最后登录时间
-}
-
-// UsedResources 已使用的资源
-type UsedResources struct {
-	// 已使用的集群数
-	Clusters int `json:"clusters,omitempty"`
-
-	// 已使用的 CPU
-	CPU string `json:"cpu,omitempty"`
-
-	// 已使用的内存
-	Memory string `json:"memory,omitempty"`
-
-	// 已使用的存储
-	Storage string `json:"storage,omitempty"`
-}
-
-// UserList 用户列表
-type UserList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []User `json:"items"`
 }
 
 func (u *User) CheckPassword(password string) bool {

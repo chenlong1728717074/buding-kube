@@ -8,6 +8,10 @@ type ClusterSaveDTO struct {
 	Config   string `json:"config"`
 	Uri      string `json:"uri"`
 	Token    string `json:"token"`
+	// CaData uri+token 方式的 API Server CA 证书(PEM 或其 base64), 用于校验服务端证书
+	CaData string `json:"caData"`
+	// Insecure uri+token 方式跳过服务端证书校验(不安全, 仅用于测试环境)
+	Insecure bool `json:"insecure"`
 }
 
 // 集群分页查询参数

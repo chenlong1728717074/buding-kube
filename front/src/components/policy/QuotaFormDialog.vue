@@ -20,9 +20,7 @@
         </p>
         <el-form label-width="150px">
           <el-form-item v-if="!namespaceFixed" label="命名空间" required>
-            <el-select v-model="namespace" filterable :disabled="isEdit" placeholder="请选择命名空间" style="width: 100%">
-              <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
-            </el-select>
+            <InfiniteSelect v-model="namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" :clearable="false" :disabled="isEdit" placeholder="请选择命名空间" style="width: 100%" />
           </el-form-item>
           <el-form-item label="名称" required>
             <el-input v-model="name" :disabled="isEdit" maxlength="253" />
@@ -49,11 +47,12 @@
 </template>
 
 <script setup lang="ts">
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import KVRowsTable from '@/components/KVRowsTable.vue'
 import { editableCopy, resourceApi, saveResourceObject, type KubeObject } from '@/api/resource'
-import { namespaceApi } from '@/api/namespace'
 import { DEFAULT_QUOTA_NAME, QUOTA_GROUPS } from '@/utils/policy'
 import { isQuantity } from '@/utils/resource'
 import type { KVRow } from '@/utils/job'
@@ -68,6 +67,8 @@ const props = withDefaults(
   }>(),
   { namespace: '', editName: '' }
 )
+// 命名空间下拉框分页加载
+const namespaceFetcher = computed(() => useNamespaceFetcher(props.clusterId))
 
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; success: [] }>()
 
@@ -82,7 +83,6 @@ const loading = ref(false)
 const saving = ref(false)
 const namespace = ref('')
 const name = ref(DEFAULT_QUOTA_NAME)
-const namespaces = ref<string[]>([])
 const values = reactive<Record<string, string>>({})
 const extra = ref<KVRow[]>([])
 const original = ref<KubeObject | null>(null)
@@ -93,12 +93,6 @@ const reset = async () => {
   original.value = null
   namespace.value = props.namespace
   name.value = props.editName || DEFAULT_QUOTA_NAME
-  if (!namespaceFixed.value) {
-    namespaceApi
-      .getList({ clusterId: props.clusterId, page: 1, pageSize: 10000 })
-      .then(resp => (namespaces.value = (resp.data?.items || []).map(ns => ns.name)))
-      .catch(() => (namespaces.value = []))
-  }
   if (!isEdit.value) return
   loading.value = true
   try {

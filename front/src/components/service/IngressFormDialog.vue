@@ -46,9 +46,7 @@
         <div v-else-if="current === 0" class="basic-form">
           <el-form ref="basicRef" :model="form" :rules="rules" label-width="100px">
             <el-form-item label="命名空间" prop="namespace">
-              <el-select v-model="form.namespace" filterable :disabled="isEdit" placeholder="请选择命名空间" :loading="nsLoading" style="width: 100%" @change="onNamespaceChange">
-                <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
-              </el-select>
+              <InfiniteSelect v-model="form.namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" :clearable="false" :disabled="isEdit" placeholder="请选择命名空间" style="width: 100%" @change="onNamespaceChange" />
             </el-form-item>
             <el-form-item label="名称" prop="name">
               <el-input v-model="form.name" :disabled="isEdit" placeholder="例如 web-ingress" maxlength="253" show-word-limit />
@@ -160,6 +158,8 @@
 </template>
 
 <script setup lang="ts">
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Check, Delete, Plus } from '@element-plus/icons-vue'
@@ -167,7 +167,6 @@ import YamlEditor from '@/components/YamlEditor.vue'
 import KVRowsTable from '@/components/KVRowsTable.vue'
 import { ingressApi, type IngressClassVO, type IngressFormDTO, type IngressPathDTO } from '@/api/ingress'
 import { serviceApi, type ServiceVO } from '@/api/service'
-import { namespaceApi } from '@/api/namespace'
 import { ANNOTATIONS } from '@/utils/annotations'
 import { jsonToYaml } from '@/utils/yaml'
 import type { KVRow } from '@/utils/job'
@@ -191,6 +190,8 @@ const props = withDefaults(
   }>(),
   { defaultNamespace: '', editTarget: null }
 )
+// 命名空间下拉框分页加载
+const namespaceFetcher = computed(() => useNamespaceFetcher(props.clusterId))
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
@@ -211,8 +212,6 @@ const loading = ref(false)
 const submitting = ref(false)
 const basicRef = ref<FormInstance>()
 
-const namespaces = ref<string[]>([])
-const nsLoading = ref(false)
 const classes = ref<IngressClassVO[]>([])
 const services = ref<ServiceVO[]>([])
 const svcLoading = ref(false)
@@ -252,18 +251,6 @@ const addAnnotation = (key: string, value: string) => {
     return
   }
   annotations.value.push({ key, value })
-}
-
-const loadNamespaces = async () => {
-  nsLoading.value = true
-  try {
-    const resp = await namespaceApi.getList({ clusterId: props.clusterId, page: 1, pageSize: 10000 })
-    namespaces.value = (resp.data?.items || []).map(ns => ns.name)
-  } catch {
-    namespaces.value = []
-  } finally {
-    nsLoading.value = false
-  }
 }
 
 const loadClasses = async () => {
@@ -351,7 +338,6 @@ const reset = async () => {
   tlsSecrets.value = []
   current.value = 0
   yamlMode.value = false
-  loadNamespaces()
   if (props.editTarget) await loadForEdit()
   loadClasses()
   loadNamespaceOptions()

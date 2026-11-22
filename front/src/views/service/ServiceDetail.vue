@@ -66,7 +66,7 @@
               <span>{{ svc.sessionAffinity === 'ClientIP' ? `按客户端 IP（${svc.sessionAffinityTimeout || 10800} 秒）` : '无' }}</span>
             </div>
             <div v-if="svc.externalTrafficPolicy" class="jd-attr"><label>外部流量策略</label><span>{{ svc.externalTrafficPolicy }}</span></div>
-            <div class="jd-attr"><label>选择器</label><span class="mono">{{ formatMap(svc.selector) || '无（需手动维护 Endpoints）' }}</span></div>
+            <div class="jd-attr"><label>选择器</label><span class="mono">{{ formatLabels(svc.selector) || '无（需手动维护 Endpoints）' }}</span></div>
             <div v-if="svc.ipFamilies.length" class="jd-attr"><label>IP 协议族</label><span>{{ svc.ipFamilies.join(', ') }}</span></div>
             <div class="jd-attr"><label>创建时间</label><span>{{ formatDateTime(svc.createTime) }}</span></div>
             <div class="jd-attr"><label>创建者</label><span>{{ svc.creator || '-' }}</span></div>
@@ -234,6 +234,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatLabels } from '@/utils/format'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -297,20 +298,6 @@ const externalText = computed(() => {
   return '不开放'
 })
 
-const formatMap = (m?: Record<string, string> | null) =>
-  Object.entries(m || {})
-    .map(([k, v]) => `${k}=${v}`)
-    .join(', ')
-
-const copy = async (text: string) => {
-  try {
-    await navigator.clipboard.writeText(text)
-    ElMessage.success('已复制')
-  } catch {
-    ElMessage.warning('复制失败，请手动选择复制')
-  }
-}
-
 const fetchDetail = async () => {
   if (!clusterId.value || !namespace.value || !name.value) return
   loading.value = true
@@ -356,6 +343,15 @@ const handleDelete = async () => {
     goBack()
   } catch {
     // 请求拦截器已提示错误
+  }
+}
+
+const copy = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success('已复制')
+  } catch {
+    ElMessage.warning('复制失败，请手动选择复制')
   }
 }
 

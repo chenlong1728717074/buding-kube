@@ -33,7 +33,7 @@ func (api *StatefulSetApi) List(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	list, err := api.srv.List(query)
+	list, err := api.srv.List(ctx.Request.Context(), query)
 	if err != nil {
 		api.InternalError(ctx, "查询失败", err)
 		return

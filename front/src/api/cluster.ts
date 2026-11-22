@@ -34,6 +34,9 @@ export interface ClusterSaveDTO {
   config?: string
   uri?: string
   token?: string
+  // uri+token 方式: API Server 的 CA 证书; insecure 为 true 时跳过证书校验
+  caData?: string
+  insecure?: boolean
 }
 
 // 集群资源使用单项指标

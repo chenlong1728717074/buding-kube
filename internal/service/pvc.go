@@ -36,13 +36,13 @@ func GetSingletonPVCService() *PVCService {
 	return pvcSrv
 }
 
-func (s *PVCService) List(query dto.PVCPageQueryBaseDTO) ([]vo.PVCVO, error) {
+func (s *PVCService) List(ctx context.Context, query dto.PVCPageQueryBaseDTO) ([]vo.PVCVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	items, err := clientSet.CoreV1().PersistentVolumeClaims(query.Namespace).List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"})
+	items, err := clientSet.CoreV1().PersistentVolumeClaims(query.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取PVC失败: %v", err)
 		return nil, fmt.Errorf("获取PVC失败: %v", err)
@@ -61,13 +61,13 @@ func (s *PVCService) List(query dto.PVCPageQueryBaseDTO) ([]vo.PVCVO, error) {
 }
 
 // Delete 删除PersistentVolumeClaim
-func (s *PVCService) Delete(base dto.BaseDTO) error {
+func (s *PVCService) Delete(ctx context.Context, base dto.BaseDTO) error {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
 		return errors.New("获取集群失败")
 	}
-	if err := clientSet.CoreV1().PersistentVolumeClaims(base.Namespace).Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+	if err := clientSet.CoreV1().PersistentVolumeClaims(base.Namespace).Delete(ctx, base.Name, metav1.DeleteOptions{}); err != nil {
 		logs.Error("删除pvc失败: %v", err)
 		return fmt.Errorf("删除pvc失败: %v", err)
 	}

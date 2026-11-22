@@ -30,12 +30,6 @@ export interface SecretDataUpdateDTO {
   stringData: Record<string, string>
 }
 
-export interface SecretApplyDTO {
-  clusterId: string
-  namespace?: string
-  yaml: string
-}
-
 export interface SecretCreateDTO {
   clusterId: string
   namespace: string
@@ -44,15 +38,6 @@ export interface SecretCreateDTO {
   alias?: string
   describe?: string
   stringData?: Record<string, string>
-  annotations?: Record<string, string>
-  labels?: Record<string, string>
-}
-
-export interface SecretSettingUpdateDTO {
-  clusterId: string
-  namespace: string
-  name: string
-  type?: string
   annotations?: Record<string, string>
   labels?: Record<string, string>
 }
@@ -68,7 +53,6 @@ export interface SecretVO {
   annotations?: Record<string, string>
   labels?: Record<string, string>
   creationTimestamp?: string
-  yaml?: string
 }
 
 export const secretApi = {
@@ -79,10 +63,6 @@ export const secretApi = {
   getInfo(params: SecretBaseDTO): Promise<ApiResponse<SecretVO>> {
     return request.get('/secret', { params })
   },
-  // 应用YAML创建Secret
-  apply(data: { clusterId: string; namespace?: string; yaml: string }): Promise<ApiResponse<void>> {
-    return request.post('/secret/apply', data)
-  },
   add(data: SecretCreateDTO): Promise<ApiResponse<void>> {
     return request.post('/secret/add', data)
   },
@@ -91,12 +71,6 @@ export const secretApi = {
   },
   updateData(data: SecretDataUpdateDTO): Promise<ApiResponse<void>> {
     return request.put('/secret/data', data)
-  },
-  updateSetting(data: SecretSettingUpdateDTO): Promise<ApiResponse<void>> {
-    return request.put('/secret/setting', data)
-  },
-  applyYaml(data: SecretApplyDTO): Promise<ApiResponse<void>> {
-    return request.post('/secret/apply', data)
   },
   delete(params: SecretBaseDTO): Promise<ApiResponse<void>> {
     return request.delete('/secret', { params })

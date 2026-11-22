@@ -5,13 +5,12 @@ import (
 )
 
 const (
-	CodeSuccess            = http.StatusOK
-	CodeInvalidParams      = http.StatusBadRequest
-	CodeUnauthorized       = http.StatusUnauthorized
-	CodeForbidden          = http.StatusForbidden
-	CodeNotFound           = http.StatusNotFound
-	CodeInternalError      = http.StatusInternalServerError
-	CodeServiceUnavailable = http.StatusServiceUnavailable
+	CodeSuccess       = http.StatusOK
+	CodeInvalidParams = http.StatusBadRequest
+	CodeUnauthorized  = http.StatusUnauthorized
+	CodeForbidden     = http.StatusForbidden
+	CodeNotFound      = http.StatusNotFound
+	CodeInternalError = http.StatusInternalServerError
 )
 
 // Response 统一响应结构

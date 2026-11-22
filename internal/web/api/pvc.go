@@ -35,7 +35,7 @@ func (a *PVCApi) Delete(ctx *gin.Context) {
 		a.ParamBindError(ctx, err)
 		return
 	}
-	if err := a.srv.Delete(base); err != nil {
+	if err := a.srv.Delete(ctx.Request.Context(), base); err != nil {
 		a.InternalError(ctx, "删除失败:%v", err)
 		return
 	}
@@ -48,7 +48,7 @@ func (a *PVCApi) List(ctx *gin.Context) {
 		a.ParamBindError(ctx, err)
 		return
 	}
-	list, err := a.srv.List(query)
+	list, err := a.srv.List(ctx.Request.Context(), query)
 	if err != nil {
 		a.InternalError(ctx, "查询失败:", err)
 		return

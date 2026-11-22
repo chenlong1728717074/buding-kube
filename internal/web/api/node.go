@@ -83,7 +83,7 @@ func (api *NodeApi) Usage(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	result, err := api.srv.GetClusterUsage(query)
+	result, err := api.srv.GetClusterUsage(ctx.Request.Context(), query)
 	if err != nil {
 		api.InternalError(ctx, "获取集群资源使用情况失败:", err)
 		return
@@ -98,7 +98,7 @@ func (api *NodeApi) Delete(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	if err := api.srv.Delete(base); err != nil {
+	if err := api.srv.Delete(ctx.Request.Context(), base); err != nil {
 		api.InternalError(ctx, "删除失败:%v", err)
 		return
 	}
@@ -111,7 +111,7 @@ func (api *NodeApi) List(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	list, err := api.srv.List(query)
+	list, err := api.srv.List(ctx.Request.Context(), query)
 	if err != nil {
 		api.InternalError(ctx, "查询失败:", err)
 		return
@@ -126,7 +126,7 @@ func (api *NodeApi) Info(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	result, err := api.srv.GetNodeInfo(base)
+	result, err := api.srv.GetNodeInfo(ctx.Request.Context(), base)
 	if err != nil {
 		api.InternalError(ctx, "获取失败:", err)
 		return
@@ -140,7 +140,7 @@ func (api *NodeApi) UnSchedule(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	err := api.srv.UnSchedule(query)
+	err := api.srv.UnSchedule(ctx.Request.Context(), query)
 	if err != nil {
 		api.InternalError(ctx, "操作失败:", err)
 		return

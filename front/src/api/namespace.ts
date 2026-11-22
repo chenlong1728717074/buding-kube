@@ -21,14 +21,8 @@ export interface NamespaceCreateDTO {
   alias?: string
   describe?: string
   annotations?: Record<string, string>
-  yaml?: string
 }
 
-// 命名空间应用DTO
-export interface NamespaceApplyDTO {
-  clusterId: string
-  yaml: string
-}
 
 // 命名空间VO
 export interface NamespaceVO {
@@ -45,7 +39,6 @@ export interface NamespaceVO {
   creationTimestamp: string
   metadata: any
   spec: any
-  yaml?: string
 }
 
 // 命名空间API
@@ -75,10 +68,6 @@ export const namespaceApi = {
     return request.delete('/namespace', { params })
   },
 
-  // 应用YAML
-  apply(data: NamespaceApplyDTO): Promise<ApiResponse<void>> {
-    return request.post('/namespace/apply', data)
-  }
 }
 
 export default namespaceApi

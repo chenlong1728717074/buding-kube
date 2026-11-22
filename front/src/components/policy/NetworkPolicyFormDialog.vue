@@ -45,9 +45,7 @@
             <el-form label-width="110px">
               <div class="np-row">
                 <el-form-item label="命名空间" required>
-                  <el-select v-model="namespace" filterable :disabled="isEdit" placeholder="请选择命名空间" style="width: 100%">
-                    <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
-                  </el-select>
+                  <InfiniteSelect v-model="namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" :clearable="false" :disabled="isEdit" placeholder="请选择命名空间" style="width: 100%" />
                 </el-form-item>
                 <el-form-item label="名称" required>
                   <el-input v-model="name" :disabled="isEdit" placeholder="例如 allow-frontend" maxlength="253" />
@@ -82,9 +80,7 @@
                       </el-select>
                       <div class="np-peer__body">
                         <KVRowsTable v-if="peer.type === 'pods'" v-model="peer.labels" title="容器组标签" add-text="添加标签" empty-text="请添加标签" />
-                        <el-select v-else-if="peer.type === 'namespaces'" v-model="peer.namespaces" multiple filterable placeholder="选择命名空间" style="width: 100%">
-                          <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
-                        </el-select>
+                        <InfiniteSelect v-else-if="peer.type === 'namespaces'" v-model="peer.namespaces" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" multiple placeholder="选择命名空间" style="width: 100%" />
                         <div v-else-if="peer.type === 'ipBlock'" class="np-ip">
                           <el-input v-model="peer.cidr" placeholder="例如 10.0.0.0/8" class="mono-input" />
                           <el-input v-model="peer.except" placeholder="排除的网段，多个用逗号分隔（可选）" class="mono-input" />
@@ -131,6 +127,8 @@
 </template>
 
 <script setup lang="ts">
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Delete, Plus } from '@element-plus/icons-vue'
@@ -138,7 +136,6 @@ import YamlEditor from '@/components/YamlEditor.vue'
 import KVRowsTable from '@/components/KVRowsTable.vue'
 import NetworkPolicySupportAlert from '@/components/policy/NetworkPolicySupportAlert.vue'
 import { editableCopy, resourceApi, saveResourceObject, type KubeObject } from '@/api/resource'
-import { namespaceApi } from '@/api/namespace'
 import { jsonToYaml } from '@/utils/yaml'
 import {
   NETWORK_POLICY_PRESETS,
@@ -156,6 +153,8 @@ const props = withDefaults(
   defineProps<{ modelValue: boolean; clusterId: string; namespace?: string; editName?: string }>(),
   { namespace: '', editName: '' }
 )
+// 命名空间下拉框分页加载
+const namespaceFetcher = computed(() => useNamespaceFetcher(props.clusterId))
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; success: [] }>()
 
 const NP_REF = { kind: 'networkpolicy' as const }
@@ -189,7 +188,6 @@ const title = computed(() => (isEdit.value ? '编辑网络策略' : '创建网�
 const loading = ref(false)
 const saving = ref(false)
 const yamlMode = ref(false)
-const namespaces = ref<string[]>([])
 const namespace = ref('')
 const name = ref('')
 const original = ref<KubeObject | null>(null)
@@ -217,10 +215,6 @@ const reset = async () => {
   yamlMode.value = false
   namespace.value = props.namespace
   name.value = props.editName
-  namespaceApi
-    .getList({ clusterId: props.clusterId, page: 1, pageSize: 10000 })
-    .then(resp => (namespaces.value = (resp.data?.items || []).map(ns => ns.name)))
-    .catch(() => (namespaces.value = []))
   if (!isEdit.value) return
   loading.value = true
   try {

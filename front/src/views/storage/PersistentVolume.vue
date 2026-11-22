@@ -60,11 +60,11 @@
         </el-table-column>
         <el-table-column prop="phase" label="状态" min-width="100" align="center" header-align="center">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.phase)" size="small">{{ row.phase || '-' }}</el-tag>
+            <el-tag :type="volumePhaseType(row.phase)" size="small">{{ row.phase || '-' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" min-width="170" align="center" header-align="center">
-          <template #default="{ row }">{{ formatDate(row.createTime || row.creationTimestamp) }}</template>
+          <template #default="{ row }">{{ formatDateTime(row.createTime || row.creationTimestamp) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="200" align="center" header-align="center" fixed="right">
           <template #default="{ row }">
@@ -114,6 +114,8 @@
 </template>
 
 <script setup lang="ts">
+import { volumePhaseType } from '@/utils/status'
+import { formatDateTime } from '@/utils/format'
 import { reactive, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -147,24 +149,6 @@ const currentName = ref('')
 const yamlAddVisible = ref(false)
 const yamlAddContent = ref('')
 const yamlAddLoading = ref(false)
-
-const getStatusType = (phase?: string) => {
-  const map: Record<string, 'success' | 'warning' | 'danger' | 'primary'> = {
-    Available: 'primary',
-    Bound: 'success',
-    Released: 'warning',
-    Failed: 'danger',
-    Pending: 'warning'
-  }
-  return (phase && map[phase]) || 'info'
-}
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  const d = new Date(dateString)
-  if (isNaN(d.getTime())) return '-'
-  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
 
 const fetchList = async () => {
   if (!clusterId.value) {

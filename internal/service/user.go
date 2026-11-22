@@ -77,7 +77,23 @@ func (s *UserService) GetUser(name string) (*kube.User, error) {
 }
 
 // ListUsers 获取用户列表
-func (s *UserService) ListUsers(query dto.UserQueryDTO) ([]*vo.UserVO, error) {
+// ErrPermissionDenied 没有权限
+var ErrPermissionDenied = errors.New("权限不足")
+
+// ListUsers 用户列表: 超级管理员查看全部, 管理员只查看普通用户, 普通用户没有权限
+func (s *UserService) ListUsers(query dto.UserQueryDTO, currentUser *kube.LoginUser) ([]*vo.UserVO, error) {
+	if currentUser == nil {
+		return nil, ErrPermissionDenied
+	}
+	var visible func(role kube.Role) bool
+	switch currentUser.Role {
+	case kube.RoleSuperAdmin:
+		visible = func(kube.Role) bool { return true }
+	case kube.RoleAdmin:
+		visible = func(role kube.Role) bool { return role == kube.RoleNormal }
+	default:
+		return nil, ErrPermissionDenied
+	}
 	users, err := kube.ListUsers(metav1.ListOptions{})
 	if err != nil {
 		logs.Error("获取用户列表失败: %s", err.Error())
@@ -88,6 +104,9 @@ func (s *UserService) ListUsers(query dto.UserQueryDTO) ([]*vo.UserVO, error) {
 
 	for i := range users {
 		u := &users[i]
+		if !visible(u.Spec.Role) {
+			continue
+		}
 
 		voUser := vo.User2VO(u)
 		if voUser == nil {
@@ -247,7 +266,7 @@ func UpdateUserFromDTO(req dto.UpdateUserDTO, user *kube.User) {
 	user.Spec.Department = req.Department
 	if req.Status != "" {
 		user.Status.State = req.Status
-		user.Spec.Enabled = req.Status == "active"
+		user.Spec.Enabled = req.Status == kube.UserStateActive
 	}
 }
 
@@ -263,7 +282,7 @@ func (s *UserService) UpdateUserStatus(req dto.UpdateUserStatusDTO, currentUser 
 	}
 
 	switch req.Status {
-	case "active", "inactive", "suspended", "expired":
+	case kube.UserStateActive, kube.UserStateInactive, kube.UserStateSuspended, kube.UserStateExpired:
 	default:
 		return errors.New("非法状态，仅支持 active/inactive/suspended/expired")
 	}

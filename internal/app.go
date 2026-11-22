@@ -44,7 +44,9 @@ func NewApp() *App {
 	})
 
 	//路由
-	api := engine.Group("/api")
+	// 普通接口 60 秒超时; 终端、日志、文件传输、排空节点不限制
+	api := engine.Group("/api", middleware.RequestTimeout(60*time.Second,
+		"/api/terminal/", "/api/pod/logs", "/api/pod/download", "/api/pod/upload", "/api/node/drain"))
 	router.SetupRouter(api)
 	api.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

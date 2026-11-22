@@ -39,13 +39,13 @@ func GetSingletonIngressService() *IngressService {
 	return ingressSrv
 }
 
-func (s *IngressService) List(query dto.IngressPageQueryBaseDTO) ([]vo.IngressVO, error) {
+func (s *IngressService) List(ctx context.Context, query dto.IngressPageQueryBaseDTO) ([]vo.IngressVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	items, err := clientSet.NetworkingV1().Ingresses(query.Namespace).List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"})
+	items, err := clientSet.NetworkingV1().Ingresses(query.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取Ingress失败: %v", err)
 		return nil, fmt.Errorf("获取Ingress失败: %v", err)
@@ -316,13 +316,13 @@ func (s *IngressService) TLSSecrets(ctx context.Context, clusterId, namespace st
 }
 
 // Delete 删除Ingress
-func (s *IngressService) Delete(base dto.BaseDTO) error {
+func (s *IngressService) Delete(ctx context.Context, base dto.BaseDTO) error {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
 		return errors.New("获取集群失败")
 	}
-	if err := clientSet.NetworkingV1().Ingresses(base.Namespace).Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+	if err := clientSet.NetworkingV1().Ingresses(base.Namespace).Delete(ctx, base.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		logs.Error("删除ingress失败: %v", err)
 		return fmt.Errorf("删除ingress失败: %v", err)
 	}

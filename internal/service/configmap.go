@@ -16,7 +16,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -121,76 +120,11 @@ func (s *ConfigMapService) Get(ctx context.Context, base dto.BaseDTO) (*vo.Confi
 	}
 
 	result := vo.ConfigMap2VO(*cm)
-	cmCopy := cm.DeepCopy()
-	cmCopy.ManagedFields = nil
-	cmCopy.ResourceVersion = ""
-	cmCopy.CreationTimestamp = metav1.Time{}
-	yamlData, err := yaml.Marshal(cmCopy)
-	if err != nil {
-		logs.Error("序列化ConfigMap失败: %v", err)
-	} else {
-		result.Yaml = string(yamlData)
-	}
 	result.DataCount = len(cm.Data) + len(cm.BinaryData)
 	return &result, nil
 }
 
-func (s *ConfigMapService) Apply(apply dto.BaseYamlApplyDTO) error {
-	clientSet, err := ClusterMap.Get(apply.ClusterId)
-	if err != nil {
-		logs.Error("获取集群失败: %s %s", apply.ClusterId, err.Error())
-		return errors.New("获取集群失败")
-	}
-
-	var configMap corev1.ConfigMap
-	err = yaml.Unmarshal([]byte(apply.Yaml), &configMap)
-	if err != nil {
-		logs.Error("反序列化ConfigMap失败: %v", err)
-		return fmt.Errorf("反序列化ConfigMap失败: %v", err)
-	}
-
-	if configMap.Name == "" {
-		return errors.New("ConfigMap名称不能为空")
-	}
-
-	namespace := apply.Namespace
-	if namespace == "" {
-		namespace = configMap.Namespace
-	}
-	if namespace == "" {
-		return errors.New("Namespace不能为空")
-	}
-
-	existingConfigMap, err := clientSet.CoreV1().ConfigMaps(namespace).Get(context.TODO(), configMap.Name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			configMap.Namespace = namespace
-			_, err = clientSet.CoreV1().ConfigMaps(namespace).Create(context.TODO(), &configMap, metav1.CreateOptions{})
-			if err != nil {
-				logs.Error("创建ConfigMap失败: %v", err)
-				return fmt.Errorf("创建ConfigMap失败: %v", err)
-			}
-			logs.Info("ConfigMap 创建成功: %s", configMap.Name)
-			return nil
-		}
-		logs.Error("获取现有ConfigMap失败: %v", err)
-		return fmt.Errorf("获取现有ConfigMap失败: %v", err)
-	}
-
-	existingConfigMap.Data = configMap.Data
-	existingConfigMap.Annotations = configMap.Annotations
-	existingConfigMap.Labels = configMap.Labels
-
-	_, err = clientSet.CoreV1().ConfigMaps(namespace).Update(context.TODO(), existingConfigMap, metav1.UpdateOptions{})
-	if err != nil {
-		logs.Error("更新ConfigMap失败: %v", err)
-		return fmt.Errorf("更新ConfigMap失败: %v", err)
-	}
-	logs.Info("ConfigMap 更新成功: %s", configMap.Name)
-	return nil
-}
-
-func (s *ConfigMapService) Delete(base dto.BaseDTO) error {
+func (s *ConfigMapService) Delete(ctx context.Context, base dto.BaseDTO) error {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
@@ -202,7 +136,7 @@ func (s *ConfigMapService) Delete(base dto.BaseDTO) error {
 		return errors.New("ConfigMapName 或 Namespace 为空")
 	}
 	// 删除
-	err = clientSet.CoreV1().ConfigMaps(base.Namespace).Delete(context.TODO(), base.Name, metav1.DeleteOptions{})
+	err = clientSet.CoreV1().ConfigMaps(base.Namespace).Delete(ctx, base.Name, metav1.DeleteOptions{})
 	if err != nil {
 		logs.Error("删除ConfigMap失败: %v", err)
 		return fmt.Errorf("删除ConfigMap失败: %v", err)
@@ -211,7 +145,7 @@ func (s *ConfigMapService) Delete(base dto.BaseDTO) error {
 	return nil
 }
 
-func (s *ConfigMapService) Save(create dto.ConfigMapCreateDTO) error {
+func (s *ConfigMapService) Save(ctx context.Context, create dto.ConfigMapCreateDTO) error {
 	clientSet, err := s.getClientSet(create.ClusterId)
 	if err != nil {
 		return err
@@ -231,7 +165,7 @@ func (s *ConfigMapService) Save(create dto.ConfigMapCreateDTO) error {
 	if create.Labels != nil {
 		configMap.Labels = create.Labels
 	}
-	_, err = clientSet.CoreV1().ConfigMaps(create.Namespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
+	_, err = clientSet.CoreV1().ConfigMaps(create.Namespace).Create(ctx, configMap, metav1.CreateOptions{})
 	if err != nil {
 		logs.Error("创建ConfigMap失败: %v", err)
 		return err
@@ -240,17 +174,17 @@ func (s *ConfigMapService) Save(create dto.ConfigMapCreateDTO) error {
 	return nil
 }
 
-func (s *ConfigMapService) UpdateInfo(update dto.BaseInfoDTO) error {
+func (s *ConfigMapService) UpdateInfo(ctx context.Context, update dto.BaseInfoDTO) error {
 	clientSet, err := s.getClientSet(update.ClusterId)
 	if err != nil {
 		return err
 	}
-	configMap, err := s.getConfigMap(clientSet, update.Namespace, update.Name)
+	configMap, err := s.getConfigMap(ctx, clientSet, update.Namespace, update.Name)
 	if err != nil {
 		return err
 	}
 	s.setAnnotations(configMap, update.Alias, update.Describe, nil)
-	_, err = clientSet.CoreV1().ConfigMaps(update.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+	_, err = clientSet.CoreV1().ConfigMaps(update.Namespace).Update(ctx, configMap, metav1.UpdateOptions{})
 	if err != nil {
 		logs.Error("更新ConfigMap信息失败: %v", err)
 		return err
@@ -259,12 +193,12 @@ func (s *ConfigMapService) UpdateInfo(update dto.BaseInfoDTO) error {
 	return nil
 }
 
-func (s *ConfigMapService) UpdateSetting(update dto.ConfigMapSettingDTO) error {
+func (s *ConfigMapService) UpdateSetting(ctx context.Context, update dto.ConfigMapSettingDTO) error {
 	clientSet, err := s.getClientSet(update.ClusterId)
 	if err != nil {
 		return err
 	}
-	configMap, err := s.getConfigMap(clientSet, update.Namespace, update.Name)
+	configMap, err := s.getConfigMap(ctx, clientSet, update.Namespace, update.Name)
 	if err != nil {
 		return err
 	}
@@ -292,7 +226,7 @@ func (s *ConfigMapService) UpdateSetting(update dto.ConfigMapSettingDTO) error {
 	configMap.Annotations = newAnn
 	configMap.Labels = update.Labels
 
-	_, err = clientSet.CoreV1().ConfigMaps(update.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+	_, err = clientSet.CoreV1().ConfigMaps(update.Namespace).Update(ctx, configMap, metav1.UpdateOptions{})
 	if err != nil {
 		logs.Error("更新ConfigMap设置失败: %v", err)
 		return err
@@ -301,12 +235,12 @@ func (s *ConfigMapService) UpdateSetting(update dto.ConfigMapSettingDTO) error {
 	return nil
 }
 
-func (s *ConfigMapService) UpdateData(updateData dto.ConfigMapDataDTO) error {
+func (s *ConfigMapService) UpdateData(ctx context.Context, updateData dto.ConfigMapDataDTO) error {
 	clientSet, err := s.getClientSet(updateData.ClusterId)
 	if err != nil {
 		return err
 	}
-	configMap, err := s.getConfigMap(clientSet, updateData.Namespace, updateData.Name)
+	configMap, err := s.getConfigMap(ctx, clientSet, updateData.Namespace, updateData.Name)
 	if err != nil {
 		return err
 	}
@@ -315,7 +249,7 @@ func (s *ConfigMapService) UpdateData(updateData dto.ConfigMapDataDTO) error {
 	} else {
 		configMap.Data = make(map[string]string)
 	}
-	_, err = clientSet.CoreV1().ConfigMaps(updateData.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+	_, err = clientSet.CoreV1().ConfigMaps(updateData.Namespace).Update(ctx, configMap, metav1.UpdateOptions{})
 	if err != nil {
 		logs.Error("更新ConfigMap数据失败: %v", err)
 		return err
@@ -333,8 +267,8 @@ func (s *ConfigMapService) getClientSet(clusterId string) (*kubernetes.Clientset
 	return clientSet, nil
 }
 
-func (s *ConfigMapService) getConfigMap(clientSet *kubernetes.Clientset, namespace, name string) (*corev1.ConfigMap, error) {
-	configMap, err := clientSet.CoreV1().ConfigMaps(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+func (s *ConfigMapService) getConfigMap(ctx context.Context, clientSet *kubernetes.Clientset, namespace, name string) (*corev1.ConfigMap, error) {
+	configMap, err := clientSet.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logs.Error("ConfigMap不存在: %s/%s", namespace, name)

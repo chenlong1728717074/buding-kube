@@ -7,6 +7,7 @@ import (
 	"buding-kube/pkg/logs"
 	"buding-kube/pkg/utils"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	certutil "k8s.io/client-go/util/cert"
 )
 
 var (
@@ -266,7 +268,7 @@ func (s *ClusterService) resolveClusterCredential(create dto.ClusterSaveDTO, exi
 		if uri == "" || token == "" {
 			return "", "", errors.New("uri和token必须同时提供")
 		}
-		config, err := buildKubeConfigFromToken(uri, token)
+		config, err := buildKubeConfigFromToken(uri, token, create.CaData, create.Insecure)
 		if err != nil {
 			return "", "", err
 		}
@@ -290,16 +292,43 @@ func (s *ClusterService) resolveClusterCredential(create dto.ClusterSaveDTO, exi
 	return existingConfig, authType, nil
 }
 
-func buildKubeConfigFromToken(uri, token string) (string, error) {
+// parseCAData 支持 PEM 原文或 base64 编码的 PEM(kubeconfig 中 certificate-authority-data 的格式)
+func parseCAData(ca string) ([]byte, error) {
+	ca = strings.TrimSpace(ca)
+	data := []byte(ca)
+	if !strings.HasPrefix(ca, "-----BEGIN") {
+		decoded, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(ca), ""))
+		if err != nil {
+			return nil, errors.New("CA 证书格式不正确，请粘贴 PEM 格式（-----BEGIN CERTIFICATE-----）或其 base64 编码")
+		}
+		data = decoded
+	}
+	if _, err := certutil.ParseCertsPEM(data); err != nil {
+		return nil, fmt.Errorf("CA 证书无效: %v", err)
+	}
+	return data, nil
+}
+
+// buildKubeConfigFromToken 由 uri + token 生成 kubeconfig.
+// https 地址默认校验服务端证书: 提供了 CA 时用它校验, 否则用系统证书; insecure 为 true 时才跳过校验
+func buildKubeConfigFromToken(uri, token, ca string, insecure bool) (string, error) {
 	if !strings.HasPrefix(uri, "http://") && !strings.HasPrefix(uri, "https://") {
 		uri = "https://" + uri
 	}
+	cluster := &clientcmdapi.Cluster{Server: uri}
+	switch {
+	case strings.TrimSpace(ca) != "":
+		data, err := parseCAData(ca)
+		if err != nil {
+			return "", err
+		}
+		cluster.CertificateAuthorityData = data
+	case insecure:
+		cluster.InsecureSkipTLSVerify = true
+	}
 	// 结构化构造避免 token 含特殊字符破坏 YAML
 	config := clientcmdapi.NewConfig()
-	config.Clusters["cluster"] = &clientcmdapi.Cluster{
-		Server:                uri,
-		InsecureSkipTLSVerify: true,
-	}
+	config.Clusters["cluster"] = cluster
 	config.AuthInfos["user"] = &clientcmdapi.AuthInfo{
 		Token: token,
 	}
@@ -322,6 +351,9 @@ func (s *ClusterService) getClusterStatus(name, alias, describe, kubeConfig stri
 	}
 	serverVersion, err := clientset.Discovery().ServerVersion()
 	if err != nil {
+		if strings.Contains(err.Error(), "x509:") {
+			return nil, nil, nil, fmt.Errorf("API Server 证书校验失败，请填写集群的 CA 证书（或在测试环境中勾选跳过证书校验）: %w", err)
+		}
 		return nil, nil, nil, err
 	}
 	clusterVersion := serverVersion.String()

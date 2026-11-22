@@ -46,9 +46,7 @@
         <div v-else-if="current === 0" class="basic-form">
           <el-form ref="basicRef" :model="form" :rules="rules" label-width="100px" label-position="right">
             <el-form-item label="命名空间" prop="namespace">
-              <el-select v-model="form.namespace" filterable placeholder="请选择命名空间" :loading="nsLoading" style="width: 100%">
-                <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
-              </el-select>
+              <InfiniteSelect v-model="form.namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" :clearable="false" placeholder="请选择命名空间" style="width: 100%" />
             </el-form-item>
             <el-form-item label="名称" prop="name">
               <el-input v-model="form.name" placeholder="例如 mysql-data" maxlength="253" show-word-limit />
@@ -195,6 +193,8 @@
 </template>
 
 <script setup lang="ts">
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Check, CircleCheckFilled } from '@element-plus/icons-vue'
@@ -202,7 +202,6 @@ import YamlEditor from '@/components/YamlEditor.vue'
 import KVRowsTable from '@/components/KVRowsTable.vue'
 import { pvcApi } from '@/api/pvc'
 import { pvApi, type PVVO } from '@/api/pv'
-import { namespaceApi } from '@/api/namespace'
 import { storageClassApi, type StorageClassVO } from '@/api/storageclass'
 import {
   ACCESS_MODE_OPTIONS,
@@ -227,6 +226,8 @@ const props = withDefaults(
   }>(),
   { defaultNamespace: '', defaultStorageClass: '' }
 )
+// 命名空间下拉框分页加载
+const namespaceFetcher = computed(() => useNamespaceFetcher(props.clusterId))
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
@@ -244,8 +245,6 @@ const yamlMode = ref(false)
 const submitting = ref(false)
 const basicRef = ref<FormInstance>()
 
-const namespaces = ref<string[]>([])
-const nsLoading = ref(false)
 const storageClasses = ref<StorageClassVO[]>([])
 const scLoading = ref(false)
 const availablePVs = ref<PVVO[]>([])
@@ -328,18 +327,6 @@ const selectBindMode = () => {
   if (!availablePVs.value.length) loadPVs()
 }
 
-const loadNamespaces = async () => {
-  nsLoading.value = true
-  try {
-    const resp = await namespaceApi.getList({ clusterId: props.clusterId, page: 1, pageSize: 10000 })
-    namespaces.value = (resp.data?.items || []).map(ns => ns.name)
-  } catch {
-    namespaces.value = []
-  } finally {
-    nsLoading.value = false
-  }
-}
-
 const loadStorageClasses = async () => {
   scLoading.value = true
   try {
@@ -377,7 +364,6 @@ const reset = () => {
   availablePVs.value = []
   current.value = 0
   yamlMode.value = false
-  loadNamespaces()
   loadStorageClasses()
 }
 

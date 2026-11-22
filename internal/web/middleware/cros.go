@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// Cors 允许跨域请求(令牌放在 Authorization 请求头中, 不使用 Cookie)
 func Cors() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -18,12 +19,4 @@ func Cors() gin.HandlerFunc {
 		}
 		c.Next()
 	}
-	//return cors.New(cors.Config{
-	//	AllowOrigins:     []string{"*"},
-	//	AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
-	//	AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
-	//	ExposeHeaders:    []string{"Content-Length"},
-	//	AllowCredentials: false,
-	//	MaxAge:           12 * time.Hour,
-	//})
 }

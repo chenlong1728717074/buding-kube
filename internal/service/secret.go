@@ -11,7 +11,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/yaml"
 	"sort"
 	"strings"
 	"sync"
@@ -103,7 +102,7 @@ func (s *SecretService) listSecretsFallback(ctx context.Context, clientSet *kube
 	return result, nil
 }
 
-func (s *SecretService) Get(base dto.BaseDTO) (*vo.SecretVO, error) {
+func (s *SecretService) Get(ctx context.Context, base dto.BaseDTO) (*vo.SecretVO, error) {
 	clientSet, err := s.getClientSet(base.ClusterId)
 	if err != nil {
 		return nil, err
@@ -111,27 +110,17 @@ func (s *SecretService) Get(base dto.BaseDTO) (*vo.SecretVO, error) {
 	if base.Name == "" || base.Namespace == "" {
 		return nil, errors.New("Secret名称或命名空间为空")
 	}
-	secret, err := s.getSecret(clientSet, base.Namespace, base.Name)
+	secret, err := s.getSecret(ctx, clientSet, base.Namespace, base.Name)
 	if err != nil {
 		return nil, err
 	}
 
 	vi := vo.Secret2VO(*secret)
-	copy := secret.DeepCopy()
-	copy.ObjectMeta.ManagedFields = nil
-	copy.ObjectMeta.ResourceVersion = ""
-	copy.ObjectMeta.CreationTimestamp = metav1.Time{}
-	yamlData, err := yaml.Marshal(copy)
-	if err != nil {
-		logs.Error("序列化Secret失败: %v", err)
-	} else {
-		vi.Yaml = string(yamlData)
-	}
 	return &vi, nil
 }
 
 // Save - 创建Secret
-func (s *SecretService) Save(create dto.SecretCreateDTO) error {
+func (s *SecretService) Save(ctx context.Context, create dto.SecretCreateDTO) error {
 	clientSet, err := s.getClientSet(create.ClusterId)
 	if err != nil {
 		return err
@@ -162,7 +151,7 @@ func (s *SecretService) Save(create dto.SecretCreateDTO) error {
 		secret.Type = corev1.SecretTypeOpaque
 	}
 
-	_, err = clientSet.CoreV1().Secrets(create.Namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, err = clientSet.CoreV1().Secrets(create.Namespace).Create(ctx, secret, metav1.CreateOptions{})
 	if err != nil {
 		logs.Error("创建Secret失败: %v", err)
 		return err
@@ -172,20 +161,20 @@ func (s *SecretService) Save(create dto.SecretCreateDTO) error {
 }
 
 // UpdateInfo - 只允许修改别名和描述
-func (s *SecretService) UpdateInfo(update dto.SecretCreateDTO) error {
+func (s *SecretService) UpdateInfo(ctx context.Context, update dto.SecretCreateDTO) error {
 	clientSet, err := s.getClientSet(update.ClusterId)
 	if err != nil {
 		return err
 	}
 
-	secret, err := s.getSecret(clientSet, update.Namespace, update.Name)
+	secret, err := s.getSecret(ctx, clientSet, update.Namespace, update.Name)
 	if err != nil {
 		return err
 	}
 
 	s.setAnnotations(secret, update.Alias, update.Describe, nil)
 
-	_, err = clientSet.CoreV1().Secrets(update.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+	_, err = clientSet.CoreV1().Secrets(update.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
 	if err != nil {
 		logs.Error("更新Secret信息失败: %v", err)
 		return err
@@ -195,13 +184,13 @@ func (s *SecretService) UpdateInfo(update dto.SecretCreateDTO) error {
 }
 
 // UpdateData - 修改Secret数据
-func (s *SecretService) UpdateData(updateData dto.SecretCreateDTO) error {
+func (s *SecretService) UpdateData(ctx context.Context, updateData dto.SecretCreateDTO) error {
 	clientSet, err := s.getClientSet(updateData.ClusterId)
 	if err != nil {
 		return err
 	}
 
-	secret, err := s.getSecret(clientSet, updateData.Namespace, updateData.Name)
+	secret, err := s.getSecret(ctx, clientSet, updateData.Namespace, updateData.Name)
 	if err != nil {
 		return err
 	}
@@ -215,7 +204,7 @@ func (s *SecretService) UpdateData(updateData dto.SecretCreateDTO) error {
 		secret.Data = make(map[string][]byte)
 	}
 
-	_, err = clientSet.CoreV1().Secrets(updateData.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+	_, err = clientSet.CoreV1().Secrets(updateData.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
 	if err != nil {
 		logs.Error("更新Secret数据失败: %v", err)
 		return err
@@ -224,106 +213,8 @@ func (s *SecretService) UpdateData(updateData dto.SecretCreateDTO) error {
 	return nil
 }
 
-func (s *SecretService) UpdateSetting(update dto.SecretCreateDTO) error {
-	clientSet, err := s.getClientSet(update.ClusterId)
-	if err != nil {
-		return err
-	}
-
-	secret, err := s.getSecret(clientSet, update.Namespace, update.Name)
-	if err != nil {
-		return err
-	}
-
-	if update.Type != "" {
-		secret.Type = corev1.SecretType(update.Type)
-	}
-
-	secret.Labels = update.Labels
-
-	alias := ""
-	describe := ""
-	if secret.Annotations != nil {
-		alias = secret.Annotations["alias"]
-		describe = secret.Annotations["describe"]
-	}
-	newAnn := make(map[string]string)
-	if alias != "" {
-		newAnn["alias"] = alias
-	}
-	if describe != "" {
-		newAnn["describe"] = describe
-	}
-	for k, v := range update.Annotations {
-		if k == "alias" || k == "describe" {
-			continue
-		}
-		newAnn[k] = v
-	}
-	secret.Annotations = newAnn
-
-	_, err = clientSet.CoreV1().Secrets(update.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
-	if err != nil {
-		logs.Error("更新Secret设置失败: %v", err)
-		return err
-	}
-	logs.Info("Secret %s/%s 设置更新成功", update.Namespace, update.Name)
-	return nil
-}
-
-// Apply BaseYamlApplyDTO - 通过YAML应用Secret
-func (s *SecretService) Apply(apply dto.BaseYamlApplyDTO) error {
-	clientSet, err := ClusterMap.Get(apply.ClusterId)
-	if err != nil {
-		logs.Error("获取集群失败: %s %s", apply.ClusterId, err.Error())
-		return errors.New("获取集群失败")
-	}
-
-	var secret corev1.Secret
-	err = yaml.Unmarshal([]byte(apply.Yaml), &secret)
-	if err != nil {
-		logs.Error("反序列化Secret失败: %v", err)
-		return fmt.Errorf("反序列化Secret失败: %v", err)
-	}
-
-	if secret.Name != "" {
-		existingSecret, err := clientSet.CoreV1().Secrets(apply.Namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// 不存在则创建
-				_, err = clientSet.CoreV1().Secrets(apply.Namespace).Create(context.TODO(), &secret, metav1.CreateOptions{})
-				if err != nil {
-					logs.Error("创建Secret失败: %v", err)
-					return fmt.Errorf("创建Secret失败: %v", err)
-				}
-				logs.Info("Secret 创建成功: %s", secret.Name)
-				return nil
-			}
-			logs.Error("获取现有Secret失败: %v", err)
-			return fmt.Errorf("获取现有Secret失败: %v", err)
-		}
-
-		// 存在则更新
-		existingSecret.Data = secret.Data
-		existingSecret.StringData = secret.StringData
-		existingSecret.Type = secret.Type
-		existingSecret.Annotations = secret.Annotations
-		existingSecret.Labels = secret.Labels
-
-		_, err = clientSet.CoreV1().Secrets(apply.Namespace).Update(context.TODO(), existingSecret, metav1.UpdateOptions{})
-		if err != nil {
-			logs.Error("更新Secret失败: %v", err)
-			return fmt.Errorf("更新Secret失败: %v", err)
-		}
-		logs.Info("Secret 更新成功: %s", secret.Name)
-		return nil
-	}
-
-	return errors.New("Secret名称不能为空")
-}
-
 // Delete - 删除Secret
-func (s *SecretService) Delete(base dto.BaseDTO) error {
+func (s *SecretService) Delete(ctx context.Context, base dto.BaseDTO) error {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
@@ -335,7 +226,7 @@ func (s *SecretService) Delete(base dto.BaseDTO) error {
 		return errors.New("SecretName 或 Namespace 为空")
 	}
 
-	err = clientSet.CoreV1().Secrets(base.Namespace).Delete(context.TODO(), base.Name, metav1.DeleteOptions{})
+	err = clientSet.CoreV1().Secrets(base.Namespace).Delete(ctx, base.Name, metav1.DeleteOptions{})
 	if err != nil {
 		logs.Error("删除Secret失败: %v", err)
 		return fmt.Errorf("删除Secret失败: %v", err)
@@ -355,8 +246,8 @@ func (s *SecretService) getClientSet(clusterId string) (*kubernetes.Clientset, e
 }
 
 // getSecret - 获取Secret
-func (s *SecretService) getSecret(clientSet *kubernetes.Clientset, namespace, name string) (*corev1.Secret, error) {
-	secret, err := clientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+func (s *SecretService) getSecret(ctx context.Context, clientSet *kubernetes.Clientset, namespace, name string) (*corev1.Secret, error) {
+	secret, err := clientSet.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logs.Error("Secret不存在: %s/%s", namespace, name)

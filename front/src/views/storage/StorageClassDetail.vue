@@ -57,7 +57,7 @@
           <div class="info-item"><label>挂载选项</label><span class="mono">{{ sc.mountOptions?.length ? sc.mountOptions.join(', ') : '-' }}</span></div>
           <div class="info-item"><label>持久卷声明数量</label><span>{{ claims.length }}</span></div>
           <div class="info-item"><label>持久卷数量</label><span>{{ sc.pvCount ?? 0 }}</span></div>
-          <div class="info-item"><label>创建时间</label><span>{{ formatDate(sc.creationTimestamp || sc.createTime) }}</span></div>
+          <div class="info-item"><label>创建时间</label><span>{{ formatDateTime(sc.creationTimestamp || sc.createTime) }}</span></div>
           <div class="info-item"><label>描述</label><span>{{ sc.describe || '-' }}</span></div>
         </div>
       </el-card>
@@ -147,7 +147,7 @@
             </template>
           </el-table-column>
           <el-table-column label="创建时间" width="170" align="center" header-align="center">
-            <template #default="{ row }">{{ formatDate(row.createTime || row.creationTimestamp) }}</template>
+            <template #default="{ row }">{{ formatDateTime(row.createTime || row.creationTimestamp) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="120" align="center" header-align="center" fixed="right">
             <template #default="{ row }">
@@ -186,6 +186,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime } from '@/utils/format'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -338,13 +339,6 @@ const phaseText = (phase?: string) =>
 
 const phaseTag = (phase?: string) =>
   (({ Available: 'primary', Bound: 'success', Released: 'warning', Failed: 'danger', Pending: 'warning', Lost: 'danger' }) as Record<string, 'primary' | 'success' | 'warning' | 'danger'>)[phase || ''] || 'info'
-
-const formatDate = (value?: string) => {
-  if (!value) return '-'
-  const d = new Date(value)
-  if (isNaN(d.getTime())) return '-'
-  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
 
 onMounted(fetchDetail)
 </script>

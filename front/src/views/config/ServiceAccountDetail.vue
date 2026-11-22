@@ -34,7 +34,7 @@
           <div class="info-item"><label>名称</label><span>{{ sa.name }}</span></div>
           <div class="info-item"><label>命名空间</label><span>{{ sa.namespace }}</span></div>
           <div class="info-item"><label>自动挂载令牌</label><span>{{ sa.automountServiceAccountToken === false ? '否' : '是' }}</span></div>
-          <div class="info-item"><label>创建时间</label><span>{{ formatDate(sa.creationTimestamp) }}</span></div>
+          <div class="info-item"><label>创建时间</label><span>{{ formatDateTime(sa.creationTimestamp) }}</span></div>
         </div>
       </el-card>
 
@@ -167,10 +167,9 @@
     <YamlDialog
       v-model="yamlDialogVisible"
       title="查看/编辑YAML"
-      v-model:content="yamlContent"
-      :readonly="false"
-      :submitting="yamlApplyLoading"
-      @confirm="confirmApplyYaml"
+      :content="yamlContent"
+      :apply-target="{ kind: 'serviceaccount', clusterId, namespace, name }"
+      @applied="fetchDetailFromList()"
     />
 
     <!-- 删除确认 -->
@@ -186,6 +185,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime } from '@/utils/format'
 import { fetchResourceYaml } from '@/api/resource'
 import PageHeader from '@/components/PageHeader.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
@@ -261,7 +261,6 @@ const fetchDetailFromList = async () => {
     }
     sa.value = null
   } catch {
-    ElMessage.error('获取详情失败')
     sa.value = null
   } finally {
     loading.value = false
@@ -277,16 +276,18 @@ const editInfoForm = reactive({
 
 const confirmEditInfo = async () => {
   if (!sa.value) return
+  // 先校验 JSON, 格式错误时单独提示; 接口错误由请求拦截器提示
+  let labels: Record<string, string> = {}
+  let annotations: Record<string, string> = {}
+  try {
+    if (editInfoForm.labelsJson.trim()) labels = JSON.parse(editInfoForm.labelsJson)
+    if (editInfoForm.annotationsJson.trim()) annotations = JSON.parse(editInfoForm.annotationsJson)
+  } catch {
+    ElMessage.error('标签或注解不是合法的 JSON')
+    return
+  }
   editInfoLoading.value = true
   try {
-    let labels: Record<string, string> = {}
-    let annotations: Record<string, string> = {}
-    if (editInfoForm.labelsJson.trim()) {
-      labels = JSON.parse(editInfoForm.labelsJson)
-    }
-    if (editInfoForm.annotationsJson.trim()) {
-      annotations = JSON.parse(editInfoForm.annotationsJson)
-    }
     await serviceAccountApi.update({
       clusterId: clusterId.value,
       namespace: namespace.value,
@@ -301,7 +302,7 @@ const confirmEditInfo = async () => {
     editInfoDialogVisible.value = false
     fetchDetailFromList()
   } catch {
-    ElMessage.error('更新失败(请检查 JSON 格式)')
+    // 请求拦截器已提示错误
   } finally {
     editInfoLoading.value = false
   }
@@ -309,22 +310,6 @@ const confirmEditInfo = async () => {
 
 const yamlDialogVisible = ref(false)
 const yamlContent = ref('')
-const yamlApplyLoading = ref(false)
-
-const confirmApplyYaml = async () => {
-  if (!yamlContent.value) { ElMessage.warning('YAML内容为空'); return }
-  yamlApplyLoading.value = true
-  try {
-    await serviceAccountApi.applyYaml({ clusterId: clusterId.value, yaml: yamlContent.value })
-    ElMessage.success('YAML应用成功')
-    yamlDialogVisible.value = false
-    fetchDetailFromList()
-  } catch {
-    ElMessage.error('YAML应用失败')
-  } finally {
-    yamlApplyLoading.value = false
-  }
-}
 
 const deleteDialogVisible = ref(false)
 const deleteLoading = ref(false)
@@ -338,27 +323,9 @@ const confirmDelete = async () => {
     deleteDialogVisible.value = false
     handleBack()
   } catch {
-    ElMessage.error('删除失败')
+    // 请求拦截器已提示错误
   } finally {
     deleteLoading.value = false
-  }
-}
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  try {
-    const d = new Date(dateString)
-    if (isNaN(d.getTime())) return '-'
-    return d.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  } catch {
-    return '-'
   }
 }
 

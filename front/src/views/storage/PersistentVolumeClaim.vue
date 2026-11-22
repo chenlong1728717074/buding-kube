@@ -14,9 +14,7 @@
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="命名空间">
-          <el-select v-model="searchForm.namespace" placeholder="全部命名空间" clearable filterable style="width: 200px" @change="handleSearch">
-            <el-option v-for="ns in namespaceList" :key="ns" :label="ns" :value="ns" />
-          </el-select>
+          <InfiniteSelect v-model="searchForm.namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" placeholder="全部命名空间" style="width: 200px" @change="handleSearch" />
         </el-form-item>
         <el-form-item label="关键词">
           <el-input v-model="searchForm.keyword" placeholder="名称关键字" clearable style="width: 200px" @keyup.enter="handleSearch" />
@@ -62,11 +60,11 @@
         </el-table-column>
         <el-table-column prop="phase" label="状态" min-width="100" align="center" header-align="center">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.phase)" size="small">{{ row.phase || '-' }}</el-tag>
+            <el-tag :type="volumePhaseType(row.phase)" size="small">{{ row.phase || '-' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" min-width="170" align="center" header-align="center">
-          <template #default="{ row }">{{ formatDate(row.createTime || row.creationTimestamp) }}</template>
+          <template #default="{ row }">{{ formatDateTime(row.createTime || row.creationTimestamp) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="200" align="center" header-align="center" fixed="right">
           <template #default="{ row }">
@@ -116,6 +114,10 @@
 </template>
 
 <script setup lang="ts">
+import { volumePhaseType } from '@/utils/status'
+import { formatDateTime } from '@/utils/format'
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { reactive, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -125,7 +127,6 @@ import ListPagination from '@/components/ListPagination.vue'
 import YamlDialog from '@/components/YamlDialog.vue'
 import PersistentVolumeClaimCreateDialog from '@/components/storage/PersistentVolumeClaimCreateDialog.vue'
 import { fetchResourceYaml, resourceApi } from '@/api/resource'
-import { namespaceApi } from '@/api/namespace'
 import { pvcApi, type PVCVO } from '@/api/pvc'
 import { useClusterStore } from '@/stores/cluster'
 import { tableHeaderClass, tableCellClass } from '@/utils/table'
@@ -135,10 +136,11 @@ import '@/assets/styles/config-editor.css'
 const router = useRouter()
 const clusterStore = useClusterStore()
 const clusterId = computed(() => clusterStore.currentClusterId)
+// 命名空间下拉框分页加载
+const namespaceFetcher = computed(() => useNamespaceFetcher(clusterId.value))
 
 const loading = ref(false)
 const items = ref<PVCVO[]>([])
-const namespaceList = ref<string[]>([])
 const searchForm = reactive({ namespace: '', keyword: '' })
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
 
@@ -156,31 +158,6 @@ const yamlAddLoading = ref(false)
 // 未绑定时 status.capacity 为空, 显示申请的容量
 const requestedCapacity = (row: PVCVO & { resources?: { requests?: Record<string, string> } }) =>
   row.resources?.requests?.storage ? `${row.resources.requests.storage}（申请）` : '-'
-
-const getStatusType = (phase?: string) => {
-  const map: Record<string, 'success' | 'warning' | 'danger'> = { Bound: 'success', Pending: 'warning', Lost: 'danger' }
-  return (phase && map[phase]) || 'info'
-}
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  const d = new Date(dateString)
-  if (isNaN(d.getTime())) return '-'
-  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
-
-const fetchNamespaces = async () => {
-  if (!clusterId.value) {
-    namespaceList.value = []
-    return
-  }
-  try {
-    const resp = await namespaceApi.getList({ clusterId: clusterId.value, page: 1, pageSize: 10000 })
-    namespaceList.value = (resp.data?.items || []).map(ns => ns.name)
-  } catch {
-    namespaceList.value = []
-  }
-}
 
 const fetchList = async () => {
   if (!clusterId.value) {
@@ -295,10 +272,8 @@ watch(
     if (value) {
       searchForm.namespace = ''
       pagination.page = 1
-      fetchNamespaces()
       fetchList()
     } else {
-      namespaceList.value = []
       items.value = []
       pagination.total = 0
     }

@@ -25,7 +25,7 @@ func NewClusterApi(router *gin.RouterGroup) *ClusterApi {
 }
 
 func (api *ClusterApi) Router() {
-	api.router.GET("/:name", middleware.Blocker(), api.Info)
+	api.router.GET("/:name", api.Info)
 	api.router.DELETE("/:name", middleware.Blocker(), api.Delete)
 	api.router.PUT("/:name", middleware.Blocker(), BindJSON[dto.ClusterSaveDTO](api.Update))
 	api.router.GET("/list", api.List)

@@ -99,14 +99,6 @@ const routes: Array<RouteRecordRaw> = [
           parent: 'namespace', title: '命名空间详情', requiresAuth: true }
       },
       {
-        path: 'namespace/edit',
-        name: 'NamespaceEdit',
-        component: () => import('@/views/namespace/NamespaceEdit.vue'),
-        meta: {
-          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
-          parent: 'namespace', title: '编辑命名空间', requiresAuth: true }
-      },
-      {
         path: 'nodes',
         name: 'NodeList',
         component: () => import('@/views/cluster/NodeList.vue'),
@@ -612,9 +604,25 @@ router.afterEach((to, from, failure) => {
   else tagsStore.onRoute(to, !from.matched.length || !from.path.startsWith('/cluster/'))
 })
 
-// 路由错误处理
-router.onError((error) => {
+// 页面代码加载失败: 开发时 Vite 重新预构建依赖、或发布新版本后旧文件已不存在.
+// 直接重新加载目标页面一次; 短时间内再次失败时才提示, 避免无限刷新
+const CHUNK_RELOAD_KEY = 'chunkReloadAt'
+const isChunkLoadError = (error: unknown) =>
+  error instanceof Error &&
+  /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(error.message)
+
+router.onError((error, to) => {
   console.error('路由错误:', error)
+  if (isChunkLoadError(error)) {
+    const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0)
+    if (Date.now() - last > 10000) {
+      sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()))
+      window.location.assign(to.fullPath)
+      return
+    }
+    ElMessage.error('页面加载失败，请检查前端服务是否正常运行，或查看终端中的编译错误')
+    return
+  }
   ElMessage.error('页面加载失败')
 })
 

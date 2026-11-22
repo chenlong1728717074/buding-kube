@@ -100,9 +100,9 @@
               <div class="jd-attr"><label>服务账户</label><span>{{ wl.serviceAccountName || 'default' }}</span></div>
               <div class="jd-attr">
                 <label>选择器</label>
-                <span class="mono">{{ formatMap(wl.selector) }}</span>
+                <span class="mono">{{ formatLabels(wl.selector) }}</span>
               </div>
-              <div class="jd-attr"><label>节点选择器</label><span class="mono">{{ formatMap(wl.nodeSelector) || '不限制' }}</span></div>
+              <div class="jd-attr"><label>节点选择器</label><span class="mono">{{ formatLabels(wl.nodeSelector) || '不限制' }}</span></div>
               <div class="jd-attr"><label>创建时间</label><span>{{ formatDateTime(wl.createTime) }}</span></div>
               <div class="jd-attr"><label>更新时间</label><span>{{ formatDateTime(wl.updateTime) }}</span></div>
               <div class="jd-attr"><label>创建者</label><span>{{ wl.creator || '-' }}</span></div>
@@ -352,6 +352,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatLabels } from '@/utils/format'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -442,27 +443,6 @@ const fetchDetail = async (silent = false) => {
   } finally {
     loading.value = false
     schedulePoll()
-  }
-}
-
-const formatMap = (m?: Record<string, string> | null) =>
-  Object.entries(m || {})
-    .map(([k, v]) => `${k}=${v}`)
-    .join(', ')
-
-const goNamespace = () => router.push({ path: `/cluster/${clusterId.value}/namespace/detail`, query: { namespace: namespace.value } })
-const goService = (svc: string) => router.push({ path: `/cluster/${clusterId.value}/service/service/detail`, query: { namespace: namespace.value, name: svc } })
-const goServiceList = () => router.push({ path: `/cluster/${clusterId.value}/service/service`, query: { namespace: namespace.value } })
-
-// 统计指向该工作负载的弹性伸缩(用于页签数量和手动调整副本时的提示)
-const loadHpaCount = async () => {
-  if (kind.value === 'daemonset') return
-  try {
-    const { data } = await resourceApi.objects({ kind: 'horizontalpodautoscaler', clusterId: clusterId.value, namespace: namespace.value })
-    const targetKind = kind.value === 'statefulset' ? 'StatefulSet' : 'Deployment'
-    hpaCount.value = (data || []).filter(h => h.spec?.scaleTargetRef?.kind === targetKind && h.spec?.scaleTargetRef?.name === name.value).length
-  } catch {
-    hpaCount.value = null
   }
 }
 
@@ -591,6 +571,22 @@ const handleDelete = async () => {
     goBack()
   } catch {
     // 请求拦截器已提示错误
+  }
+}
+
+const goNamespace = () => router.push({ path: `/cluster/${clusterId.value}/namespace/detail`, query: { namespace: namespace.value } })
+const goService = (svc: string) => router.push({ path: `/cluster/${clusterId.value}/service/service/detail`, query: { namespace: namespace.value, name: svc } })
+const goServiceList = () => router.push({ path: `/cluster/${clusterId.value}/service/service`, query: { namespace: namespace.value } })
+
+// 统计指向该工作负载的弹性伸缩(用于页签数量和手动调整副本时的提示)
+const loadHpaCount = async () => {
+  if (kind.value === 'daemonset') return
+  try {
+    const { data } = await resourceApi.objects({ kind: 'horizontalpodautoscaler', clusterId: clusterId.value, namespace: namespace.value })
+    const targetKind = kind.value === 'statefulset' ? 'StatefulSet' : 'Deployment'
+    hpaCount.value = (data || []).filter(h => h.spec?.scaleTargetRef?.kind === targetKind && h.spec?.scaleTargetRef?.name === name.value).length
+  } catch {
+    hpaCount.value = null
   }
 }
 

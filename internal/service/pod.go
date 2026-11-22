@@ -49,7 +49,7 @@ func NewPodService() *PodService {
 	return &PodService{}
 }
 
-func (s *PodService) Delete(pod dto.PodDTO) error {
+func (s *PodService) Delete(ctx context.Context, pod dto.PodDTO) error {
 	clientSet, err := ClusterMap.GetClientSet(pod.ClusterId)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (s *PodService) Delete(pod dto.PodDTO) error {
 		gracePeriod := int64(0)
 		options.GracePeriodSeconds = &gracePeriod
 	}
-	if err = clientSet.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, options); err != nil {
+	if err = clientSet.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, options); err != nil {
 		logs.Error("删除pod失败: %s %s/%s %v", pod.ClusterId, pod.Namespace, pod.Name, err)
 		return err
 	}
@@ -69,12 +69,11 @@ func (s *PodService) Delete(pod dto.PodDTO) error {
 
 // List 查询 Pod 列表, 附带 metrics-server 提供的实时用量.
 // 列表只返回概要信息, YAML 按需加载, 避免 Pod 较多时逐个序列化、响应体过大
-func (s *PodService) List(query dto.PodQueryDTO) ([]vo.PodVO, error) {
+func (s *PodService) List(ctx context.Context, query dto.PodQueryDTO) ([]vo.PodVO, error) {
 	clientSet, err := ClusterMap.GetClientSet(query.ClusterId)
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.TODO()
 	listOptions := metav1.ListOptions{ResourceVersion: "0"}
 	if query.Status != "" {
 		listOptions.FieldSelector = fmt.Sprintf("status.phase=%s", query.Status)
@@ -183,7 +182,7 @@ func (s *PodService) Get(ctx context.Context, query dto.PodDTO) (*vo.PodDetailVO
 	return &result, nil
 }
 
-func (s *PodService) Expel(query dto.PodDTO) error {
+func (s *PodService) Expel(ctx context.Context, query dto.PodDTO) error {
 	clientSet, err := ClusterMap.GetClientSet(query.ClusterId)
 	if err != nil {
 		return err
@@ -196,7 +195,7 @@ func (s *PodService) Expel(query dto.PodDTO) error {
 		},
 		DeleteOptions: &metav1.DeleteOptions{},
 	}
-	return clientSet.PolicyV1().Evictions(eviction.Namespace).Evict(context.TODO(), eviction)
+	return clientSet.PolicyV1().Evictions(eviction.Namespace).Evict(ctx, eviction)
 }
 
 // PodLog 获取 Pod 日志流. ctx 应传入请求的 Context, 客户端断开时日志流随之关闭

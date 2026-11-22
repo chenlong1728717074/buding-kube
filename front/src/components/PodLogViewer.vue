@@ -592,7 +592,6 @@ const fetchPodLogs = async () => {
   } catch (error: any) {
     if (!error?.name || error.name !== 'AbortError') {
       logContent.value = '获取日志失败: ' + (error?.message || '网络错误')
-      ElMessage.error('获取日志失败')
       followLogs.value = false
     }
   } finally {

@@ -39,13 +39,13 @@ func GetSingletonKubeSrvService() *KubeSrvService {
 	return kubeSrv
 }
 
-func (s *KubeSrvService) List(query dto.ServiceQueryDTO) ([]vo.ServiceVO, error) {
+func (s *KubeSrvService) List(ctx context.Context, query dto.ServiceQueryDTO) ([]vo.ServiceVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	items, err := clientSet.CoreV1().Services(query.Namespace).List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"})
+	items, err := clientSet.CoreV1().Services(query.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取service失败: %v", err)
 		return nil, fmt.Errorf("获取service失败: %v", err)
@@ -375,13 +375,13 @@ func (s *KubeSrvService) Update(ctx context.Context, req dto.ServiceFormDTO) err
 }
 
 // Delete 删除Service
-func (s *KubeSrvService) Delete(base dto.BaseDTO) error {
+func (s *KubeSrvService) Delete(ctx context.Context, base dto.BaseDTO) error {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
 		return errors.New("获取集群失败")
 	}
-	if err := clientSet.CoreV1().Services(base.Namespace).Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+	if err := clientSet.CoreV1().Services(base.Namespace).Delete(ctx, base.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		logs.Error("删除service失败: %v", err)
 		return fmt.Errorf("删除service失败: %v", err)
 	}

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
@@ -128,6 +129,61 @@ func fetchPodMetrics(ctx context.Context, cs *kubernetes.Clientset, namespace st
 	for i := range resp.Items {
 		item := &resp.Items[i]
 		result[item.Metadata.Namespace+"/"+item.Metadata.Name] = toPodMetrics(item)
+	}
+	return result
+}
+
+// podNamespaces 容器组所在的命名空间(去重)
+func podNamespaces(pods []corev1.Pod) []string {
+	seen := make(map[string]bool)
+	result := make([]string, 0)
+	for i := range pods {
+		if ns := pods[i].Namespace; !seen[ns] {
+			seen[ns] = true
+			result = append(result, ns)
+		}
+	}
+	return result
+}
+
+// metricsNamespaceConcurrency 按命名空间并发查询用量的并发数
+const metricsNamespaceConcurrency = 5
+
+// fetchPodMetricsInNamespaces 只查询给定命名空间中容器组的用量(例如节点详情, 避免查询整个集群); 不可用时返回 nil
+func fetchPodMetricsInNamespaces(ctx context.Context, cs *kubernetes.Clientset, namespaces []string) map[string]*podMetrics {
+	if len(namespaces) == 0 || metricsDisabled(cs) {
+		return nil
+	}
+	var (
+		mu     sync.Mutex
+		wg     sync.WaitGroup
+		result = make(map[string]*podMetrics)
+		ok     bool
+		sem    = make(chan struct{}, metricsNamespaceConcurrency)
+	)
+	for _, ns := range namespaces {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(ns string) {
+			defer func() {
+				<-sem
+				wg.Done()
+			}()
+			items := fetchPodMetrics(ctx, cs, ns)
+			if items == nil {
+				return
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			ok = true
+			for k, v := range items {
+				result[k] = v
+			}
+		}(ns)
+	}
+	wg.Wait()
+	if !ok {
+		return nil
 	}
 	return result
 }

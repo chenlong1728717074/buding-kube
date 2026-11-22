@@ -36,13 +36,13 @@ func GetSingletonPVService() *PVService {
 	return pvSrv
 }
 
-func (s *PVService) List(query dto.PVPageQueryBaseDTO) ([]vo.PVVO, error) {
+func (s *PVService) List(ctx context.Context, query dto.PVPageQueryBaseDTO) ([]vo.PVVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	items, err := clientSet.CoreV1().PersistentVolumes().List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"})
+	items, err := clientSet.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取PV失败: %v", err)
 		return nil, fmt.Errorf("获取PV失败: %v", err)
@@ -61,13 +61,13 @@ func (s *PVService) List(query dto.PVPageQueryBaseDTO) ([]vo.PVVO, error) {
 }
 
 // Delete 删除PersistentVolume
-func (s *PVService) Delete(base dto.BaseDTO) error {
+func (s *PVService) Delete(ctx context.Context, base dto.BaseDTO) error {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
 		return errors.New("获取集群失败")
 	}
-	if err := clientSet.CoreV1().PersistentVolumes().Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+	if err := clientSet.CoreV1().PersistentVolumes().Delete(ctx, base.Name, metav1.DeleteOptions{}); err != nil {
 		logs.Error("删除pv失败: %v", err)
 		return fmt.Errorf("删除pv失败: %v", err)
 	}

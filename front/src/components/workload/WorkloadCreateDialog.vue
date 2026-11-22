@@ -46,9 +46,7 @@
         <div v-else-if="current === 0" class="basic-form">
           <el-form ref="basicRef" :model="basic" :rules="rules" label-width="100px">
             <el-form-item label="命名空间" prop="namespace">
-              <el-select v-model="basic.namespace" filterable placeholder="请选择命名空间" :loading="nsLoading" style="width: 100%" @change="onNamespaceChange">
-                <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
-              </el-select>
+              <InfiniteSelect v-model="basic.namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" :clearable="false" placeholder="请选择命名空间" style="width: 100%" @change="onNamespaceChange" />
             </el-form-item>
             <el-form-item label="名称" prop="name">
               <el-input v-model="basic.name" placeholder="例如 web-frontend" :maxlength="nameMax" show-word-limit />
@@ -240,6 +238,8 @@
 </template>
 
 <script setup lang="ts">
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Check, Delete, Plus } from '@element-plus/icons-vue'
@@ -248,7 +248,6 @@ import KVRowsTable from '@/components/KVRowsTable.vue'
 import WorkloadContainerEditor from '@/components/workload/WorkloadContainerEditor.vue'
 import VolumeListEditor from '@/components/workload/VolumeListEditor.vue'
 import { workloadApi, type WorkloadCreateDTO, type WorkloadKind } from '@/api/workload'
-import { namespaceApi } from '@/api/namespace'
 import { configMapApi } from '@/api/configmap'
 import { secretApi } from '@/api/secret'
 import { pvcApi } from '@/api/pvc'
@@ -283,6 +282,8 @@ const props = withDefaults(
   }>(),
   { defaultNamespace: '' }
 )
+// 命名空间下拉框分页加载
+const namespaceFetcher = computed(() => useNamespaceFetcher(props.clusterId))
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
@@ -306,8 +307,6 @@ const yamlMode = ref(false)
 const submitting = ref(false)
 const basicRef = ref<FormInstance>()
 
-const namespaces = ref<string[]>([])
-const nsLoading = ref(false)
 const optionsLoading = ref(false)
 const pvcOptions = ref<string[]>([])
 const configMapOptions = ref<string[]>([])
@@ -389,18 +388,6 @@ const addContainer = () => {
   openContainer.value = item.uid
 }
 
-const loadNamespaces = async () => {
-  nsLoading.value = true
-  try {
-    const resp = await namespaceApi.getList({ clusterId: props.clusterId, page: 1, pageSize: 10000 })
-    namespaces.value = (resp.data?.items || []).map(ns => ns.name)
-  } catch {
-    namespaces.value = []
-  } finally {
-    nsLoading.value = false
-  }
-}
-
 // 命名空间内的可选资源: 持久卷声明、ConfigMap、Secret、服务账户
 const loadNamespaceOptions = async () => {
   const namespace = basic.namespace
@@ -460,7 +447,6 @@ const reset = () => {
   annotations.value = []
   current.value = 0
   yamlMode.value = false
-  loadNamespaces()
   if (props.kind === 'statefulset') loadStorageClasses()
   if (basic.namespace) loadNamespaceOptions()
 }

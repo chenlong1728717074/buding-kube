@@ -20,9 +20,7 @@
         </p>
         <el-form :model="form" label-width="120px">
           <el-form-item label="命名空间" required>
-            <el-select v-model="form.namespace" filterable :disabled="fixedTarget || isEdit" placeholder="请选择命名空间" style="width: 100%" @change="onNamespaceChange">
-              <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
-            </el-select>
+            <InfiniteSelect v-model="form.namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" :clearable="false" :disabled="fixedTarget || isEdit" placeholder="请选择命名空间" style="width: 100%" @change="onNamespaceChange" />
           </el-form-item>
           <el-form-item label="目标工作负载" required>
             <el-select v-model="form.target" filterable :disabled="fixedTarget || isEdit" placeholder="选择 Deployment / StatefulSet" style="width: 100%" :loading="workloadLoading" @change="onTargetChange">
@@ -71,11 +69,12 @@
 </template>
 
 <script setup lang="ts">
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { editableCopy, resourceApi, saveResourceObject, type KubeObject } from '@/api/resource'
 import { workloadApi } from '@/api/workload'
-import { namespaceApi } from '@/api/namespace'
 
 const HPA_REF = { kind: 'horizontalpodautoscaler' as const }
 
@@ -91,6 +90,8 @@ const props = withDefaults(
   }>(),
   { namespace: '', target: null, editName: '' }
 )
+// 命名空间下拉框分页加载
+const namespaceFetcher = computed(() => useNamespaceFetcher(props.clusterId))
 
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; success: [] }>()
 
@@ -100,7 +101,6 @@ const title = computed(() => (isEdit.value ? '编辑弹性伸缩' : '设置弹�
 
 const loading = ref(false)
 const saving = ref(false)
-const namespaces = ref<string[]>([])
 const workloadLoading = ref(false)
 const targetOptions = ref<{ value: string; label: string }[]>([])
 const original = ref<KubeObject | null>(null)
@@ -121,15 +121,6 @@ const createForm = () => ({
 const form = reactive(createForm())
 
 const isCpuMem = (m: KubeObject) => m.type === 'Resource' && ['cpu', 'memory'].includes(m.resource?.name)
-
-const loadNamespaces = async () => {
-  try {
-    const resp = await namespaceApi.getList({ clusterId: props.clusterId, page: 1, pageSize: 10000 })
-    namespaces.value = (resp.data?.items || []).map(ns => ns.name)
-  } catch {
-    namespaces.value = []
-  }
-}
 
 const loadTargets = async () => {
   if (fixedTarget.value || !form.namespace) return
@@ -168,7 +159,6 @@ const reset = async () => {
     targetOptions.value = [{ value: form.target, label: `${props.target.kind} / ${props.target.name}` }]
     form.name = props.target.name
   }
-  if (!fixedTarget.value) loadNamespaces()
   if (!isEdit.value) {
     loadTargets()
     return

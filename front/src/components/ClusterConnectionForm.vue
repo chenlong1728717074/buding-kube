@@ -30,6 +30,20 @@
         </el-form-item>
       </el-col>
     </el-row>
+    <el-form-item label="CA 证书">
+      <el-input
+        v-model="caData"
+        type="textarea"
+        :rows="5"
+        :disabled="insecure"
+        placeholder="API Server 的 CA 证书（PEM 格式或 kubeconfig 中 certificate-authority-data 的 base64 值）。留空则使用系统证书校验"
+        style="font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 12px;"
+      />
+    </el-form-item>
+    <el-form-item label="证书校验">
+      <el-checkbox v-model="insecure">跳过证书校验（不安全，仅用于测试环境）</el-checkbox>
+      <div v-if="insecure" class="ccf-warn">跳过校验后无法确认连接的是真正的 API Server，Token 可能被中间人截获</div>
+    </el-form-item>
   </template>
 </template>
 
@@ -53,4 +67,16 @@ const authType = defineModel<string>('authType', { default: 'config' })
 const config = defineModel<string>('config', { default: '' })
 const uri = defineModel<string>('uri', { default: '' })
 const token = defineModel<string>('token', { default: '' })
+const caData = defineModel<string>('caData', { default: '' })
+const insecure = defineModel<boolean>('insecure', { default: false })
 </script>
+
+<style scoped>
+.ccf-warn {
+  width: 100%;
+  margin-top: 4px;
+  color: #d97706;
+  font-size: 12px;
+  line-height: 1.5;
+}
+</style>

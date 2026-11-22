@@ -1,7 +1,8 @@
 package api
 
 import (
-	"buding-kube/internal/kube"
+	"errors"
+
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
 	"buding-kube/internal/web/middleware"
@@ -29,10 +30,10 @@ func NewUserApi(router *gin.RouterGroup) *UserApi {
 
 // Router 配置路由
 func (api *UserApi) Router() {
-	api.router.POST("", BindJSON[dto.CreateUserDTO](api.CreateUser))
+	api.router.POST("", middleware.Blocker(), BindJSON[dto.CreateUserDTO](api.CreateUser))
 	api.router.PUT("", middleware.Blocker(), BindJSON[dto.UpdateUserDTO](api.UpdateUser))
 	api.router.GET("/profile", api.GetProfile)
-	api.router.PUT("/profile", BindJSON[dto.ProfileUpdateDTO](api.UpdateProfile))
+	api.router.PUT("/profile", middleware.Blocker(), BindJSON[dto.ProfileUpdateDTO](api.UpdateProfile))
 	api.router.PUT("/status", middleware.Blocker(), BindJSON[dto.UpdateUserStatusDTO](api.UpdateUserStatus))
 	api.router.PUT("/enable", middleware.Blocker(), BindJSON[dto.UpdateUserEnableDTO](api.UpdateUserEnable))
 	api.router.POST("/batchDelete", middleware.Blocker(), BindJSON[dto.BatchDeleteUsersDTO](api.BatchDeleteUsers))
@@ -42,8 +43,13 @@ func (api *UserApi) Router() {
 	api.router.DELETE("/:name", middleware.Blocker(), BindStringParam("name", api.DeleteUser))
 }
 
+// ListUsers 超级管理员查看全部用户, 管理员查看普通用户, 普通用户没有权限
 func (api *UserApi) ListUsers(ctx *gin.Context, query dto.UserQueryDTO) {
-	result, err := api.srv.ListUsers(query)
+	result, err := api.srv.ListUsers(query, api.CurrentUser(ctx))
+	if errors.Is(err, service.ErrPermissionDenied) {
+		api.Forbidden(ctx, "权限不足")
+		return
+	}
 	if err != nil {
 		api.InternalError(ctx, "获取用户列表失败", err)
 		return
@@ -51,11 +57,9 @@ func (api *UserApi) ListUsers(ctx *gin.Context, query dto.UserQueryDTO) {
 	api.SuccessWithData(ctx, BuildPageResponse(result, query.Page, query.PageSize))
 }
 
+// GetUser 用户详情; 不返回密码哈希等内部字段
 func (api *UserApi) GetUser(ctx *gin.Context, name string) {
-	// 获取当前用户
-	var currentUser *kube.LoginUser
-	var err error
-	currentUser = api.CurrentUser(ctx)
+	currentUser := api.CurrentUser(ctx)
 	user, err := api.srv.GetUser(name)
 	if err != nil {
 		api.NotFound(ctx, "用户不存在")
@@ -67,7 +71,7 @@ func (api *UserApi) GetUser(ctx *gin.Context, name string) {
 		return
 	}
 
-	api.SuccessWithData(ctx, user)
+	api.SuccessWithData(ctx, vo.User2VO(user))
 }
 
 func (api *UserApi) CreateUser(ctx *gin.Context, req dto.CreateUserDTO) {
@@ -143,13 +147,7 @@ func (api *UserApi) ResetPassword(ctx *gin.Context, name string) {
 
 // DeleteUser 删除用户
 func (api *UserApi) DeleteUser(ctx *gin.Context, name string) {
-	// 获取当前用户
-	var currentUser *kube.LoginUser
-	var err error
-
-	currentUser = api.CurrentUser(ctx)
-	err = api.srv.DeleteUser(name, currentUser)
-	if err != nil {
+	if err := api.srv.DeleteUser(name, api.CurrentUser(ctx)); err != nil {
 		api.InternalError(ctx, "删除用户失败", err)
 		return
 	}

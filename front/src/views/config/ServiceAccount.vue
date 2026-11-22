@@ -14,9 +14,7 @@
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="命名空间">
-          <el-select v-model="searchForm.namespace" placeholder="请选择命名空间" style="width: 200px" clearable @change="handleNamespaceChange">
-            <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-          </el-select>
+          <InfiniteSelect v-model="searchForm.namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" placeholder="请选择命名空间" style="width: 200px" @change="handleNamespaceChange" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
@@ -48,7 +46,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="creationTimestamp" label="创建时间" min-width="180" :show-overflow-tooltip="true" header-align="center" align="center">
-          <template #default="{ row }">{{ formatDate(row.creationTimestamp) }}</template>
+          <template #default="{ row }">{{ formatDateTime(row.creationTimestamp) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right" header-align="center" align="center">
           <template #default="{ row }">
@@ -92,9 +90,7 @@
       <template #extra>
         <el-form :model="yamlAddForm" label-width="100px">
           <el-form-item label="命名空间">
-            <el-select v-model="yamlAddForm.namespace" placeholder="请选择命名空间" style="width: 240px">
-              <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-            </el-select>
+            <InfiniteSelect v-model="yamlAddForm.namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" :clearable="false" placeholder="请选择命名空间" style="width: 240px" />
           </el-form-item>
         </el-form>
       </template>
@@ -141,9 +137,7 @@
           <div v-else-if="createSection === 'basic'" class="basic-form">
             <el-form :model="createForm" label-width="110px" label-position="right">
               <el-form-item label="命名空间" required>
-                <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 100%">
-                  <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-                </el-select>
+                <InfiniteSelect v-model="createForm.namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" :clearable="false" placeholder="请选择命名空间" style="width: 100%" />
               </el-form-item>
               <el-form-item label="名称" required>
                 <el-input v-model="createForm.name" placeholder="请输入名称" />
@@ -286,7 +280,10 @@
 </template>
 
 <script setup lang="ts">
-import { fetchResourceYaml } from '@/api/resource'
+import { formatDateTime } from '@/utils/format'
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
+import { fetchResourceYaml, resourceApi } from '@/api/resource'
 import YamlDialog from '@/components/YamlDialog.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import ListPagination from '@/components/ListPagination.vue'
@@ -298,7 +295,7 @@ import { useRouter } from 'vue-router'
 import { serviceAccountApi, type ServiceAccountVO, type ServiceAccountPageQueryDTO } from '@/api/serviceaccount'
 import type { ClusterVO } from '@/api/cluster'
 
-import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import { type NamespaceVO } from '@/api/namespace'
 import { useClusterStore } from '@/stores/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
@@ -309,6 +306,8 @@ type KvRow = { key: string; value: string }
 // 集群上下文
 const clusterStore = useClusterStore()
 const clusterId = computed(() => clusterStore.currentClusterId)
+// 命名空间下拉框分页加载
+const namespaceFetcher = computed(() => useNamespaceFetcher(clusterId.value))
 
 const loading = ref(false)
 const serviceAccounts = ref<ServiceAccountVO[]>([])
@@ -322,7 +321,6 @@ const searchForm = reactive<Omit<ServiceAccountPageQueryDTO, 'clusterId'>>({
 })
 
 const clusterList = ref<ClusterVO[]>([])
-const namespaceList = ref<NamespaceVO[]>([])
 
 const pagination = reactive({
   page: 1,
@@ -429,21 +427,6 @@ const handleSelectionChange = (rows: ServiceAccountVO[]) => {
   selectedRows.value = rows
 }
 
-const fetchNamespaces = async () => {
-  if (!clusterId.value) {
-    namespaceList.value = []
-    return
-  }
-  try {
-    const resp = await namespaceApi.getList({ clusterId: clusterId.value, page: 1, pageSize: 10000 })
-    if (resp.code === 200) {
-      namespaceList.value = resp.data.items || []
-    }
-  } catch {
-    ElMessage.error('获取命名空间失败')
-  }
-}
-
 const fetchList = async () => {
   if (!clusterId.value) {
     serviceAccounts.value = []
@@ -466,7 +449,7 @@ const fetchList = async () => {
       pagination.total = total
     }
   } catch {
-    ElMessage.error('获取ServiceAccount列表失败')
+    // 请求拦截器已提示错误
   } finally {
     loading.value = false
   }
@@ -486,7 +469,6 @@ const handleReset = async () => {
   searchForm.namespace = ''
   searchForm.keyword = ''
   pagination.page = 1
-  await fetchNamespaces()
   fetchList()
 }
 
@@ -537,16 +519,18 @@ const openDelete = (row: ServiceAccountVO) => {
 
 const confirmEditInfo = async () => {
   if (!currentRow.value) return
+  // 先校验 JSON, 格式错误时单独提示; 接口错误由请求拦截器提示
+  let labels: Record<string, string> = {}
+  let annotations: Record<string, string> = {}
+  try {
+    if (editInfoForm.labelsJson.trim()) labels = JSON.parse(editInfoForm.labelsJson)
+    if (editInfoForm.annotationsJson.trim()) annotations = JSON.parse(editInfoForm.annotationsJson)
+  } catch {
+    ElMessage.error('标签或注解不是合法的 JSON')
+    return
+  }
   editInfoLoading.value = true
   try {
-    let labels: Record<string, string> = {}
-    let annotations: Record<string, string> = {}
-    if (editInfoForm.labelsJson.trim()) {
-      labels = JSON.parse(editInfoForm.labelsJson)
-    }
-    if (editInfoForm.annotationsJson.trim()) {
-      annotations = JSON.parse(editInfoForm.annotationsJson)
-    }
     await serviceAccountApi.update({
       clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
@@ -561,7 +545,7 @@ const confirmEditInfo = async () => {
     editInfoDialogVisible.value = false
     fetchList()
   } catch {
-    ElMessage.error('更新失败，请检查JSON格式')
+    // 请求拦截器已提示错误
   } finally {
     editInfoLoading.value = false
   }
@@ -578,16 +562,18 @@ const confirmApplyYaml = async () => {
   }
   yamlApplyLoading.value = true
   try {
-    await serviceAccountApi.applyYaml({
+    await resourceApi.updateYaml({
+      kind: 'serviceaccount',
       clusterId: clusterId.value,
       namespace: currentRow.value.namespace,
+      name: currentRow.value.name,
       yaml: yamlContent.value
     })
     ElMessage.success('YAML应用成功')
     yamlDialogVisible.value = false
     fetchList()
   } catch {
-    ElMessage.error('YAML应用失败')
+    // 请求拦截器已提示错误
   } finally {
     yamlApplyLoading.value = false
   }
@@ -618,16 +604,17 @@ const confirmYamlAdd = async () => {
   }
   yamlAddLoading.value = true
   try {
-    await serviceAccountApi.applyYaml({
+    await resourceApi.apply({
+      kind: 'serviceaccount',
       clusterId: clusterId.value,
-      namespace: yamlAddForm.namespace || '',
+      namespace: yamlAddForm.namespace || undefined,
       yaml: yamlAddContent.value
     })
     ElMessage.success('YAML添加成功')
     yamlAddDialogVisible.value = false
     fetchList()
   } catch {
-    ElMessage.error('YAML添加失败')
+    // 请求拦截器已提示错误
   } finally {
     yamlAddLoading.value = false
   }
@@ -698,16 +685,18 @@ const confirmCreate = async () => {
   createLoading.value = true
   try {
     const toApply = createYamlMode.value ? createYaml.value : yaml
-    await serviceAccountApi.applyYaml({
+    await resourceApi.apply({
+      kind: 'serviceaccount',
       clusterId: clusterId.value,
       namespace: createForm.namespace,
-      yaml: toApply
+      yaml: toApply,
+      createOnly: true
     })
     ElMessage.success('创建成功')
     createDialogVisible.value = false
     fetchList()
   } catch {
-    ElMessage.error('创建失败')
+    // 请求拦截器已提示错误
   } finally {
     createLoading.value = false
   }
@@ -729,27 +718,9 @@ const confirmDelete = async () => {
     deleteDialogVisible.value = false
     fetchList()
   } catch {
-    ElMessage.error('删除失败')
+    // 请求拦截器已提示错误
   } finally {
     deleteLoading.value = false
-  }
-}
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  try {
-    const d = new Date(dateString)
-    if (isNaN(d.getTime())) return '-'
-    return d.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  } catch {
-    return '-'
   }
 }
 
@@ -758,7 +729,6 @@ watch(clusterId, async (newClusterId) => {
   if (newClusterId) {
     searchForm.namespace = ''
     pagination.page = 1
-    await fetchNamespaces()
     await fetchList()
   } else {
     serviceAccounts.value = []
@@ -768,7 +738,6 @@ watch(clusterId, async (newClusterId) => {
 
 onMounted(async () => {
   if (clusterId.value) {
-    await fetchNamespaces()
     await fetchList()
   }
 })

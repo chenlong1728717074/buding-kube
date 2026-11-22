@@ -26,7 +26,6 @@ func (api *ConfigMapApi) Router() {
 	api.router.GET("/list", api.List)
 	api.router.GET("", api.Get)
 	api.router.POST("/add", middleware.Blocker(), api.Add)
-	api.router.POST("/apply", middleware.Blocker(), api.Apply)
 	api.router.DELETE("", middleware.Blocker(), api.Delete)
 	api.router.PUT("", middleware.Blocker(), api.Update)
 	api.router.PUT("/data", middleware.Blocker(), api.UpdateData)
@@ -63,27 +62,13 @@ func (a *ConfigMapApi) Get(ctx *gin.Context) {
 	a.SuccessWithData(ctx, data)
 }
 
-func (api *ConfigMapApi) Apply(ctx *gin.Context) {
-	var apply dto.BaseYamlApplyDTO
-	if err := ctx.ShouldBindJSON(&apply); err != nil {
-		api.ParamBindError(ctx, err)
-		return
-	}
-	err := api.srv.Apply(apply)
-	if err != nil {
-		api.InternalError(ctx, "执行失败:", err)
-		return
-	}
-	api.SuccessMsg(ctx, "执行成功")
-}
-
 func (api *ConfigMapApi) Delete(ctx *gin.Context) {
 	var base dto.BaseDTO
 	if err := api.BindQuery(ctx, &base); err != nil {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	if err := api.srv.Delete(base); err != nil {
+	if err := api.srv.Delete(ctx.Request.Context(), base); err != nil {
 		api.InternalError(ctx, "删除失败", err)
 		return
 	}
@@ -97,7 +82,7 @@ func (api *ConfigMapApi) Add(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	err := api.srv.Save(create)
+	err := api.srv.Save(ctx.Request.Context(), create)
 	if err != nil {
 		api.InternalError(ctx, "添加失败:", err)
 		return
@@ -112,7 +97,7 @@ func (api *ConfigMapApi) Update(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	err := api.srv.UpdateInfo(update)
+	err := api.srv.UpdateInfo(ctx.Request.Context(), update)
 	if err != nil {
 		api.InternalError(ctx, "修改失败:", err)
 		return
@@ -127,7 +112,7 @@ func (api *ConfigMapApi) UpdateData(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	err := api.srv.UpdateData(updateData)
+	err := api.srv.UpdateData(ctx.Request.Context(), updateData)
 	if err != nil {
 		api.InternalError(ctx, "修改数据失败:", err)
 		return
@@ -142,7 +127,7 @@ func (api *ConfigMapApi) UpdateSetting(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	err := api.srv.UpdateSetting(update)
+	err := api.srv.UpdateSetting(ctx.Request.Context(), update)
 	if err != nil {
 		api.InternalError(ctx, "修改设置失败:", err)
 		return

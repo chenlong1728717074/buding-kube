@@ -84,13 +84,13 @@ func normalizeConcurrencyPolicy(value string) (batchv1.ConcurrencyPolicy, error)
 	}
 }
 
-func (s *CronJobService) List(query dto.CronJobPageQueryBaseDTO) ([]vo.CronJobVO, error) {
+func (s *CronJobService) List(ctx context.Context, query dto.CronJobPageQueryBaseDTO) ([]vo.CronJobVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	items, err := clientSet.BatchV1().CronJobs(query.Namespace).List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"})
+	items, err := clientSet.BatchV1().CronJobs(query.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取CronJob失败: %v", err)
 		return nil, fmt.Errorf("获取CronJob失败: %v", err)

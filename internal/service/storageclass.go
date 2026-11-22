@@ -149,13 +149,13 @@ var validAccessModes = map[string]bool{
 	string(corev1.ReadWriteOncePod): true,
 }
 
-func (s *StorageClassService) List(query dto.StorageClassPageQueryBaseDTO) ([]vo.StorageClassVO, error) {
+func (s *StorageClassService) List(ctx context.Context, query dto.StorageClassPageQueryBaseDTO) ([]vo.StorageClassVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	items, err := clientSet.StorageV1().StorageClasses().List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"})
+	items, err := clientSet.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取StorageClass失败: %v", err)
 		return nil, fmt.Errorf("获取StorageClass失败: %v", err)
@@ -163,7 +163,7 @@ func (s *StorageClassService) List(query dto.StorageClassPageQueryBaseDTO) ([]vo
 
 	// 统计每个存储类关联的持久卷声明(PVC)数量
 	pvcCountMap := make(map[string]int64)
-	if pvcs, err := clientSet.CoreV1().PersistentVolumeClaims(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"}); err == nil {
+	if pvcs, err := clientSet.CoreV1().PersistentVolumeClaims(metav1.NamespaceAll).List(ctx, metav1.ListOptions{ResourceVersion: "0"}); err == nil {
 		for _, pvc := range pvcs.Items {
 			if pvc.Spec.StorageClassName == nil {
 				// 未显式指定时使用集群默认存储类, 不计入具体存储类
@@ -492,13 +492,13 @@ func setOrDelete(m map[string]string, key, value string) {
 }
 
 // Delete 删除StorageClass
-func (s *StorageClassService) Delete(base dto.BaseDTO) error {
+func (s *StorageClassService) Delete(ctx context.Context, base dto.BaseDTO) error {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
 		return errors.New("获取集群失败")
 	}
-	if err := clientSet.StorageV1().StorageClasses().Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+	if err := clientSet.StorageV1().StorageClasses().Delete(ctx, base.Name, metav1.DeleteOptions{}); err != nil {
 		logs.Error("删除storageclass失败: %v", err)
 		return fmt.Errorf("删除storageclass失败: %v", err)
 	}

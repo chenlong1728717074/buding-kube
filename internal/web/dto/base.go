@@ -7,12 +7,6 @@ type PageQueryDTO struct {
 	Keyword  string `form:"keyword" json:"keyword" example:"关键词"`  // 搜索关键词
 }
 
-type BaseYamlApplyDTO struct {
-	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`
-	Namespace string `json:"namespace" form:"namespace"`
-	Yaml      string `json:"yaml" binding:"required"`
-}
-
 type BaseDTO struct {
 	// 集群ID
 	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`

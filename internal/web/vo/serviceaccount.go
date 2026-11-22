@@ -20,7 +20,6 @@ type ServiceAccountVO struct {
 	CreationTimestamp            time.Time                     `json:"creationTimestamp"`
 	CreateTime                   time.Time                     `json:"createTime"`
 	Metadata                     metav1.ObjectMeta             `json:"metadata"`
-	Yaml                         string                        `json:"yaml"`
 }
 
 func ServiceAccount2VO(sa corev1.ServiceAccount) ServiceAccountVO {

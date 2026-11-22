@@ -52,9 +52,7 @@
         <div v-else-if="stepKey === 'basic'" class="basic-form">
           <el-form ref="basicRef" :model="form" :rules="rules" label-width="100px" label-position="right">
             <el-form-item label="命名空间" prop="namespace">
-              <el-select v-model="form.namespace" filterable placeholder="请选择命名空间" :loading="nsLoading" style="width: 100%">
-                <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
-              </el-select>
+              <InfiniteSelect v-model="form.namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" :clearable="false" placeholder="请选择命名空间" style="width: 100%" />
             </el-form-item>
             <el-form-item label="名称" prop="name">
               <el-input v-model="form.name" :placeholder="kind === 'job' ? '例如 db-backup' : '例如 nightly-report'" :maxlength="nameMax" show-word-limit />
@@ -259,6 +257,8 @@
 </template>
 
 <script setup lang="ts">
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Check, CircleCheckFilled, Delete, Plus } from '@element-plus/icons-vue'
@@ -266,7 +266,6 @@ import YamlEditor from '@/components/YamlEditor.vue'
 import KVRowsTable from '@/components/KVRowsTable.vue'
 import { jobApi } from '@/api/job'
 import { cronJobApi, type ConcurrencyPolicy } from '@/api/cronjob'
-import { namespaceApi } from '@/api/namespace'
 import { jsonToYaml } from '@/utils/yaml'
 import {
   CONCURRENCY_POLICIES,
@@ -291,6 +290,8 @@ const props = withDefaults(
   }>(),
   { defaultNamespace: '' }
 )
+// 命名空间下拉框分页加载
+const namespaceFetcher = computed(() => useNamespaceFetcher(props.clusterId))
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
@@ -318,8 +319,6 @@ const yamlMode = ref(false)
 const submitting = ref(false)
 const basicRef = ref<FormInstance>()
 
-const namespaces = ref<string[]>([])
-const nsLoading = ref(false)
 
 const form = reactive({ namespace: '', name: '', alias: '', describe: '' })
 
@@ -355,18 +354,6 @@ const rules = computed<FormRules>(() => ({
   ]
 }))
 
-const loadNamespaces = async () => {
-  nsLoading.value = true
-  try {
-    const resp = await namespaceApi.getList({ clusterId: props.clusterId, page: 1, pageSize: 10000 })
-    namespaces.value = (resp.data?.items || []).map(ns => ns.name)
-  } catch {
-    namespaces.value = []
-  } finally {
-    nsLoading.value = false
-  }
-}
-
 const reset = () => {
   Object.assign(form, { namespace: props.defaultNamespace || '', name: '', alias: '', describe: '' })
   Object.assign(cron, createCronForm())
@@ -380,7 +367,6 @@ const reset = () => {
   labels.value = []
   current.value = 0
   yamlMode.value = false
-  loadNamespaces()
 }
 
 const addContainer = () => containers.value.push(createContainerForm(containers.value.length))

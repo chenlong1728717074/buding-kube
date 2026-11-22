@@ -65,9 +65,7 @@
           <div v-if="isEdit" class="field-hint svc-hint">虚拟 IP 和内部域名（Headless）创建后不能互相切换</div>
           <el-form ref="basicRef" :model="form" :rules="rules" label-width="100px">
             <el-form-item label="命名空间" prop="namespace">
-              <el-select v-model="form.namespace" filterable :disabled="isEdit" placeholder="请选择命名空间" :loading="nsLoading" style="width: 100%" @change="onNamespaceChange">
-                <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
-              </el-select>
+              <InfiniteSelect v-model="form.namespace" :fetch-data="namespaceFetcher" v-bind="namespaceSelectConfig" :clearable="false" :disabled="isEdit" placeholder="请选择命名空间" style="width: 100%" @change="onNamespaceChange" />
             </el-form-item>
             <el-form-item label="名称" prop="name">
               <el-input v-model="form.name" :disabled="isEdit" placeholder="例如 web-frontend" maxlength="63" show-word-limit />
@@ -197,6 +195,8 @@
 </template>
 
 <script setup lang="ts">
+import InfiniteSelect from '@/components/InfiniteSelect.vue'
+import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Check, CircleCheckFilled, Delete, Plus } from '@element-plus/icons-vue'
@@ -204,7 +204,6 @@ import YamlEditor from '@/components/YamlEditor.vue'
 import KVRowsTable from '@/components/KVRowsTable.vue'
 import { serviceApi, type ServiceFormDTO } from '@/api/service'
 import { workloadApi, type WorkloadSelectorVO } from '@/api/workload'
-import { namespaceApi } from '@/api/namespace'
 import { jsonToYaml } from '@/utils/yaml'
 import type { KVRow } from '@/utils/job'
 import { WORKLOAD_KINDS, recordToRows, rowsToRecord } from '@/utils/workload'
@@ -229,6 +228,8 @@ const props = withDefaults(
   }>(),
   { defaultNamespace: '', editTarget: null }
 )
+// 命名空间下拉框分页加载
+const namespaceFetcher = computed(() => useNamespaceFetcher(props.clusterId))
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
@@ -256,8 +257,6 @@ const submitting = ref(false)
 const basicRef = ref<FormInstance>()
 const originalMode = ref<Mode>('virtual')
 
-const namespaces = ref<string[]>([])
-const nsLoading = ref(false)
 const workloads = ref<WorkloadSelectorVO[]>([])
 const workloadLoading = ref(false)
 const selectedWorkload = ref('')
@@ -307,18 +306,6 @@ const rules: FormRules = {
 
 const addPort = (port?: Partial<PortRow>) => ports.value.push({ name: '', protocol: 'TCP', port: undefined, targetPort: '', nodePort: undefined, ...port })
 
-const loadNamespaces = async () => {
-  nsLoading.value = true
-  try {
-    const resp = await namespaceApi.getList({ clusterId: props.clusterId, page: 1, pageSize: 10000 })
-    namespaces.value = (resp.data?.items || []).map(ns => ns.name)
-  } catch {
-    namespaces.value = []
-  } finally {
-    nsLoading.value = false
-  }
-}
-
 const loadWorkloads = async () => {
   if (!form.namespace) {
     workloads.value = []
@@ -363,7 +350,6 @@ const reset = async () => {
   originalMode.value = 'virtual'
   current.value = 0
   yamlMode.value = false
-  loadNamespaces()
   if (props.editTarget) {
     await loadForEdit()
   } else {

@@ -3,6 +3,7 @@ package api
 import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
+	"buding-kube/internal/web/vo"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,10 +31,15 @@ func (a *EventApi) List(ctx *gin.Context) {
 		a.ParamBindError(ctx, err)
 		return
 	}
-	list, err := service.ListEvents(ctx.Request.Context(), query)
+	result, err := service.ListEvents(ctx.Request.Context(), query)
 	if err != nil {
 		a.InternalError(ctx, "查询失败", err)
 		return
 	}
-	a.SuccessWithData(ctx, BuildPageResponse(list, query.Page, query.PageSize))
+	a.SuccessWithData(ctx, vo.EventPageVO{
+		PageResponse: BuildPageResponse(result.Items, query.Page, query.PageSize),
+		Matched:      result.Matched,
+		Limited:      result.Limited,
+		Limit:        service.EventDefaultLimit,
+	})
 }

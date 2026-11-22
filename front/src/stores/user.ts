@@ -44,16 +44,13 @@ export const useUserStore = defineStore('user', () => {
         sessionStorage.setItem('userInfo', JSON.stringify(userData))
         localStorage.removeItem('token')
         localStorage.removeItem('userInfo')
-        
-        ElMessage.success('登录成功')
+        // 欢迎提示由登录页显示
         return true
       } else {
         ElMessage.error(response.msg || '登录失败')
         return false
       }
-    } catch (error: any) {
-      console.error('登录失败:', error)
-      ElMessage.error(error.message || '登录失败，请检查网络连接')
+    } catch {
       return false
     } finally {
       loading.value = false

@@ -39,7 +39,7 @@
           <div class="info-item"><label>命名空间</label><span>{{ cm.namespace }}</span></div>
           <div class="info-item"><label>别名</label><span>{{ cm.alias || '-' }}</span></div>
           <div class="info-item"><label>备注</label><span>{{ cm.describe || '-' }}</span></div>
-          <div class="info-item"><label>创建时间</label><span>{{ formatDate(cm.creationTimestamp) }}</span></div>
+          <div class="info-item"><label>创建时间</label><span>{{ formatDateTime(cm.creationTimestamp) }}</span></div>
         </div>
       </el-card>
 
@@ -198,10 +198,9 @@
     <YamlDialog
       v-model="yamlDialogVisible"
       title="查看/编辑YAML"
-      v-model:content="yamlContent"
-      :readonly="false"
-      :submitting="yamlApplyLoading"
-      @confirm="confirmApplyYaml"
+      :content="yamlContent"
+      :apply-target="{ kind: 'configmap', clusterId, namespace, name }"
+      @applied="fetchDetail()"
     />
 
     <!-- 删除确认 -->
@@ -217,6 +216,8 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime } from '@/utils/format'
+import { fetchResourceYaml } from '@/api/resource'
 import PageHeader from '@/components/PageHeader.vue'
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
@@ -328,12 +329,21 @@ const resetEditDataRows = () => {
 
 const yamlDialogVisible = ref(false)
 const yamlContent = ref('')
-const yamlApplyLoading = ref(false)
 
 const deleteDialogVisible = ref(false)
 const deleteLoading = ref(false)
 
 const handleBack = () => goBack()
+
+// YAML 按需查询
+const openYaml = async () => {
+  try {
+    yamlContent.value = await fetchResourceYaml({ kind: 'configmap', clusterId: clusterId.value, namespace: namespace.value, name: name.value })
+    yamlDialogVisible.value = true
+  } catch {
+    // 请求拦截器已提示错误
+  }
+}
 
 const handleMore = (cmd: string) => {
   switch (cmd) {
@@ -344,8 +354,7 @@ const handleMore = (cmd: string) => {
       editInfoDialogVisible.value = true
       break
     case 'yaml':
-      yamlContent.value = cm.value?.yaml || ''
-      yamlDialogVisible.value = true
+      openYaml()
       break
     case 'editData':
       editDataRows.value = Object.entries(cm.value?.data || {}).map(([k,v]) => ({ key: k, value: v }))
@@ -372,8 +381,8 @@ const fetchDetail = async () => {
         .filter(([k]) => k !== 'alias' && k !== 'describe')
         .map(([k,v]) => ({ key: k, value: String(v ?? '') }))
     }
-  } catch (e) {
-    ElMessage.error('获取详情失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     loading.value = false
   }
@@ -387,8 +396,8 @@ const confirmEditInfo = async () => {
     ElMessage.success('更新成功')
     editInfoDialogVisible.value = false
     fetchDetail()
-  } catch (e) {
-    ElMessage.error('更新失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     editInfoLoading.value = false
   }
@@ -403,25 +412,10 @@ const confirmEditData = async () => {
     ElMessage.success('保存成功')
     editDataDialogVisible.value = false
     fetchDetail()
-  } catch (e) {
-    ElMessage.error('保存失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     editDataLoading.value = false
-  }
-}
-
-const confirmApplyYaml = async () => {
-  if (!yamlContent.value) { ElMessage.warning('YAML内容为空'); return }
-  yamlApplyLoading.value = true
-  try {
-    await configMapApi.applyYaml({ clusterId: clusterId.value, namespace: namespace.value, yaml: yamlContent.value })
-    ElMessage.success('YAML应用成功')
-    yamlDialogVisible.value = false
-    fetchDetail()
-  } catch (e) {
-    ElMessage.error('YAML应用失败')
-  } finally {
-    yamlApplyLoading.value = false
   }
 }
 
@@ -433,20 +427,11 @@ const confirmDelete = async () => {
     ElMessage.success('删除成功')
     deleteDialogVisible.value = false
     goBack()
-  } catch (e) {
-    ElMessage.error('删除失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     deleteLoading.value = false
   }
-}
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  try {
-    const d = new Date(dateString)
-    if (isNaN(d.getTime())) return '-'
-    return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  } catch { return '-' }
 }
 
 onMounted(() => {

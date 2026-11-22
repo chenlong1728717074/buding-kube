@@ -38,12 +38,11 @@ func NewNodeService() *NodeService {
 }
 
 // List 节点列表, 附带每个节点的已分配资源(容器组预留合计)和 metrics-server 的实时用量
-func (s *NodeService) List(query dto.NodeQueryDTO) ([]vo.NodeVO, error) {
+func (s *NodeService) List(ctx context.Context, query dto.NodeQueryDTO) ([]vo.NodeVO, error) {
 	clientSet, err := ClusterMap.GetClientSet(query.ClusterId)
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.TODO()
 	list, err := clientSet.CoreV1().Nodes().List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取节点失败 集群:%s 异常:%v", query.ClusterId, err)
@@ -126,13 +125,13 @@ func nodeHasRole(roles []string, role string) bool {
 	return false
 }
 
-func (s *NodeService) UnSchedule(query dto.NodeUnScheduleDTO) error {
-	node, clientSet, err := s.GetNode(query.NodeInfoQueryDTO)
+func (s *NodeService) UnSchedule(ctx context.Context, query dto.NodeUnScheduleDTO) error {
+	node, clientSet, err := s.GetNode(ctx, query.NodeInfoQueryDTO)
 	if err != nil {
 		return err
 	}
 	node.Spec.Unschedulable = *query.UnSchedule
-	_, err = clientSet.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
+	_, err = clientSet.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
 	if err != nil {
 		logs.Error("更新节点失败: %s %s %s", query.ClusterId, query.Hostname, err.Error())
 		return err
@@ -140,13 +139,13 @@ func (s *NodeService) UnSchedule(query dto.NodeUnScheduleDTO) error {
 	return nil
 }
 
-func (s *NodeService) GetNode(query dto.NodeInfoQueryDTO) (*corev1.Node, *kubernetes.Clientset, error) {
+func (s *NodeService) GetNode(ctx context.Context, query dto.NodeInfoQueryDTO) (*corev1.Node, *kubernetes.Clientset, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, nil, err
 	}
-	node, err := clientSet.CoreV1().Nodes().Get(context.TODO(), query.Hostname, metav1.GetOptions{})
+	node, err := clientSet.CoreV1().Nodes().Get(ctx, query.Hostname, metav1.GetOptions{})
 	if err != nil {
 		logs.Error("获取节点失败: %s %s %s", query.ClusterId, query.Hostname, err.Error())
 		return nil, nil, err
@@ -155,12 +154,11 @@ func (s *NodeService) GetNode(query dto.NodeInfoQueryDTO) (*corev1.Node, *kubern
 }
 
 // GetNodeInfo 节点详情: 属性、资源分配与用量、污点、状态条件、容器组和事件
-func (s *NodeService) GetNodeInfo(query dto.NodeInfoQueryDTO) (*vo.NodeInfoVO, error) {
-	node, clientSet, err := s.GetNode(query)
+func (s *NodeService) GetNodeInfo(ctx context.Context, query dto.NodeInfoQueryDTO) (*vo.NodeInfoVO, error) {
+	node, clientSet, err := s.GetNode(ctx, query)
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.TODO()
 	result := vo.Node2InfoVO(node)
 
 	var (
@@ -171,7 +169,7 @@ func (s *NodeService) GetNodeInfo(query dto.NodeInfoQueryDTO) (*vo.NodeInfoVO, e
 		nodeUsage   *[2]int64
 		podsMetrics map[string]*podMetrics
 	)
-	wg.Add(4)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		var evErr error
@@ -192,16 +190,13 @@ func (s *NodeService) GetNodeInfo(query dto.NodeInfoQueryDTO) (*vo.NodeInfoVO, e
 		defer wg.Done()
 		nodeUsage = fetchSingleNodeMetrics(ctx, clientSet, node.Name)
 	}()
-	go func() {
-		defer wg.Done()
-		// 容器组的用量只能按命名空间或全部查询, 这里查全部再按名称取
-		podsMetrics = fetchPodMetrics(ctx, clientSet, "")
-	}()
 	wg.Wait()
 	if podErr != nil {
 		logs.Error("获取节点容器组失败: %s %s %v", query.ClusterId, query.Hostname, podErr)
 		return nil, podErr
 	}
+	// 容器组用量只能按命名空间查询, 只查这些容器组所在的命名空间
+	podsMetrics = fetchPodMetricsInNamespaces(ctx, clientSet, podNamespaces(pods.Items))
 
 	for i := range pods.Items {
 		pod := &pods.Items[i]
@@ -226,13 +221,13 @@ func (s *NodeService) GetNodeInfo(query dto.NodeInfoQueryDTO) (*vo.NodeInfoVO, e
 }
 
 // Delete 删除Node对象(节点重新注册后会再次出现)
-func (s *NodeService) Delete(base dto.BaseDTO) error {
+func (s *NodeService) Delete(ctx context.Context, base dto.BaseDTO) error {
 	clientSet, err := ClusterMap.Get(base.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", base.ClusterId, err.Error())
 		return err
 	}
-	if err := clientSet.CoreV1().Nodes().Delete(context.TODO(), base.Name, metav1.DeleteOptions{}); err != nil {
+	if err := clientSet.CoreV1().Nodes().Delete(ctx, base.Name, metav1.DeleteOptions{}); err != nil {
 		logs.Error("删除node失败: %v", err)
 		return err
 	}
@@ -251,14 +246,14 @@ type kubeletStatsSummaryResponse struct {
 // GetClusterUsage 聚合集群节点 CPU / 内存 / 存储实时使用率及节点/Pod健康状态
 // CPU/内存优先取 metrics-server 实时指标，未安装时回退到活跃 Pod Requests
 // 存储优先取 kubelet /stats/summary 文件系统用量，不可达时回退到 PVC 与 Pod 临时存储请求
-func (s *NodeService) GetClusterUsage(query dto.NodeUsageQueryDTO) (*vo.ClusterResourceUsageVO, error) {
+func (s *NodeService) GetClusterUsage(ctx context.Context, query dto.NodeUsageQueryDTO) (*vo.ClusterResourceUsageVO, error) {
 	clientSet, err := ClusterMap.Get(query.ClusterId)
 	if err != nil {
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
 
 	nodeList, err := clientSet.CoreV1().Nodes().List(ctx, metav1.ListOptions{})

@@ -22,7 +22,6 @@ type SecretVO struct {
 	CreationTimestamp time.Time         `json:"creationTimestamp"`
 	CreateTime        time.Time         `json:"createTime"`
 	Metadata          metav1.ObjectMeta `json:"metadata"`
-	Yaml              string            `json:"yaml"`
 	DataCount         int               `json:"dataCount"` // 数据条数, 列表接口使用(列表不返回 data 本身)
 }
 

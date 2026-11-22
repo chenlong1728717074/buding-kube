@@ -70,7 +70,7 @@
         </el-table-column>
         <el-table-column prop="provisioner" label="供应者" min-width="200" show-overflow-tooltip />
         <el-table-column prop="createTime" label="创建时间" min-width="170" align="center" header-align="center">
-          <template #default="{ row }">{{ formatDate(row.createTime || row.creationTimestamp) }}</template>
+          <template #default="{ row }">{{ formatDateTime(row.createTime || row.creationTimestamp) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="200" align="center" header-align="center" fixed="right">
           <template #default="{ row }">
@@ -133,6 +133,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime } from '@/utils/format'
 import { fetchResourceYaml } from '@/api/resource'
 import PageHeader from '@/components/PageHeader.vue'
 import ListPagination from '@/components/ListPagination.vue'
@@ -179,20 +180,6 @@ const router = useRouter()
 const yamlAddVisible = ref(false)
 const yamlAddContent = ref('')
 const yamlAddLoading = ref(false)
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  const d = new Date(dateString)
-  if (isNaN(d.getTime())) return '-'
-  return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
 
 const fetchList = async () => {
   if (!clusterId.value) {

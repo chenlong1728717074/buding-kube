@@ -37,7 +37,7 @@ func (api *KubeSrvApi) Delete(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	if err := api.srv.Delete(base); err != nil {
+	if err := api.srv.Delete(ctx.Request.Context(), base); err != nil {
 		api.InternalError(ctx, "删除失败:%v", err)
 		return
 	}
@@ -50,7 +50,7 @@ func (api *KubeSrvApi) List(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	list, err := api.srv.List(query)
+	list, err := api.srv.List(ctx.Request.Context(), query)
 	if err != nil {
 		api.InternalError(ctx, "查询失败:", err)
 		return

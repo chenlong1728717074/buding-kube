@@ -23,12 +23,11 @@ func NewNamespacesApi(router *gin.RouterGroup) *NamespacesApi {
 }
 
 func (api *NamespacesApi) Router() {
-	api.router.GET("", middleware.Blocker(), api.Info)
+	api.router.GET("", api.Info)
 	api.router.DELETE("", middleware.Blocker(), api.Delete)
 	api.router.GET("/list", api.List)
 	api.router.POST("", middleware.Blocker(), api.Add)
 	api.router.PUT("", middleware.Blocker(), api.Update)
-	api.router.POST("/apply", middleware.Blocker(), api.Apply)
 }
 
 func (api *NamespacesApi) List(ctx *gin.Context) {
@@ -37,7 +36,7 @@ func (api *NamespacesApi) List(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	list, err := api.srv.List(query)
+	list, err := api.srv.List(ctx.Request.Context(), query)
 	if err != nil {
 		api.InternalError(ctx, "查询失败:", err)
 		return
@@ -52,7 +51,7 @@ func (api *NamespacesApi) Info(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	result, err := api.srv.GetById(base)
+	result, err := api.srv.GetById(ctx.Request.Context(), base)
 	if err != nil {
 		api.InternalError(ctx, "获取失败:", err)
 		return
@@ -66,7 +65,7 @@ func (api *NamespacesApi) Delete(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	if err := api.srv.Delete(base); err != nil {
+	if err := api.srv.Delete(ctx.Request.Context(), base); err != nil {
 		api.InternalError(ctx, "删除失败", err)
 		return
 	}
@@ -79,7 +78,7 @@ func (api *NamespacesApi) Add(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	err := api.srv.Save(create)
+	err := api.srv.Save(ctx.Request.Context(), create)
 	if err != nil {
 		api.InternalError(ctx, "添加失败:", err)
 		return
@@ -93,24 +92,10 @@ func (api *NamespacesApi) Update(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	err := api.srv.Update(create)
+	err := api.srv.Update(ctx.Request.Context(), create)
 	if err != nil {
 		api.InternalError(ctx, "修改失败:", err)
 		return
 	}
 	api.SuccessMsg(ctx, "修改成功")
-}
-
-func (api *NamespacesApi) Apply(ctx *gin.Context) {
-	var apply dto.NamespaceApplyDTO
-	if err := ctx.ShouldBindJSON(&apply); err != nil {
-		api.ParamBindError(ctx, err)
-		return
-	}
-	err := api.srv.Apply(apply)
-	if err != nil {
-		api.InternalError(ctx, "执行失败:", err)
-		return
-	}
-	api.SuccessMsg(ctx, "执行成功")
 }

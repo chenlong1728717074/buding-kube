@@ -20,7 +20,6 @@ const (
 	colorYellow  = "\033[33m"
 	colorBlue    = "\033[34m"
 	colorMagenta = "\033[35m"
-	colorCyan    = "\033[36m"
 	colorReset   = "\033[0m"
 )
 
@@ -167,76 +166,4 @@ func Warn(msg string, fields ...interface{}) {
 
 func Fatal(msg string, fields ...interface{}) {
 	Sugar.Fatalf(msg, fields...)
-}
-
-// 结构化日志方法
-func InfoWithFields(msg string, fields map[string]interface{}) {
-	Sugar.Infow(msg, fieldsToArgs(fields)...)
-}
-
-func ErrorWithFields(msg string, fields map[string]interface{}) {
-	Sugar.Errorw(msg, fieldsToArgs(fields)...)
-}
-
-func DebugWithFields(msg string, fields map[string]interface{}) {
-	Sugar.Debugw(msg, fieldsToArgs(fields)...)
-}
-
-func WarnWithFields(msg string, fields map[string]interface{}) {
-	Sugar.Warnw(msg, fieldsToArgs(fields)...)
-}
-
-func FatalWithFields(msg string, fields map[string]interface{}) {
-	Sugar.Fatalw(msg, fieldsToArgs(fields)...)
-}
-
-// 对象日志方法
-func InfoObject(msg string, key string, obj interface{}) {
-	Sugar.Infow(msg, key, obj)
-}
-
-func ErrorObject(msg string, key string, obj interface{}) {
-	Sugar.Errorw(msg, key, obj)
-}
-
-func DebugObject(msg string, key string, obj interface{}) {
-	Sugar.Debugw(msg, key, obj)
-}
-
-func WarnObject(msg string, key string, obj interface{}) {
-	Sugar.Warnw(msg, key, obj)
-}
-
-func FatalObject(msg string, key string, obj interface{}) {
-	Sugar.Fatalw(msg, key, obj)
-}
-
-// 多对象日志方法
-func InfoObjects(msg string, keysAndObjects ...interface{}) {
-	Sugar.Infow(msg, keysAndObjects...)
-}
-
-func ErrorObjects(msg string, keysAndObjects ...interface{}) {
-	Sugar.Errorw(msg, keysAndObjects...)
-}
-
-func DebugObjects(msg string, keysAndObjects ...interface{}) {
-	Sugar.Debugw(msg, keysAndObjects...)
-}
-
-func WarnObjects(msg string, keysAndObjects ...interface{}) {
-	Sugar.Warnw(msg, keysAndObjects...)
-}
-
-func FatalObjects(msg string, keysAndObjects ...interface{}) {
-	Sugar.Fatalw(msg, keysAndObjects...)
-}
-
-// 将map转换为zap的参数列表
-func fieldsToArgs(fields map[string]interface{}) []interface{} {
-	args := make([]interface{}, 0, len(fields)*2)
-	for k, v := range fields {
-		args = append(args, k, v)
-	}
-	return args
 }

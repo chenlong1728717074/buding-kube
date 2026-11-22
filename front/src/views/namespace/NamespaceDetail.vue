@@ -2,7 +2,7 @@
   <div class="namespace-detail detail-page job-detail">
     <PageHeader :title="ns?.name || namespace" subtitle="命名空间详情" icon="ns" back @back="goBack">
       <template v-if="ns" #meta>
-        <el-tag :type="ns.active === 'Active' ? 'success' : 'warning'" effect="light">{{ ns.active === 'Active' ? '活跃' : ns.active === 'Terminating' ? '删除中' : ns.active }}</el-tag>
+        <el-tag :type="namespaceStatusType(ns.active)" effect="light">{{ namespaceStatusText(ns.active) }}</el-tag>
       </template>
       <el-button @click="refresh">
         <el-icon><Refresh /></el-icon>
@@ -150,7 +150,8 @@ import { eventApi } from '@/api/event'
 import type { EventVO } from '@/api/job'
 import { useClusterStore } from '@/stores/cluster'
 import { useTabBack } from '@/composables/useTabBack'
-import { formatDateTime } from '@/utils/job'
+import { formatDateTime } from '@/utils/format'
+import { namespaceStatusText, namespaceStatusType } from '@/utils/status'
 import '@/assets/styles/job-detail.css'
 
 type TabKey = 'quota' | 'limits' | 'network' | 'metadata' | 'events'

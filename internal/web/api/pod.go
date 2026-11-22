@@ -60,7 +60,7 @@ func (api *PodApi) Expel(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	if err := api.srv.Expel(query); err != nil {
+	if err := api.srv.Expel(ctx.Request.Context(), query); err != nil {
 		api.InternalError(ctx, "驱逐失败", err)
 		return
 	}
@@ -100,7 +100,7 @@ func (api *PodApi) Delete(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	if err := api.srv.Delete(pod); err != nil {
+	if err := api.srv.Delete(ctx.Request.Context(), pod); err != nil {
 		api.InternalError(ctx, "删除失败", err)
 		return
 	}
@@ -113,7 +113,7 @@ func (api *PodApi) List(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	list, err := api.srv.List(query)
+	list, err := api.srv.List(ctx.Request.Context(), query)
 	if err != nil {
 		api.InternalError(ctx, "查询失败", err)
 		return

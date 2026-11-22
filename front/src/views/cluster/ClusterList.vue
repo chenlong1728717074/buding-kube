@@ -246,7 +246,7 @@
                       </h3>
                       <span class="status-pill" :class="getStatusClass(cluster.status)">
                         <span class="status-dot" />
-                        <span>{{ getStatusText(cluster.status) }}</span>
+                        <span>{{ clusterStatusText(cluster.status) }}</span>
                       </span>
                     </div>
                     <p v-if="cluster.describe" class="cluster-describe" :title="cluster.describe">
@@ -435,6 +435,8 @@
           v-model:config="clusterForm.config"
           v-model:uri="clusterForm.uri"
           v-model:token="clusterForm.token"
+          v-model:ca-data="clusterForm.caData"
+          v-model:insecure="clusterForm.insecure"
         />
       </el-form>
       <template #footer>
@@ -471,6 +473,8 @@
           v-model:config="editClusterForm.config"
           v-model:uri="editClusterForm.uri"
           v-model:token="editClusterForm.token"
+          v-model:ca-data="editClusterForm.caData"
+          v-model:insecure="editClusterForm.insecure"
           :required-config="false"
           config-placeholder="如需更新配置，请粘贴完整的 kubeconfig 配置文件内容"
         />
@@ -484,6 +488,7 @@
 </template>
 
 <script setup lang="ts">
+import { clusterStatusText } from '@/utils/status'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -947,7 +952,9 @@ const clusterForm = ref({
   authType: 'config',
   config: '',
   uri: '',
-  token: ''
+  token: '',
+  caData: '',
+  insecure: false
 })
 
 const editClusterForm = ref({
@@ -957,7 +964,9 @@ const editClusterForm = ref({
   authType: 'config',
   config: '',
   uri: '',
-  token: ''
+  token: '',
+  caData: '',
+  insecure: false
 })
 
 const addRules = {
@@ -1024,10 +1033,8 @@ const loadClusters = async (preserveIndex = false) => {
         animateToIndex(0, true)
       }
     }
-  } catch (error) {
+  } catch {
     if (seq !== requestSeq) return
-    console.error('Failed to load clusters:', error)
-    ElMessage.error('加载集群列表失败')
     clusters.value = []
     total.value = 0
     animateToIndex(0, true)
@@ -1073,10 +1080,8 @@ const loadMoreClusters = async () => {
         }
       }
     }
-  } catch (error) {
+  } catch {
     if (seq !== requestSeq) return
-    console.error('Failed to load more clusters:', error)
-    ElMessage.error('加载更多集群失败')
   } finally {
     if (seq === requestSeq) {
       loadingMore.value = false
@@ -1124,18 +1129,6 @@ const getStatusClass = (status?: string) => {
 }
 
 // 获取状态文本
-const getStatusText = (status?: string) => {
-  const statusMap: Record<string, string> = {
-    Active: '运行中',
-    Running: '运行中',
-    Error: '异常',
-    Failed: '失败',
-    Pending: '等待中',
-    Unknown: '未知'
-  }
-  return (status && statusMap[status]) || status || '未知'
-}
-
 // 进入集群
 const enterCluster = (cluster: ClusterItem) => {
   clusterStore.setCurrentCluster({
@@ -1157,7 +1150,9 @@ const handleCommand = (command: string, cluster: ClusterItem) => {
       authType: 'config',
       config: '',
       uri: '',
-      token: ''
+      token: '',
+      caData: '',
+      insecure: false
     }
     showEditDialog.value = true
   } else if (command === 'delete') {
@@ -1171,9 +1166,8 @@ const handleCommand = (command: string, cluster: ClusterItem) => {
           await clusterApi.deleteCluster(cluster.name)
           ElMessage.success('删除成功')
           loadClusters(true)
-        } catch (error) {
-          console.error('Failed to delete cluster:', error)
-          ElMessage.error('删除失败')
+        } catch {
+          // 请求拦截器已提示错误
         }
       })
       .catch(() => {})
@@ -1193,7 +1187,9 @@ const handleAddCluster = async () => {
         describe: clusterForm.value.describe,
         config: clusterForm.value.authType === 'config' ? clusterForm.value.config : undefined,
         uri: clusterForm.value.authType === 'token' ? clusterForm.value.uri : undefined,
-        token: clusterForm.value.authType === 'token' ? clusterForm.value.token : undefined
+        token: clusterForm.value.authType === 'token' ? clusterForm.value.token : undefined,
+        caData: clusterForm.value.authType === 'token' ? clusterForm.value.caData : undefined,
+        insecure: clusterForm.value.authType === 'token' ? clusterForm.value.insecure : undefined
       })
       ElMessage.success('添加成功')
       showAddDialog.value = false
@@ -1204,12 +1200,13 @@ const handleAddCluster = async () => {
         authType: 'config',
         config: '',
         uri: '',
-        token: ''
+        token: '',
+        caData: '',
+        insecure: false
       }
       loadClusters(false)
-    } catch (error) {
-      console.error('Failed to add cluster:', error)
-      ElMessage.error('添加失败')
+    } catch {
+      // 请求拦截器已提示错误
     } finally {
       submitting.value = false
     }
@@ -1229,14 +1226,15 @@ const handleEditCluster = async () => {
         describe: editClusterForm.value.describe,
         config: editClusterForm.value.authType === 'config' ? editClusterForm.value.config : undefined,
         uri: editClusterForm.value.authType === 'token' ? editClusterForm.value.uri : undefined,
-        token: editClusterForm.value.authType === 'token' ? editClusterForm.value.token : undefined
+        token: editClusterForm.value.authType === 'token' ? editClusterForm.value.token : undefined,
+        caData: editClusterForm.value.authType === 'token' ? editClusterForm.value.caData : undefined,
+        insecure: editClusterForm.value.authType === 'token' ? editClusterForm.value.insecure : undefined
       })
       ElMessage.success('更新成功')
       showEditDialog.value = false
       loadClusters(true)
-    } catch (error) {
-      console.error('Failed to update cluster:', error)
-      ElMessage.error('更新失败')
+    } catch {
+      // 请求拦截器已提示错误
     } finally {
       submitting.value = false
     }

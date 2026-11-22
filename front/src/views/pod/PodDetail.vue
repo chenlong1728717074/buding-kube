@@ -266,7 +266,7 @@
             <div class="card-header"><span>调度</span></div>
           </template>
           <div class="jd-attr-grid">
-            <div class="jd-attr"><label>节点选择器</label><span class="mono">{{ formatMap(pod.nodeSelector) || '不限制' }}</span></div>
+            <div class="jd-attr"><label>节点选择器</label><span class="mono">{{ formatLabels(pod.nodeSelector) || '不限制' }}</span></div>
             <div class="jd-attr"><label>DNS 策略</label><span>{{ pod.dnsPolicy || '-' }}</span></div>
           </div>
           <h4 class="jd-section__title pd-tol-title">容忍（{{ pod.tolerations.length }}）</h4>
@@ -414,6 +414,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatLabels } from '@/utils/format'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type UploadFile, type UploadInstance } from 'element-plus'
@@ -513,19 +514,6 @@ const fetchDetail = async (silent = false) => {
     loading.value = false
     schedulePoll()
   }
-}
-
-const formatMap = (m?: Record<string, string> | null) =>
-  Object.entries(m || {})
-    .map(([k, v]) => `${k}=${v}`)
-    .join(', ')
-
-const base = computed(() => `/cluster/${clusterId.value}`)
-const goNamespace = () => router.push({ path: `${base.value}/namespace/detail`, query: { namespace: namespace.value } })
-const goNode = () => router.push({ path: `${base.value}/node/detail`, query: { hostname: pod.value?.nodeName } })
-const goOwner = () => {
-  if (!ownerPath.value || !pod.value) return
-  router.push({ path: `${base.value}/${ownerPath.value}`, query: { namespace: namespace.value, name: pod.value.ownerName } })
 }
 
 // 终端
@@ -631,8 +619,8 @@ const confirmDownload = async () => {
     window.URL.revokeObjectURL(url)
     ElMessage.success('文件下载成功')
     downloadVisible.value = false
-  } catch (error) {
-    ElMessage.error((error as Error)?.message || '下载文件失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     fileLoading.value = false
   }
@@ -693,6 +681,14 @@ const handleDelete = async () => {
   } catch {
     // 请求拦截器已提示错误
   }
+}
+
+const base = computed(() => `/cluster/${clusterId.value}`)
+const goNamespace = () => router.push({ path: `${base.value}/namespace/detail`, query: { namespace: namespace.value } })
+const goNode = () => router.push({ path: `${base.value}/node/detail`, query: { hostname: pod.value?.nodeName } })
+const goOwner = () => {
+  if (!ownerPath.value || !pod.value) return
+  router.push({ path: `${base.value}/${ownerPath.value}`, query: { namespace: namespace.value, name: pod.value.ownerName } })
 }
 
 onMounted(() => fetchDetail())

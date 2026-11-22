@@ -96,14 +96,8 @@ export function describeCron(expr?: string): string {
   return ''
 }
 
-// 2026-11-17 00:04:41
-export const formatDateTime = (value?: string | null) => {
-  if (!value) return '-'
-  const d = new Date(value)
-  if (isNaN(d.getTime()) || d.getFullYear() < 1971) return '-'
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
-}
+// 兼容已有的导入路径
+export { formatDateTime } from '@/utils/format'
 
 // 耗时: 未结束时计算到现在
 export const formatDuration = (start?: string | null, end?: string | null) => {

@@ -4,10 +4,8 @@ import (
 	"buding-kube/internal/kube"
 	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
-	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -104,29 +102,9 @@ func (api *BaseApi) GetParam(c *gin.Context, key string) string {
 	return c.Param(key)
 }
 
-func (api *BaseApi) GetParamUint(c *gin.Context, key string) (uint, error) {
-	param := c.Param(key)
-	val, err := strconv.ParseUint(param, 10, 64)
-	return uint(val), err
-}
-
-func (api *BaseApi) GetParamWithConvert(c *gin.Context, key string, converter func(string) (interface{}, error)) (interface{}, error) {
-	param := c.Param(key)
-	return converter(param)
-}
-
 // GetQuery 获取查询参数
 func (api *BaseApi) GetQuery(c *gin.Context, key string) (string, bool) {
 	return c.GetQuery(key)
-}
-
-func (api *BaseApi) GetQueryUint(c *gin.Context, key string) (uint, error) {
-	param, flag := c.GetQuery(key)
-	if !flag {
-		return 0, errors.New("获取不到id参数")
-	}
-	val, err := strconv.ParseUint(param, 10, 64)
-	return uint(val), err
 }
 
 // Success 成功响应
@@ -153,11 +131,6 @@ func (api *BaseApi) SuccessNoData(ctx *gin.Context) {
 		Msg:  "操作成功",
 	})
 }
-
-// SuccessWithData 仅数据的成功响应
-//func (api *BaseApi) SuccessWithData(c *gin.Context, data interface{}) {
-//	api.Success(c, "操作成功", data)
-//}
 
 // SuccessMsg 仅消息的成功响应
 func (api *BaseApi) SuccessMsg(c *gin.Context, msg string) {
@@ -194,11 +167,6 @@ func (api *BaseApi) InternalError(c *gin.Context, msg string, err error) {
 // NotFound 资源不存在错误
 func (api *BaseApi) NotFound(c *gin.Context, msg string) {
 	api.Fail(c, vo.CodeNotFound, msg)
-}
-
-// Unauthorized 未授权错误
-func (api *BaseApi) Unauthorized(c *gin.Context, msg string) {
-	api.Fail(c, vo.CodeUnauthorized, msg)
 }
 
 // Forbidden 权限不足错误

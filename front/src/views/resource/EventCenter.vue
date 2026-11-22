@@ -1,8 +1,9 @@
 <template>
   <div class="event-center list-page">
     <PageHeader title="事件中心" subtitle="查看集群中所有资源的事件，事件默认只保留 1 小时（由 apiserver 的 --event-ttl 决定）" icon="etcd">
+      <el-switch v-model="showAll" active-text="显示全部事件" @change="handleSearch" />
       <el-switch v-model="autoRefresh" active-text="自动刷新" />
-      <el-button @click="fetchList()">
+      <el-button @click="fetchList(false, true)">
         <el-icon><Refresh /></el-icon>
         刷新
       </el-button>
@@ -51,6 +52,10 @@
     </el-card>
 
     <el-card class="table-card">
+      <el-alert v-if="limitedInfo" type="info" show-icon :closable="false" class="ec-limit">
+        共 {{ limitedInfo.matched }} 条符合条件的事件，只显示最近 {{ limitedInfo.limit }} 条。
+        <el-link type="primary" @click="viewAll">显示全部</el-link>
+      </el-alert>
       <el-table v-loading="loading" :data="events" style="width: 100%" :header-cell-class-name="tableHeaderClass" :row-class-name="rowClass">
         <el-table-column label="类型" width="100" header-align="center" align="center">
           <template #default="{ row }">
@@ -133,10 +138,14 @@ const searchForm = reactive({
 })
 const pagination = reactive({ page: 1, pageSize: 20, total: 0 })
 const autoRefresh = ref(false)
+// 默认只显示最近 1000 条
+const showAll = ref(false)
+const limitedInfo = ref<{ matched: number; limit: number } | null>(null)
 
 // 快速切换条件时只采用最后一次查询的结果
 const nextRequest = useLatestRequest()
-const fetchList = async (silent = false) => {
+// refresh: 忽略后端的翻页缓存(刷新按钮、自动刷新)
+const fetchList = async (silent = false, refresh = false) => {
   if (!clusterId.value) return
   if (!silent) loading.value = true
   const isLatest = nextRequest()
@@ -148,12 +157,15 @@ const fetchList = async (silent = false) => {
       kind: searchForm.kind || undefined,
       name: searchForm.name.trim() || undefined,
       keyword: searchForm.keyword.trim() || undefined,
+      all: showAll.value || undefined,
+      refresh: refresh || undefined,
       page: pagination.page,
       pageSize: pagination.pageSize
     })
     if (!isLatest()) return
     events.value = resp.data?.items || []
     pagination.total = resp.data?.total || 0
+    limitedInfo.value = resp.data?.limited ? { matched: resp.data.matched, limit: resp.data.limit } : null
   } catch {
     if (!isLatest()) return
     events.value = []
@@ -163,9 +175,15 @@ const fetchList = async (silent = false) => {
   }
 }
 
+// 条件变化时重新查询
 const handleSearch = () => {
   pagination.page = 1
-  fetchList()
+  fetchList(false, true)
+}
+
+const viewAll = () => {
+  showAll.value = true
+  handleSearch()
 }
 
 const handleReset = () => {
@@ -186,7 +204,7 @@ let timer: ReturnType<typeof setInterval> | undefined
 const stopTimer = () => clearInterval(timer)
 const startTimer = () => {
   stopTimer()
-  if (autoRefresh.value) timer = setInterval(() => fetchList(true), 10000)
+  if (autoRefresh.value) timer = setInterval(() => fetchList(true, true), 10000)
 }
 watch(autoRefresh, startTimer)
 onActivated(startTimer)
@@ -205,6 +223,10 @@ watch(
 </script>
 
 <style scoped>
+.ec-limit {
+  margin-bottom: 12px;
+}
+
 .ec-object {
   display: flex;
   align-items: center;

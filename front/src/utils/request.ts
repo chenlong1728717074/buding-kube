@@ -96,31 +96,31 @@ request.interceptors.response.use(
     return data
   },
   (error) => {
-    console.error('响应错误:', error)
-    
+    // 主动取消的请求不提示
+    if (axios.isCancel(error)) return Promise.reject(error)
+
     if (error.response) {
       const { status, data } = error.response
       
-      switch (status) {
-        case 401:
-          redirectToLogin(data?.msg)
-          break
-        case 403:
-          ElMessage.error('没有权限访问该资源')
-          break
-        case 404:
-          ElMessage.error('网络连接异常，请检查网络')
-          break
-        case 500:
-          ElMessage.error('服务器内部错误')
-          break
-        default:
-          if (Number(data?.code) === 401) {
-            redirectToLogin(data?.msg)
-            break
-          }
-          ElMessage.error(data?.msg || `请求失败 (${status})`)
+      // 优先使用后端返回的原因
+      const backendMsg = typeof data?.msg === 'string' && data.msg ? data.msg : ''
+      if (status === 401 || Number(data?.code) === 401) {
+        redirectToLogin(data?.msg)
+      } else {
+        const fallback: Record<number, string> = {
+          400: '请求参数错误',
+          403: '没有权限访问该资源',
+          404: '请求的接口不存在',
+          413: '上传的文件过大',
+          500: '服务器内部错误',
+          502: '后端服务不可用',
+          503: '服务暂时不可用',
+          504: '请求超时，请稍后重试'
+        }
+        ElMessage.error(backendMsg || fallback[status] || `请求失败 (${status})`)
       }
+    } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+      ElMessage.error('请求超时，请稍后重试')
     } else if (error.request) {
       ElMessage.error('网络连接失败，请检查网络')
     } else {

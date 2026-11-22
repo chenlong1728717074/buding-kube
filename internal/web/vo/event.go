@@ -76,3 +76,11 @@ func Events2VO(events *corev1.EventList) []EventVO {
 	})
 	return result
 }
+
+// EventPageVO 事件分页; 默认只保留最近 Limit 条, Limited 为 true 时表示还有更早的事件未返回
+type EventPageVO struct {
+	PageResponse
+	Matched int  `json:"matched"`
+	Limited bool `json:"limited"`
+	Limit   int  `json:"limit"`
+}

@@ -160,9 +160,9 @@
         
         <el-table-column prop="status" label="状态" min-width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" effect="light" class="status-tag">
+            <el-tag :type="userStatusType(row.status)" effect="light" class="status-tag">
               <el-icon class="status-icon"><component :is="getStatusIcon(row.status)" /></el-icon>
-              <span>{{ getStatusText(row.status) }}</span>
+              <span>{{ userStatusText(row.status) }}</span>
             </el-tag>
           </template>
         </el-table-column>
@@ -183,7 +183,7 @@
         
         <el-table-column prop="createdAt" label="创建时间" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">
-            <span v-if="row.createdAt">{{ formatDate(row.createdAt) }}</span>
+            <span v-if="row.createdAt">{{ formatDateTime(row.createdAt) }}</span>
             <el-text v-else type="info">-</el-text>
           </template>
         </el-table-column>
@@ -363,6 +363,8 @@
 </template>
 
 <script setup lang="ts">
+import { userStatusText, userStatusType } from '@/utils/status'
+import { formatDateTime } from '@/utils/format'
 import { tableHeaderClass, tableCellClass } from '@/utils/table'
 import ListPagination from '@/components/ListPagination.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
@@ -508,37 +510,7 @@ const getRoleText = (role: string) => {
 }
 
 // 获取状态类型
-const getStatusType = (status: string) => {
-  switch (status) {
-    case 'active':
-      return 'success'
-    case 'inactive':
-      return 'danger'
-    case 'suspended':
-      return 'warning'
-    case 'expired':
-      return 'info'
-    default:
-      return 'info'
-  }
-}
-
 // 获取状态文本
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'active':
-      return '正常'
-    case 'inactive':
-      return '禁用'
-    case 'suspended':
-      return '暂停'
-    case 'expired':
-      return '过期'
-    default:
-      return status || '未知'
-  }
-}
-
 // 获取状态图标
 const getStatusIcon = (status: string) => {
   switch (status) {
@@ -580,16 +552,10 @@ const fetchUserList = async () => {
       ElMessage.warning(res.msg || '暂无用户数据')
     }
   } catch (error: any) {
-    console.error('获取用户列表失败:', error)
     userList.value = []
     pagination.total = 0
-    
-    if (error.response?.status === 403) {
-      ElMessage.error('没有权限访问用户列表，请联系管理员')
-    } else if (error.response?.status === 401) {
-      ElMessage.error('登录已过期，请重新登录')
+     else if (error.response?.status === 401) {
     } else {
-      ElMessage.error('获取用户列表失败')
     }
   } finally {
     loading.value = false
@@ -703,10 +669,8 @@ const handleToggleStatus = async (row: UserVO) => {
     await userApi.toggleUserEnable({ username: row.username, enable })
     ElMessage.success(`${action}成功`)
     fetchUserList()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(`${action}失败`)
-    }
+  } catch {
+    // 请求拦截器已提示错误
   }
 }
 
@@ -746,10 +710,8 @@ const handleResetPassword = async (row: UserVO) => {
     } else {
       ElMessage.success('密码已重置为 123456')
     }
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error('重置密码失败')
-    }
+  } catch {
+    // 请求拦截器已提示错误
   }
 }
 
@@ -773,8 +735,8 @@ const confirmDeleteUser = async () => {
     ElMessage.success('删除成功')
     deleteDialogVisible.value = false
     fetchUserList()
-  } catch (error: any) {
-    ElMessage.error('删除失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     deleteLoading.value = false
     deleteUserId.value = ''
@@ -827,10 +789,8 @@ const handleBatchDisable = async () => {
     }
     ElMessage.success('禁用成功')
     fetchUserList()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error('禁用失败')
-    }
+  } catch {
+    // 请求拦截器已提示错误
   }
 }
 
@@ -844,8 +804,8 @@ const confirmBatchDeleteUsers = async () => {
     selectedUsers.value = []
     batchDeleteDialogVisible.value = false
     fetchUserList()
-  } catch (error: any) {
-    ElMessage.error('批量删除失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     batchDeleteLoading.value = false
   }
@@ -894,8 +854,8 @@ const handleSubmit = async () => {
     
     dialogVisible.value = false
     fetchUserList()
-  } catch (error: any) {
-    ElMessage.error(isEdit.value ? '更新失败' : '创建失败')
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     submitLoading.value = false
   }
@@ -911,18 +871,6 @@ const handleDialogClose = () => {
 }
 
 // 格式化日期
-const formatDate = (dateString: string) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
 // 页面加载时获取用户列表
 onMounted(() => {
   fetchUserList()

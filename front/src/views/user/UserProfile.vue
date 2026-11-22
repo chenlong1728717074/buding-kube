@@ -100,8 +100,8 @@
                 </el-col>
                 <el-col :span="12">
                   <el-form-item label="状态">
-                    <el-tag :type="getStatusType(userInfo.status)">
-                      {{ getStatusText(userInfo.status) }}
+                    <el-tag :type="userStatusType(userInfo.status)">
+                      {{ userStatusText(userInfo.status) }}
                     </el-tag>
                   </el-form-item>
                 </el-col>
@@ -215,6 +215,7 @@
 </template>
 
 <script setup lang="ts">
+import { userStatusText, userStatusType } from '@/utils/status'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Edit, UserFilled, Camera, Lock, Phone} from '@element-plus/icons-vue'
@@ -473,23 +474,7 @@ const getRoleText = (role: string) => {
 }
 
 // 获取状态类型
-const getStatusType = (status: string) => {
-  const statusMap: Record<string, string> = {
-    active: 'success',
-    inactive: 'danger'
-  }
-  return statusMap[status] || 'info'
-}
-
 // 获取状态文本
-const getStatusText = (status: string) => {
-  const statusMap: Record<string, string> = {
-    active: '正常',
-    inactive: '禁用'
-  }
-  return statusMap[status] || status
-}
-
 // 初始化
 onMounted(() => {
   fetchUserInfo()
