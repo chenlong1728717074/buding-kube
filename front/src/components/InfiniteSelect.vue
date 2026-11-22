@@ -1,6 +1,6 @@
 <template>
   <el-select
-    v-model="internalValue"
+    :model-value="modelValue"
     :placeholder="placeholder"
     :style="style"
     :clearable="clearable"
@@ -8,6 +8,7 @@
     :remote="remote"
     :remote-method="handleRemoteMethod"
     :loading="loading"
+    @update:model-value="handleInput"
     @change="handleChange"
     @visible-change="handleVisibleChange"
     @clear="handleClear"
@@ -75,18 +76,14 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-// 内部值，用于处理v-model
-const internalValue = ref(props.modelValue)
+// 清空时 el-select 给出 undefined, 统一为空字符串(表示全部)
+const normalize = (value: any) => (value === undefined || value === null ? '' : value)
 
-// 监听外部值变化
-watch(() => props.modelValue, (newValue) => {
-  internalValue.value = newValue
-})
-
-// 监听内部值变化，向外发射事件
-watch(internalValue, (newValue) => {
-  emit('update:modelValue', newValue)
-})
+// 必须同步回写 v-model: el-select 先触发 update:modelValue 再触发 change,
+// 页面在 change 里直接读取绑定的值查询. 以前通过 watch 异步回写, change 时页面读到的还是上一次的值
+const handleInput = (value: any) => {
+  emit('update:modelValue', normalize(value))
+}
 
 const loading = ref(false)
 const options = ref<any[]>([])
@@ -200,7 +197,7 @@ const handleScroll = (event: Event) => {
 
 // 处理值变化
 const handleChange = (value: any) => {
-  emit('change', value)
+  emit('change', normalize(value))
 }
 
 // 处理清空

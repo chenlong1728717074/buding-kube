@@ -177,6 +177,7 @@ import YamlDialog from '@/components/YamlDialog.vue'
 import ResourceDetailDrawer from '@/components/resource/ResourceDetailDrawer.vue'
 import { fetchResourceYaml, resourceApi, type ResourceRef, type ResourceTableColumn, type ResourceTableRow } from '@/api/resource'
 import { useClusterStore } from '@/stores/cluster'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { tableHeaderClass, tableCellClass } from '@/utils/table'
 import { formatDateTime } from '@/utils/job'
@@ -238,6 +239,8 @@ const yamlAddVisible = ref(false)
 const yamlAddContent = ref('')
 const yamlAddLoading = ref(false)
 
+// 快速切换条件时只采用最后一次查询的结果
+const nextRequest = useLatestRequest()
 const fetchList = async (silent = false) => {
   if (!clusterId.value) {
     rows.value = []
@@ -245,6 +248,7 @@ const fetchList = async (silent = false) => {
     return
   }
   if (!silent) loading.value = true
+  const isLatest = nextRequest()
   try {
     const resp = await resourceApi.table({
       ...props.resource,
@@ -255,16 +259,18 @@ const fetchList = async (silent = false) => {
       page: pagination.page,
       pageSize: pagination.pageSize
     })
+    if (!isLatest()) return
     allColumns.value = resp.data?.columns || []
     rows.value = resp.data?.items || []
     pagination.total = resp.data?.total || 0
     loadError.value = ''
   } catch (e) {
+    if (!isLatest()) return
     rows.value = []
     pagination.total = 0
     loadError.value = (e as Error)?.message || ''
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 

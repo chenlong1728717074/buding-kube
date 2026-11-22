@@ -270,6 +270,8 @@ const formatTime = (time: string) => {
 // 处理命名空间变化
 const handleNamespaceChange = (namespace: string) => {
   searchForm.namespace = namespace
+  // 切换命名空间后回到第一页, 否则数据较少时当前页为空
+  pagination.page = 1
   if (clusterId.value) {
     fetchEndpointList()
   }

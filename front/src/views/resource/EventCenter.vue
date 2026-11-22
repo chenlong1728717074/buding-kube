@@ -107,6 +107,7 @@ import InfiniteSelect from '@/components/InfiniteSelect.vue'
 import { eventApi } from '@/api/event'
 import type { EventVO } from '@/api/job'
 import { useClusterStore } from '@/stores/cluster'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { tableHeaderClass } from '@/utils/table'
 import { formatDateTime } from '@/utils/job'
@@ -133,9 +134,12 @@ const searchForm = reactive({
 const pagination = reactive({ page: 1, pageSize: 20, total: 0 })
 const autoRefresh = ref(false)
 
+// 快速切换条件时只采用最后一次查询的结果
+const nextRequest = useLatestRequest()
 const fetchList = async (silent = false) => {
   if (!clusterId.value) return
   if (!silent) loading.value = true
+  const isLatest = nextRequest()
   try {
     const resp = await eventApi.list({
       clusterId: clusterId.value,
@@ -147,13 +151,15 @@ const fetchList = async (silent = false) => {
       page: pagination.page,
       pageSize: pagination.pageSize
     })
+    if (!isLatest()) return
     events.value = resp.data?.items || []
     pagination.total = resp.data?.total || 0
   } catch {
+    if (!isLatest()) return
     events.value = []
     pagination.total = 0
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 

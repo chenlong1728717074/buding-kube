@@ -148,6 +148,7 @@ import WorkloadCreateDialog from '@/components/workload/WorkloadCreateDialog.vue
 import { workloadApi, type WorkloadKind, type WorkloadVO } from '@/api/workload'
 import { fetchResourceYaml, resourceApi } from '@/api/resource'
 import { useClusterStore } from '@/stores/cluster'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { useClientPage } from '@/composables/useClientPage'
 import { tableHeaderClass, tableCellClass } from '@/utils/table'
@@ -184,6 +185,8 @@ const yamlAddContent = ref('')
 const yamlAddLoading = ref(false)
 const current = ref<WorkloadRow | null>(null)
 
+// 快速切换条件时只采用最后一次查询的结果
+const nextRequest = useLatestRequest()
 const fetchList = async () => {
   if (!clusterId.value) {
     list.value = []
@@ -191,14 +194,17 @@ const fetchList = async () => {
   }
   loading.value = true
   const params = { clusterId: clusterId.value, namespace: searchForm.namespace, name: searchForm.name.trim(), page: 1, pageSize: 100000 }
+  const isLatest = nextRequest()
   try {
     // 后端已按创建时间倒序
     const resp = await workloadApi.list(props.kind, params)
+    if (!isLatest()) return
     list.value = resp.data?.items || []
   } catch {
+    if (!isLatest()) return
     list.value = []
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 

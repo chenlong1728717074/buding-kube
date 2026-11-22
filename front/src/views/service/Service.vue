@@ -151,6 +151,7 @@ import ServiceFormDialog from '@/components/service/ServiceFormDialog.vue'
 import { serviceApi, type ServiceVO } from '@/api/service'
 import { fetchResourceYaml, resourceApi } from '@/api/resource'
 import { useClusterStore } from '@/stores/cluster'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { tableHeaderClass, tableCellClass } from '@/utils/table'
 import { formatDateTime } from '@/utils/job'
@@ -179,6 +180,8 @@ const yamlAddContent = ref('')
 const yamlAddLoading = ref(false)
 const current = ref<ServiceVO | null>(null)
 
+// 快速切换条件时只采用最后一次查询的结果
+const nextRequest = useLatestRequest()
 const fetchList = async () => {
   if (!clusterId.value) {
     serviceList.value = []
@@ -186,6 +189,7 @@ const fetchList = async () => {
     return
   }
   loading.value = true
+  const isLatest = nextRequest()
   try {
     const resp = await serviceApi.getServices({
       clusterId: clusterId.value,
@@ -195,12 +199,14 @@ const fetchList = async () => {
       page: pagination.page,
       pageSize: pagination.pageSize
     })
+    if (!isLatest()) return
     serviceList.value = resp.data?.items || []
     pagination.total = resp.data?.total || 0
   } catch {
+    if (!isLatest()) return
     serviceList.value = []
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 

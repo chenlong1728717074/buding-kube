@@ -198,6 +198,7 @@ import ResourceUsageBar from '@/components/ResourceUsageBar.vue'
 import { podApi, type PodVO } from '@/api/pod'
 import { fetchResourceYaml, resourceApi } from '@/api/resource'
 import { useClusterStore } from '@/stores/cluster'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import { tableHeaderClass, tableCellClass } from '@/utils/table'
 import { formatDateTime, podStatusTag, podStatusText } from '@/utils/job'
@@ -242,6 +243,8 @@ const logVisible = ref(false)
 const terminalVisible = ref(false)
 const current = ref<PodVO | null>(null)
 
+// 快速切换条件时只采用最后一次查询的结果
+const nextRequest = useLatestRequest()
 const fetchList = async (silent = false) => {
   if (!clusterId.value) {
     podList.value = []
@@ -249,6 +252,7 @@ const fetchList = async (silent = false) => {
     return
   }
   if (!silent) loading.value = true
+  const isLatest = nextRequest()
   try {
     const resp = await podApi.getList({
       clusterId: clusterId.value,
@@ -260,12 +264,14 @@ const fetchList = async (silent = false) => {
       page: pagination.page,
       pageSize: pagination.pageSize
     })
+    if (!isLatest()) return
     podList.value = resp.data?.items || []
     pagination.total = resp.data?.total || 0
   } catch {
+    if (!isLatest()) return
     if (!silent) podList.value = []
   } finally {
-    loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
