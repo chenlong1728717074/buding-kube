@@ -20,11 +20,11 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
-	"sigs.k8s.io/yaml"
 )
 
 // defaultLogTailLines 未指定起始时间和行数时默认返回的日志行数
@@ -67,77 +67,120 @@ func (s *PodService) Delete(pod dto.PodDTO) error {
 	return nil
 }
 
-// List 查询 Pod 列表.
-// 列表只返回概要信息, YAML 由详情接口按需加载, 避免 Pod 较多时逐个序列化、响应体过大
+// List 查询 Pod 列表, 附带 metrics-server 提供的实时用量.
+// 列表只返回概要信息, YAML 按需加载, 避免 Pod 较多时逐个序列化、响应体过大
 func (s *PodService) List(query dto.PodQueryDTO) ([]vo.PodVO, error) {
 	clientSet, err := ClusterMap.GetClientSet(query.ClusterId)
 	if err != nil {
 		return nil, err
 	}
-	listOptions := metav1.ListOptions{}
+	ctx := context.TODO()
+	listOptions := metav1.ListOptions{ResourceVersion: "0"}
 	if query.Status != "" {
 		listOptions.FieldSelector = fmt.Sprintf("status.phase=%s", query.Status)
 	}
-	pods, err := clientSet.CoreV1().Pods(query.Namespace).List(context.TODO(), listOptions)
+	// 用量和列表同时查询
+	metricsCh := make(chan map[string]*podMetrics, 1)
+	go func() {
+		metricsCh <- fetchPodMetrics(ctx, clientSet, query.Namespace)
+	}()
+	pods, err := clientSet.CoreV1().Pods(query.Namespace).List(ctx, listOptions)
 	if err != nil {
 		logs.Error("获取pod失败: %v", err)
 		return nil, err
 	}
+	metrics := <-metricsCh
 	result := make([]vo.PodVO, 0, len(pods.Items))
 	for i := range pods.Items {
 		item := &pods.Items[i]
 		if query.Keyword != "" && !strings.Contains(item.Name, query.Keyword) {
 			continue
 		}
-		result = append(result, vo.Pod2VO(item))
+		row := vo.Pod2VO(item)
+		if metrics != nil {
+			row.PodUsage = metrics[item.Namespace+"/"+item.Name].usage()
+		}
+		result = append(result, row)
 	}
-	// 按照创建时间倒序排序
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreationTimestamp.After(result[j].CreationTimestamp)
-	})
+	sortPods(result, query.SortBy, query.SortOrder == "asc")
 	return result, nil
 }
 
-func (s *PodService) GetById(query dto.PodDTO) (*vo.PodInfoVO, error) {
+// sortPods 排序; 没有用量数据的排在最后
+func sortPods(items []vo.PodVO, sortBy string, asc bool) {
+	value := func(p *vo.PodVO) (int64, bool) {
+		switch sortBy {
+		case "cpu":
+			if p.CPUUsage == nil {
+				return 0, false
+			}
+			return *p.CPUUsage, true
+		case "memory":
+			if p.MemoryUsage == nil {
+				return 0, false
+			}
+			return *p.MemoryUsage, true
+		case "restarts":
+			return int64(p.Restarts), true
+		default:
+			return p.CreationTimestamp.UnixNano(), true
+		}
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		if sortBy == "name" {
+			if asc {
+				return items[i].Name < items[j].Name
+			}
+			return items[i].Name > items[j].Name
+		}
+		vi, oki := value(&items[i])
+		vj, okj := value(&items[j])
+		if oki != okj {
+			return oki
+		}
+		if vi == vj {
+			return items[i].Name < items[j].Name
+		}
+		if asc {
+			return vi < vj
+		}
+		return vi > vj
+	})
+}
+
+// Get 容器组详情: 属性、容器状态、存储卷和事件
+func (s *PodService) Get(ctx context.Context, query dto.PodDTO) (*vo.PodDetailVO, error) {
 	clientSet, err := ClusterMap.GetClientSet(query.ClusterId)
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.TODO()
 	pod, err := clientSet.CoreV1().Pods(query.Namespace).Get(ctx, query.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("容器组 %s 不存在", query.Name)
+		}
 		logs.Error("获取pod失败: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("获取容器组失败: %v", err)
 	}
-	yamlData, err := podToYaml(pod)
-	if err != nil {
-		logs.Error("序列化pod失败: %v", err)
-		return nil, err
+	result := vo.Pod2DetailVO(pod)
+	// ReplicaSet 按名称推断不出时(名称被截断等), 查一次 ReplicaSet 的所属控制器
+	if result.OwnerKind == "ReplicaSet" {
+		if rs, rsErr := clientSet.AppsV1().ReplicaSets(pod.Namespace).Get(ctx, result.OwnerName, metav1.GetOptions{}); rsErr == nil {
+			if ref := metav1.GetControllerOf(rs); ref != nil && ref.Kind == "Deployment" {
+				result.OwnerKind, result.OwnerName = ref.Kind, ref.Name
+			}
+		}
 	}
-	events, err := clientSet.CoreV1().Events(query.Namespace).List(ctx, metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("involvedObject.kind=Pod,involvedObject.name=%s", query.Name),
-	})
-	if err != nil {
-		logs.Error("获取pod事件失败: %v", err)
-		return nil, err
+	result.Events = listObjectEvents(ctx, clientSet, pod.Namespace, string(pod.UID))
+	if pod.Status.Phase == v1.PodRunning {
+		if m := fetchSinglePodMetrics(ctx, clientSet, pod.Namespace, pod.Name); m != nil {
+			result.PodUsage = m.usage()
+			for i := range result.ContainerUsages {
+				result.ContainerUsages[i].PodUsage = m.containerUsage(result.ContainerUsages[i].Name)
+			}
+		}
 	}
-	result := vo.Pod2InfoVO(pod, events)
-	result.Yaml = yamlData
 	return &result, nil
-}
-
-// podToYaml 生成精简后的 Pod YAML(去掉 managedFields、status 等运行时字段)
-func podToYaml(pod *v1.Pod) (string, error) {
-	podCopy := pod.DeepCopy()
-	podCopy.ManagedFields = nil
-	podCopy.ResourceVersion = ""
-	podCopy.CreationTimestamp = metav1.Time{}
-	podCopy.Status = v1.PodStatus{}
-	data, err := yaml.Marshal(podCopy)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
 }
 
 func (s *PodService) Expel(query dto.PodDTO) error {

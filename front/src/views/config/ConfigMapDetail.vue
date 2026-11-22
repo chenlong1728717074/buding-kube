@@ -1,32 +1,29 @@
 <template>
-  <div class="configmap-detail">
-    <div class="page-header">
-      <div class="header-left">
-        <el-button @click="handleBack">
-          <el-icon><ArrowLeft /></el-icon>
-          返回
-        </el-button>
-        <h1>{{ cm?.name || name }}</h1>
-      </div>
-      <div class="header-right">
-        <el-button @click="handleMore('editInfo')">
-          <el-icon><EditPen /></el-icon>
-          编辑
-        </el-button>
-        <el-button @click="handleMore('editData')">
-          <el-icon><Setting /></el-icon>
-          编辑设置
-        </el-button>
-        <el-button @click="handleMore('yaml')">
-          <el-icon><Document /></el-icon>
-          查看YAML
-        </el-button>
-        <el-button type="danger" @click="openDelete">
-          <el-icon><Delete /></el-icon>
-          删除
-        </el-button>
-      </div>
-    </div>
+  <div class="configmap-detail detail-page">
+    <PageHeader
+      :title="cm?.name || name"
+      :subtitle="cm ? `命名空间：${cm.namespace}` : 'ConfigMap 详情'"
+      icon="cm"
+      back
+      @back="handleBack"
+    >
+      <el-button @click="handleMore('editInfo')">
+        <el-icon><EditPen /></el-icon>
+        编辑
+      </el-button>
+      <el-button @click="handleMore('editData')">
+        <el-icon><Setting /></el-icon>
+        编辑设置
+      </el-button>
+      <el-button @click="handleMore('yaml')">
+        <el-icon><Document /></el-icon>
+        查看YAML
+      </el-button>
+      <el-button type="danger" @click="openDelete">
+        <el-icon><Delete /></el-icon>
+        删除
+      </el-button>
+    </PageHeader>
 
     <div v-if="loading" class="loading-container">
       <el-skeleton :rows="8" animated />
@@ -38,11 +35,11 @@
           <div class="card-header"><span>基本信息</span></div>
         </template>
         <div class="info-grid">
-          <div class="info-item"><label>名称：</label><span>{{ cm.name }}</span></div>
-          <div class="info-item"><label>命名空间：</label><span>{{ cm.namespace }}</span></div>
-          <div class="info-item"><label>别名：</label><span>{{ cm.alias || '-' }}</span></div>
-          <div class="info-item"><label>备注：</label><span>{{ cm.describe || '-' }}</span></div>
-          <div class="info-item"><label>创建时间：</label><span>{{ formatDate(cm.creationTimestamp) }}</span></div>
+          <div class="info-item"><label>名称</label><span>{{ cm.name }}</span></div>
+          <div class="info-item"><label>命名空间</label><span>{{ cm.namespace }}</span></div>
+          <div class="info-item"><label>别名</label><span>{{ cm.alias || '-' }}</span></div>
+          <div class="info-item"><label>备注</label><span>{{ cm.describe || '-' }}</span></div>
+          <div class="info-item"><label>创建时间</label><span>{{ formatDate(cm.creationTimestamp) }}</span></div>
         </div>
       </el-card>
 
@@ -118,26 +115,25 @@
     </div>
 
     <!-- 编辑信息(与命名空间编辑弹窗同款) -->
-    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="80%" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="800px" :close-on-click-modal="false" class="config-dialog form-dialog--compact">
       <template #header>
         <div class="dialog-header">
           <div>
             <h3 class="dialog-title">编辑信息</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">ConfigMap 基础信息</div>
           </div>
         </div>
       </template>
       <div class="config-editor">
         <div class="config-content">
-          <el-form :model="editInfoForm" label-width="100px" class="configmap-form">
+          <el-form :model="editInfoForm" label-width="96px" class="configmap-form">
             <el-form-item label="名称">
               <el-input :model-value="cm?.name || ''" disabled />
             </el-form-item>
             <el-form-item label="别名" prop="alias">
-              <el-input v-model="editInfoForm.alias" placeholder="请输入别名" />
+              <el-input v-model="editInfoForm.alias" placeholder="请输入别名" maxlength="50" show-word-limit />
             </el-form-item>
             <el-form-item label="备注" prop="describe">
-              <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" placeholder="请输入备注" />
+              <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" placeholder="请输入备注" maxlength="200" show-word-limit />
             </el-form-item>
           </el-form>
         </div>
@@ -151,7 +147,7 @@
     </el-dialog>
 
     <!-- 编辑数据设置(与列表页同款) -->
-    <el-dialog v-model="editDataDialogVisible" title="编辑数据设置" width="1600px" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="editDataDialogVisible" title="编辑数据设置" width="1200px" top="6vh" :close-on-click-modal="false" class="config-dialog form-dialog--wide">
       <template #header>
         <div class="dialog-header">
           <h3 class="dialog-title">编辑数据设置</h3>
@@ -199,27 +195,14 @@
     </el-dialog>
 
     <!-- 查看/编辑YAML（修改时不允许选择集群） -->
-    <el-dialog v-model="yamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <h3 class="dialog-title">查看/编辑YAML</h3>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-editor-wrapper">
-            <YamlEditor :model-value="yamlContent" :readonly="false" height="100%" @update:modelValue="val => yamlContent = val" />
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlDialogVisible = false">关闭</el-button>
-          <el-button type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
-          <span style="color:#909399;font-size:12px;margin-left:10px;">应用到当前集群：{{ clusterId }}</span>
-        </div>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="yamlDialogVisible"
+      title="查看/编辑YAML"
+      v-model:content="yamlContent"
+      :readonly="false"
+      :submitting="yamlApplyLoading"
+      @confirm="confirmApplyYaml"
+    />
 
     <!-- 删除确认 -->
     <DeleteConfirmDialog
@@ -234,20 +217,23 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/PageHeader.vue'
 import { ref, reactive, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, EditPen, Document, Setting, Delete } from '@element-plus/icons-vue'
+import { EditPen, Document, Setting, Delete } from '@element-plus/icons-vue'
 import { configMapApi, type ConfigMapVO } from '@/api/configmap'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
-import YamlEditor from '@/components/YamlEditor.vue'
+import YamlDialog from '@/components/YamlDialog.vue'
 import KVEditorPane from '@/components/KVEditorPane.vue'
 import '@/assets/styles/config-editor.css'
+import { useTabBack } from '@/composables/useTabBack'
 
 type KvRow = { key: string; value: string }
 
 const route = useRoute()
-const router = useRouter()
+// 返回当前标签内的上一页
+const goBack = useTabBack()
 const clusterId = ref('')
 const namespace = ref('')
 const name = ref('')
@@ -347,7 +333,7 @@ const yamlApplyLoading = ref(false)
 const deleteDialogVisible = ref(false)
 const deleteLoading = ref(false)
 
-const handleBack = () => router.back()
+const handleBack = () => goBack()
 
 const handleMore = (cmd: string) => {
   switch (cmd) {
@@ -371,15 +357,15 @@ const handleMore = (cmd: string) => {
   }
 }
 
-const fetchDetailFromList = async () => {
+// 查询 ConfigMap 详情(之前是拉取整个命名空间的列表再按名称查找)
+const fetchDetail = async () => {
   if (!clusterId.value) return
   loading.value = true
   try {
-    const resp = await configMapApi.getList({ clusterId: clusterId.value, namespace: namespace.value, page: 1, pageSize: 10000 })
+    const resp = await configMapApi.getInfo({ clusterId: clusterId.value, namespace: namespace.value, name: name.value })
     if (resp.code === 200) {
-      const items = resp.data.items || []
-      const found = items.find((it: ConfigMapVO) => it.name === name.value)
-      cm.value = found || null
+      const found = resp.data || null
+      cm.value = found
       dataRows.value = Object.entries(found?.data || {}).map(([k,v]) => ({ key: k, value: v }))
       labelRows.value = Object.entries(found?.labels || {}).map(([k,v]) => ({ key: k, value: String(v ?? '') }))
       annotationRows.value = Object.entries(found?.annotations || {})
@@ -400,7 +386,7 @@ const confirmEditInfo = async () => {
     await configMapApi.updateInfo({ clusterId: clusterId.value, namespace: namespace.value, name: name.value, alias: editInfoForm.alias, describe: editInfoForm.describe })
     ElMessage.success('更新成功')
     editInfoDialogVisible.value = false
-    fetchDetailFromList()
+    fetchDetail()
   } catch (e) {
     ElMessage.error('更新失败')
   } finally {
@@ -416,7 +402,7 @@ const confirmEditData = async () => {
     await configMapApi.updateData({ clusterId: clusterId.value, namespace: namespace.value, name: name.value, data })
     ElMessage.success('保存成功')
     editDataDialogVisible.value = false
-    fetchDetailFromList()
+    fetchDetail()
   } catch (e) {
     ElMessage.error('保存失败')
   } finally {
@@ -431,7 +417,7 @@ const confirmApplyYaml = async () => {
     await configMapApi.applyYaml({ clusterId: clusterId.value, namespace: namespace.value, yaml: yamlContent.value })
     ElMessage.success('YAML应用成功')
     yamlDialogVisible.value = false
-    fetchDetailFromList()
+    fetchDetail()
   } catch (e) {
     ElMessage.error('YAML应用失败')
   } finally {
@@ -446,7 +432,7 @@ const confirmDelete = async () => {
     await configMapApi.delete({ clusterId: clusterId.value, namespace: namespace.value, name: name.value })
     ElMessage.success('删除成功')
     deleteDialogVisible.value = false
-    router.back()
+    goBack()
   } catch (e) {
     ElMessage.error('删除失败')
   } finally {
@@ -467,7 +453,7 @@ onMounted(() => {
   clusterId.value = route.query.clusterId as string || ''
   namespace.value = route.query.namespace as string || ''
   name.value = route.query.name as string || ''
-  fetchDetailFromList()
+  fetchDetail()
 })
 </script>
 

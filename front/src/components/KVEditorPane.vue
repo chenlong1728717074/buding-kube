@@ -157,21 +157,191 @@ defineExpose({
 </script>
 
 <style scoped>
-.kv-split { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
-.kv-left { display: flex; flex-direction: column; border: 1px solid #cfe5ff; border-radius: 12px; background: #f0f9ff; }
-.kv-list { padding: 6px; }
-.kv-item { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; cursor: pointer; }
-.kv-item.active { background: #eef6ff; }
-.kv-key { color: #1e3a8a; font-weight: 600; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.kv-icon { color: #3b82f6; }
-.kv-right { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
-.kv-value { flex: 1; }
-.kv-value :deep(.el-textarea) { height: 100%; }
-.kv-value :deep(.el-textarea__inner) { height: 100% !important; resize: none; }
-.kv-right-header { display: flex; }
-.kv-right-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.kv-right-actions__buttons { display: flex; gap: 8px; }
-.kv-right-empty { border: 1px dashed #cfe5ff; border-radius: 12px; padding: 18px; background: #ffffff; justify-content: center; }
-.kv-empty-title { font-weight: 700; color: #0f172a; margin-bottom: 6px; }
-.kv-empty-sub { color: #64748b; }
+.kv-split {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+}
+
+/* 左侧键列表 */
+.kv-left {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid #e3ecfb;
+  border-radius: 12px;
+  background: #f8fbff;
+  overflow: hidden;
+}
+
+.kv-list {
+  padding: 8px;
+}
+
+.kv-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.kv-item:hover {
+  background: #eef4ff;
+}
+
+.kv-item.active {
+  border-color: #d4e2fb;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.kv-item.active::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #3b74f2;
+}
+
+.kv-icon {
+  color: #94a3b8;
+}
+
+.kv-item.active .kv-icon {
+  color: #3b74f2;
+}
+
+.kv-key {
+  overflow: hidden;
+  color: #334155;
+  font-family: 'SF Mono', Consolas, Monaco, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kv-item.active .kv-key {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+/* 删除按钮只在悬停 / 选中时显示, 列表更干净 */
+.kv-item :deep(.el-button) {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.kv-item:hover :deep(.el-button),
+.kv-item.active :deep(.el-button),
+.kv-item :deep(.el-button:focus-visible) {
+  opacity: 1;
+}
+
+/* 右侧编辑区 */
+.kv-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.kv-right-header {
+  display: flex;
+}
+
+.kv-right-header :deep(.el-input__wrapper) {
+  border-radius: 10px !important;
+}
+
+.kv-right-header :deep(.el-input__inner) {
+  font-family: 'SF Mono', Consolas, Monaco, monospace;
+  font-weight: 600;
+}
+
+.kv-value {
+  flex: 1;
+  min-height: 0;
+}
+
+.kv-value :deep(.el-textarea) {
+  height: 100%;
+}
+
+.kv-value :deep(.el-textarea__inner) {
+  height: 100% !important;
+  padding: 12px 14px;
+  border-radius: 10px !important;
+  background: #fbfcfe;
+  font-family: 'SF Mono', Consolas, Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  resize: none;
+}
+
+.kv-right-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kv-right-actions__buttons {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.kv-right-actions__buttons :deep(.el-button) {
+  border-radius: 8px !important;
+}
+
+/* 空状态 */
+.kv-right-empty {
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  border: 1px dashed #cbdaf3;
+  border-radius: 12px;
+  background: #fbfcff;
+  text-align: center;
+}
+
+.kv-empty-title {
+  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.kv-empty-sub {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+@media (max-width: 900px) {
+  .kv-split {
+    grid-template-columns: 1fr;
+    height: auto !important;
+  }
+
+  .kv-left {
+    max-height: 220px;
+  }
+
+  .kv-right {
+    min-height: 320px;
+  }
+}
 </style>

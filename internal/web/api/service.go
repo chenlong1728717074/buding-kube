@@ -25,7 +25,8 @@ func NewKubeSrvApi(router *gin.RouterGroup) *KubeSrvApi {
 func (api *KubeSrvApi) Router() {
 	api.router.GET("/list", api.List)
 	api.router.GET("", api.GetInfo)
-	api.router.GET("/yaml", api.GetYaml)
+	api.router.POST("", middleware.Blocker(), BindJSON[dto.ServiceFormDTO](api.Create))
+	api.router.PUT("", middleware.Blocker(), BindJSON[dto.ServiceFormDTO](api.Update))
 	api.router.DELETE("", middleware.Blocker(), api.Delete)
 }
 
@@ -64,7 +65,7 @@ func (api *KubeSrvApi) GetInfo(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	info, err := api.srv.GetInfo(query)
+	info, err := api.srv.Get(ctx.Request.Context(), query)
 	if err != nil {
 		api.InternalError(ctx, "获取详情失败:", err)
 		return
@@ -72,16 +73,20 @@ func (api *KubeSrvApi) GetInfo(ctx *gin.Context) {
 	api.SuccessWithData(ctx, info)
 }
 
-func (api *KubeSrvApi) GetYaml(ctx *gin.Context) {
-	var query dto.ServiceBaseDTO
-	if err := api.BindQuery(ctx, &query); err != nil {
-		api.ParamBindError(ctx, err)
+// Create 创建服务
+func (api *KubeSrvApi) Create(ctx *gin.Context, req dto.ServiceFormDTO) {
+	if err := api.srv.Create(ctx.Request.Context(), req, api.CurrentUser(ctx).Username); err != nil {
+		api.InternalError(ctx, "创建失败", err)
 		return
 	}
-	yaml, err := api.srv.GetYaml(query)
-	if err != nil {
-		api.InternalError(ctx, "获取YAML失败:", err)
+	api.SuccessMsg(ctx, "创建成功")
+}
+
+// Update 编辑服务
+func (api *KubeSrvApi) Update(ctx *gin.Context, req dto.ServiceFormDTO) {
+	if err := api.srv.Update(ctx.Request.Context(), req); err != nil {
+		api.InternalError(ctx, "更新失败", err)
 		return
 	}
-	api.SuccessWithData(ctx, yaml)
+	api.SuccessMsg(ctx, "更新成功")
 }

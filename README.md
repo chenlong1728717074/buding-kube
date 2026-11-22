@@ -1,7 +1,7 @@
 # buding-kube
 
 ![License](https://img.shields.io/github/license/chenlong1728717074/buding-kube)
-![Go Version](https://img.shields.io/badge/Go-1.18+-blue)
+![Go Version](https://img.shields.io/badge/Go-1.25+-blue)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-1.20+-blue)
 
 ## 📝 介绍
@@ -23,69 +23,38 @@ buding-kube 采用前后端分离的架构设计：
 
 ## ✅ 已实现功能
 
-### 集群管理
-- 多集群接入与管理
-- 集群状态监控
-- 集群详情查看
-- 集群添加/删除/更新
+### 集群
+- 多集群接入、切换与管理，集群概览（资源用量、最近告警事件）
+- 节点：资源分配与实时用量、标签 / 污点编辑、停止调度、排空节点（cordon + drain，遵守 PDB）
+- 事件中心：按集群 / 命名空间 / 类型 / 资源查看全部事件
+- Web kubectl：集群级 kubectl / helm 终端（仅管理员）
 
-### 资源管理
-- 命名空间管理
-- Pod 资源查看与操作
-  - Pod 详情查看
-  - Pod 日志查看
-  - Pod 终端操作
-  - Pod 删除操作
-  - Pod 驱逐
-  - 文件上传/下载（运行态）
-  - 运行态操作守卫（非运行态禁用日志/上传/下载/进入容器）
+### 工作负载
+- Deployment / StatefulSet / DaemonSet：分步创建、扩缩容、更新镜像、重新创建、版本回退
+- 弹性伸缩（HPA）：按 CPU / 内存使用率自动调整副本数，工作负载详情中可直接设置
+- ReplicaSet、Job / CronJob（重新执行、立即执行、暂停）
+- Pod：详情、日志、容器终端、文件上传下载、CPU / 内存用量
 
-### 体验优化
-- 标签式导航与页面状态保留
-- 登录与管理页浅蓝灰主题、圆润风格
-- 统一错误提示与 401 自动跳转登录
+### 服务与网络
+- Service、Ingress（表单创建）、Endpoint / EndpointSlice、IngressClass
+- 网络策略（NetworkPolicy）：表单 + 常用模板
 
-### 系统功能
-- RESTful API
-- 跨域请求支持
-- 结构化日志记录
-- 健壮的异常恢复机制
+### 配置、存储与策略
+- ConfigMap / Secret / ServiceAccount
+- PV / PVC 分步创建，StorageClass（存储系统模板）
+- 资源配额（ResourceQuota）、默认资源限制（LimitRange），命名空间详情中可直接设置
+- 中断预算（PDB）、优先级（PriorityClass）
+- CRD 及其实例（例如 cert-manager 的 Certificate）的查看与 YAML 编辑
 
-## 🚧 开发中功能
-
-以下功能正在积极开发中：
-
-- **工作负载管理**
-  - Deployment
-  - StatefulSet
-  - DaemonSet
-  - Job/CronJob
-
-- **服务与网络**
-  - Service
-  - Ingress
-  - NetworkPolicy
-
-- **配置与存储**
-  - ConfigMap/Secret
-  - PV/PVC
-  - StorageClass
-
-- **集群管理**
-  - Node 管理
-  - 集群监控
-  - 事件查看
-
-- **安全性**
-  - 用户认证
-  - 权限管理
-  - 资源隔离
+### 通用
+- 所有资源支持查看 / 编辑 YAML、YAML 创建
+- 标签式导航（一个菜单一个窗口）与页面状态保留
 
 ## 📦 快速开始
 
 ### 前置条件
 - Kubernetes 集群 (v1.20+)
-- Go 1.18+ (仅开发需要)
+- Go 1.25+ (仅开发需要)
 - Node.js 16+ (仅前端开发需要)
 
 ### 部署方式
@@ -98,6 +67,18 @@ cd buding-kube
 # 部署到 Kubernetes（示例）
 kubectl apply -f devlop.yaml
 ```
+
+### 环境变量
+
+| 变量 | 说明 |
+| --- | --- |
+| `KUBE_RUNTIME_PORT` | 后端监听端口 |
+| `JWT_SECRET_KEY` / `KUBE_SECRET_KEY` | 登录令牌签名密钥 / 集群凭证加密密钥，生产环境必须修改 |
+| `APP_ENV=demo` | 演示模式：禁止写操作和终端 |
+| `KUBECTL_IMAGE` | Web kubectl 使用的镜像，默认 `alpine/k8s:1.35.10`，内网环境改为可访问的镜像 |
+
+> Web kubectl 首次使用时会在目标集群创建命名空间 `buding-kubectl`、绑定 cluster-admin 的服务账户，并为每个用户运行一个容器组（24 小时后回收）；平台接入集群所用的凭证需要有这些权限。
+> 生产环境通过 Nginx 代理时，`/api/terminal/` 需要转发 WebSocket（`Upgrade` / `Connection` 请求头）。
 
 ## 🔧 开发说明
 
@@ -133,12 +114,3 @@ pnpm preview
 **注意：本项目目前处于积极开发阶段，API 和功能可能会有变动。**
 
 欢迎有兴趣的开发者参与贡献，共同完善这个轻量级的 Kubernetes 多集群管理工具！
-
-#### 特技
-
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)

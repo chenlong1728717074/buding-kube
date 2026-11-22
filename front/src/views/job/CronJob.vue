@@ -1,14 +1,15 @@
 <template>
-  <div class="cronjob-list">
-    <div class="page-header">
-      <h1>CronJob管理</h1>
-      <div class="header-actions">
-        <el-button type="success" @click="openYamlAdd">
-          <el-icon><Document /></el-icon>
-          YAML添加
-        </el-button>
-      </div>
-    </div>
+  <div class="cronjob-list list-page">
+    <PageHeader title="CronJob管理" subtitle="管理按计划周期执行的定时任务" icon="cronjob">
+      <el-button type="primary" @click="createVisible = true">
+        <el-icon><Plus /></el-icon>
+        创建定时任务
+      </el-button>
+      <el-button type="success" @click="openYamlAdd">
+        <el-icon><Document /></el-icon>
+        YAML添加
+      </el-button>
+    </PageHeader>
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
@@ -22,12 +23,13 @@
           />
         </el-form-item>
         <el-form-item label="名称">
-          <el-input 
-            v-model="searchForm.name" 
-            placeholder="输入CronJob名称" 
-            clearable
-            style="width: 200px"
-          />
+          <el-input v-model="searchForm.keyword" placeholder="输入CronJob名称" clearable style="width: 200px" @keyup.enter="handleSearch" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 140px" @change="handleSearch">
+            <el-option label="运行中" value="Active" />
+            <el-option label="已暂停" value="Suspended" />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
@@ -43,67 +45,63 @@
     </el-card>
 
     <el-card class="table-card">
-      <el-table 
-        v-loading="loading" 
-        :data="cronJobList" 
-        stripe
+      <el-table
+        v-loading="loading"
+        :data="cronJobList"
         style="width: 100%"
+        :header-cell-class-name="tableHeaderClass"
+        :cell-class-name="tableCellClass"
       >
-        <el-table-column prop="name" label="名称" min-width="120" header-align="center" align="center">
+        <el-table-column prop="name" label="名称" min-width="180" header-align="center" align="center">
           <template #default="{ row }">
-            <el-link type="primary" @click="handleDetail(row)" :title="row.describe || ''">
-              {{ row.name }}
-            </el-link>
+            <div class="name-cell">
+              <el-link type="primary" :title="row.describe || ''" @click="handleDetail(row)">{{ row.name }}</el-link>
+              <span v-if="row.alias" class="name-cell__alias">{{ row.alias }}</span>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column prop="namespace" label="命名空间" min-width="100" header-align="center" align="center">
+        <el-table-column label="状态" min-width="100" header-align="center" align="center">
           <template #default="{ row }">
-            <el-link type="primary" @click="handleNamespaceDetail(row)">
-              {{ row.namespace }}
-            </el-link>
+            <el-tag :type="row.suspend ? 'info' : 'success'" size="small">{{ row.suspend ? '已暂停' : '运行中' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="alias" label="别名" min-width="80" header-align="center" align="center">
+        <el-table-column prop="schedule" label="调度规则" min-width="170" header-align="center" align="center">
           <template #default="{ row }">
-            <span v-if="row.alias">{{ row.alias }}</span>
-            <el-text v-else type="info">-</el-text>
+            <el-tag type="info" size="small" class="mono">{{ row.schedule }}</el-tag>
+            <span v-if="describeCron(row.schedule)" class="sub-text">{{ describeCron(row.schedule) }}{{ row.timeZone ? `（${row.timeZone}）` : '' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="schedule" label="调度表达式" min-width="120" header-align="center" align="center">
+        <el-table-column prop="namespace" label="命名空间" min-width="120" header-align="center" align="center">
           <template #default="{ row }">
-            <el-tag type="info" size="small">{{ row.schedule }}</el-tag>
+            <el-link type="primary" @click="handleNamespaceDetail(row)">{{ row.namespace }}</el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="lastRunTime" label="上次运行时间" min-width="140" header-align="center" align="center">
-          <template #default="{ row }">
-            <span v-if="row.lastRunTime">{{ formatTime(row.lastRunTime) }}</span>
-            <el-text v-else type="info">-</el-text>
-          </template>
+        <el-table-column label="运行中的任务" min-width="110" header-align="center" align="center">
+          <template #default="{ row }">{{ row.active }}</template>
         </el-table-column>
-        <el-table-column prop="lastSuccessfulTime" label="上次成功时间" min-width="140" header-align="center" align="center">
-          <template #default="{ row }">
-            <span v-if="row.lastSuccessfulTime">{{ formatTime(row.lastSuccessfulTime) }}</span>
-            <el-text v-else type="info">-</el-text>
-          </template>
+        <el-table-column label="上次调度时间" min-width="160" header-align="center" align="center">
+          <template #default="{ row }">{{ formatDateTime(row.lastRunTime) }}</template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" min-width="140" header-align="center" align="center">
-          <template #default="{ row }">
-            {{ formatTime(row.createTime) }}
-          </template>
+        <el-table-column label="上次成功时间" min-width="160" header-align="center" align="center">
+          <template #default="{ row }">{{ formatDateTime(row.lastSuccessfulTime) }}</template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" min-width="160" header-align="center" align="center">
+          <template #default="{ row }">{{ formatDateTime(row.createTime) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right" header-align="center">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" class="btn-main" @click="handleDetail(row)">
-                详情
-              </el-button>
+              <el-button size="small" type="primary" class="btn-main" @click="handleDetail(row)">详情</el-button>
               <el-dropdown trigger="click" @command="(command: string) => handleMoreAction(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
+                    <el-dropdown-item command="trigger">立即执行</el-dropdown-item>
+                    <el-dropdown-item command="suspend">{{ row.suspend ? '启用' : '暂停' }}</el-dropdown-item>
+                    <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                    <el-dropdown-item command="yaml">编辑YAML</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -113,270 +111,201 @@
         </el-table-column>
       </el-table>
 
-      <!-- 分页器 -->
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
+      <ListPagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50, 100]"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </el-card>
 
-    <!-- YAML添加对话框 -->
-    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加CronJob" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">YAML添加CronJob</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">已内置示例，可直接修改后使用</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-editor-wrapper">
-            <YamlEditor v-model="yamlAddContent" :readonly="false" height="100%" filename="cronjob.yaml" />
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
-          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <JobCreateDialog v-model="createVisible" kind="cronjob" :cluster-id="clusterId" :default-namespace="searchForm.namespace" @success="handleCreated" />
+    <JobEditDialog v-model="editVisible" kind="cronjob" :cluster-id="clusterId" :target="currentCronJob" @success="fetchCronJobList" />
 
-    <!-- 查看YAML对话框 -->
-    <el-dialog v-model="viewYamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">查看YAML</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">CronJob 配置</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-dialog-content">
-            <div class="yaml-info">
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
-                <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
-                <el-descriptions-item label="名称">{{ currentCronJob?.name }}</el-descriptions-item>
-                <el-descriptions-item label="类型">CronJob</el-descriptions-item>
-              </el-descriptions>
-            </div>
+    <YamlDialog
+      v-model="yamlAddDialogVisible"
+      title="YAML添加CronJob"
+      subtitle="已内置示例，可直接修改后使用"
+      v-model:content="yamlAddContent"
+      :readonly="false"
+      filename="cronjob.yaml"
+      :submitting="yamlAddLoading"
+      @confirm="confirmYamlAdd"
+    />
 
-            <div class="yaml-view">
-              <YamlEditor
-                v-model="viewYamlForm.yaml"
-                :title="`${currentCronJob?.name} - CronJob YAML`"
-                :readonly="true"
-                height="100%"
-                :filename="`${currentCronJob?.name}-cronjob.yaml`"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="viewYamlDialogVisible = false">关闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="viewYamlDialogVisible"
+      title="编辑YAML"
+      subtitle="CronJob 配置"
+      :info="[{ label: '集群', value: clusterName }, { label: '命名空间', value: currentCronJob?.namespace }, { label: '名称', value: currentCronJob?.name }, { label: '类型', value: 'CronJob' }]"
+      v-model:content="viewYaml"
+      :editor-title="`${currentCronJob?.name} - CronJob YAML`"
+      :filename="`${currentCronJob?.name}-cronjob.yaml`"
+      :apply-target="currentCronJob ? { clusterId, kind: 'cronjob', namespace: currentCronJob.namespace, name: currentCronJob.name } : null"
+      @applied="fetchCronJobList"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
-import { cronJobApi, type CronJobVO, type CronJobQueryDTO } from '@/api/cronjob'
-
-import { useClusterStore } from '@/stores/cluster'
+import { Search, Refresh, MoreFilled, Document, Plus } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
+import ListPagination from '@/components/ListPagination.vue'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
-import YamlEditor from '@/components/YamlEditor.vue'
+import YamlDialog from '@/components/YamlDialog.vue'
+import JobCreateDialog from '@/components/job/JobCreateDialog.vue'
+import JobEditDialog from '@/components/job/JobEditDialog.vue'
+import { cronJobApi, type CronJobVO } from '@/api/cronjob'
+import { fetchResourceYaml, resourceApi } from '@/api/resource'
+import { useClusterStore } from '@/stores/cluster'
 import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
+import { tableHeaderClass, tableCellClass } from '@/utils/table'
+import { cronJobYamlExample, describeCron, formatDateTime } from '@/utils/job'
 import '@/assets/styles/config-editor.css'
 
-// 路由
 const router = useRouter()
-
-// 集群上下文
 const clusterStore = useClusterStore()
 const clusterId = computed(() => clusterStore.currentClusterId)
 const clusterName = computed(() => clusterStore.currentClusterName)
 
-// 响应式数据
 const loading = ref(false)
 const cronJobList = ref<CronJobVO[]>([])
-
-// 渐进式加载的数据获取函数
 const namespaceFetcher = computed(() => useNamespaceFetcher(clusterId.value))
 
-// 对话框状态
+const createVisible = ref(false)
+const editVisible = ref(false)
 const viewYamlDialogVisible = ref(false)
+const viewYaml = ref('')
 const currentCronJob = ref<CronJobVO | null>(null)
 const yamlAddDialogVisible = ref(false)
 const yamlAddLoading = ref(false)
 const yamlAddContent = ref('')
 
-// 查看YAML表单
-const viewYamlForm = reactive({
-  clusterName: '',
-  namespace: '',
-  yaml: ''
-})
+const searchForm = reactive({ namespace: '', keyword: '', status: '' })
+const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
 
-// 搜索表单
-const searchForm = reactive<Omit<CronJobQueryDTO, 'clusterId'>>({
-  namespace: '',
-  name: '',
-  page: 1,
-  pageSize: 10
-})
-
-// 分页信息
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
-
-// 获取CronJob列表
 const fetchCronJobList = async () => {
   if (!clusterId.value) {
     cronJobList.value = []
     pagination.total = 0
     return
   }
-  
   loading.value = true
   try {
-    const params = {
-      ...searchForm,
+    const response = await cronJobApi.getCronJobs({
       clusterId: clusterId.value,
+      namespace: searchForm.namespace,
+      keyword: searchForm.keyword.trim(),
+      status: searchForm.status,
       page: pagination.page,
       pageSize: pagination.pageSize
-    }
-    const response = await cronJobApi.getCronJobs(params)
+    })
     if (response.code === 200) {
       cronJobList.value = response.data.items || []
       pagination.total = response.data.total || 0
     }
   } catch (error) {
     console.error('获取CronJob列表失败:', error)
-    ElMessage.error('获取CronJob列表失败')
   } finally {
     loading.value = false
   }
 }
 
-// 搜索处理
 const handleSearch = () => {
   pagination.page = 1
   fetchCronJobList()
 }
 
-// 重置处理
 const handleReset = () => {
-  searchForm.namespace = ''
-  searchForm.name = ''
-  pagination.page = 1
-  fetchCronJobList()
+  Object.assign(searchForm, { namespace: '', keyword: '', status: '' })
+  handleSearch()
 }
 
-// 分页大小变化
 const handleSizeChange = (size: number) => {
   pagination.pageSize = size
   pagination.page = 1
   fetchCronJobList()
 }
 
-// 当前页变化
 const handleCurrentChange = (page: number) => {
   pagination.page = page
   fetchCronJobList()
 }
 
-// 跳转到命名空间详情
-const handleNamespaceDetail = (row: CronJobVO) => {
-  router.push({
-    path: `/cluster/${clusterId.value}/namespace/detail`,
-    query: {
-      clusterId: clusterId.value,
-      namespace: row.namespace
-    }
-  })
-}
-
-// 格式化时间
-const formatTime = (time: string) => {
-  if (!time) return '-'
-  return new Date(time).toLocaleString('zh-CN')
-}
-
-// 处理命名空间变化
 const handleNamespaceChange = (namespace: string) => {
   searchForm.namespace = namespace
-  if (clusterId.value) {
-    fetchCronJobList()
-  }
+  handleSearch()
 }
 
-// 详情处理
-const handleDetail = (row: CronJobVO) => {
-  ElMessage.info('详情功能暂未实现')
+const handleDetail = (row: { namespace: string; name: string }) => {
+  router.push({ path: `/cluster/${clusterId.value}/job/cronjob/detail`, query: { namespace: row.namespace, name: row.name } })
 }
 
-// 更多操作处理
+const handleNamespaceDetail = (row: CronJobVO) => {
+  router.push({ path: `/cluster/${clusterId.value}/namespace/detail`, query: { namespace: row.namespace } })
+}
+
+const handleCreated = (namespace: string, name: string) => {
+  fetchCronJobList()
+  ElMessageBox.confirm('定时任务已创建，是否查看详情？', '创建成功', { type: 'success', confirmButtonText: '查看详情', cancelButtonText: '留在列表' })
+    .then(() => handleDetail({ namespace, name }))
+    .catch(() => {})
+}
+
 const handleMoreAction = (command: string, row: CronJobVO) => {
-  switch (command) {
-    case 'yaml':
-      handleViewYaml(row)
-      break
-    case 'delete':
-      handleDelete(row)
-      break
+  currentCronJob.value = row
+  if (command === 'trigger') handleTrigger(row)
+  else if (command === 'suspend') toggleSuspend(row)
+  else if (command === 'edit') editVisible.value = true
+  else if (command === 'yaml') handleViewYaml(row)
+}
+
+const handleTrigger = async (row: CronJobVO) => {
+  try {
+    await ElMessageBox.confirm('将按任务模板立即创建一个任务，不影响原有的调度计划。', `立即执行 "${row.name}"`, {
+      type: 'info',
+      confirmButtonText: '立即执行',
+      cancelButtonText: '取消'
+    })
+  } catch {
+    return
+  }
+  try {
+    const resp = await cronJobApi.trigger({ clusterId: clusterId.value, namespace: row.namespace, name: row.name })
+    ElMessage.success(`已创建任务 ${resp.data?.jobName || ''}`)
+    fetchCronJobList()
+  } catch {
+    // 请求拦截器已提示错误
   }
 }
 
-const buildCronJobYamlExample = () => {
-  const namespace = searchForm.namespace || 'default'
-  return [
-    'apiVersion: batch/v1',
-    'kind: CronJob',
-    'metadata:',
-    '  name: example-cronjob',
-    `  namespace: ${namespace}`,
-    'spec:',
-    '  schedule: "*/5 * * * *"',
-    '  successfulJobsHistoryLimit: 3',
-    '  failedJobsHistoryLimit: 1',
-    '  jobTemplate:',
-    '    spec:',
-    '      template:',
-    '        spec:',
-    '          restartPolicy: OnFailure',
-    '          containers:',
-    '            - name: busybox',
-    '              image: busybox:1.36',
-    '              command: ["sh", "-c", "date; echo cron running"]'
-  ].join('\n')
+const toggleSuspend = async (row: CronJobVO) => {
+  const suspend = !row.suspend
+  try {
+    await ElMessageBox.confirm(
+      suspend ? '暂停后不会再按计划创建新任务，已经在运行的任务不受影响。' : '启用后会按调度规则继续创建任务。',
+      suspend ? `暂停 "${row.name}"` : `启用 "${row.name}"`,
+      { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  try {
+    await cronJobApi.suspend({ clusterId: clusterId.value, namespace: row.namespace, name: row.name, suspend })
+    ElMessage.success(suspend ? '已暂停' : '已启用')
+    fetchCronJobList()
+  } catch {
+    // 请求拦截器已提示错误
+  }
 }
 
 const openYamlAdd = () => {
-  yamlAddContent.value = buildCronJobYamlExample()
+  yamlAddContent.value = cronJobYamlExample(searchForm.namespace || 'default')
   yamlAddDialogVisible.value = true
 }
 
@@ -387,56 +316,60 @@ const confirmYamlAdd = async () => {
   }
   yamlAddLoading.value = true
   try {
-    ElMessage.warning('当前版本后端暂未开放CronJob YAML应用接口，请先复制示例使用kubectl apply执行')
+    await resourceApi.apply({ clusterId: clusterId.value, kind: 'cronjob', namespace: searchForm.namespace || undefined, yaml: yamlAddContent.value })
+    ElMessage.success('创建成功')
+    yamlAddDialogVisible.value = false
+    fetchCronJobList()
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     yamlAddLoading.value = false
   }
 }
 
-// 查看YAML
-const handleViewYaml = (row: CronJobVO) => {
+const handleViewYaml = async (row: CronJobVO) => {
+  try {
+    viewYaml.value = await fetchResourceYaml({ clusterId: clusterId.value, kind: 'cronjob', namespace: row.namespace, name: row.name })
+  } catch {
+    return
+  }
   currentCronJob.value = row
-  viewYamlForm.clusterName = clusterName.value
-  viewYamlForm.namespace = row.namespace
-  viewYamlForm.yaml = row.yaml || ''
   viewYamlDialogVisible.value = true
 }
 
-// 删除CronJob
-const handleDelete = (row: CronJobVO) => {
-  ElMessageBox.confirm(
-    `确定要删除CronJob "${row.name}" 吗？`,
-    '确认删除',
-    {
+const handleDelete = async (row: CronJobVO) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除定时任务 "${row.name}" 吗？它创建的任务和容器组会一起删除，此操作不可恢复。`, '确认删除', {
       confirmButtonText: '确定删除',
       cancelButtonText: '取消',
       type: 'warning'
-    }
-  ).then(() => {
-    ElMessage.info('删除功能开发中')
-  }).catch(() => {
-    // 用户取消删除
-  })
+    })
+  } catch {
+    return
+  }
+  try {
+    await cronJobApi.delete({ clusterId: clusterId.value, namespace: row.namespace, name: row.name })
+    ElMessage.success('删除成功')
+    if (cronJobList.value.length === 1 && pagination.page > 1) pagination.page--
+    fetchCronJobList()
+  } catch {
+    // 请求拦截器已提示错误
+  }
 }
 
-// 监听集群变化
-watch(clusterId, (newClusterId) => {
-  if (newClusterId) {
+watch(
+  clusterId,
+  id => {
     searchForm.namespace = ''
     pagination.page = 1
-    fetchCronJobList()
-  } else {
-    cronJobList.value = []
-    pagination.total = 0
-  }
-}, { immediate: true })
-
-// 页面挂载时的处理
-onMounted(() => {
-  if (clusterId.value) {
-    fetchCronJobList()
-  }
-})
+    if (id) fetchCronJobList()
+    else {
+      cronJobList.value = []
+      pagination.total = 0
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -530,4 +463,37 @@ onMounted(() => {
   border-radius: 8px;
 }
 
+.name-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.3;
+}
+
+.name-cell__alias {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.status-msg {
+  display: block;
+  max-width: 220px;
+  margin: 2px auto 0;
+  overflow: hidden;
+  color: #ef4444;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sub-text {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', Consolas, Menlo, monospace;
+}
 </style>

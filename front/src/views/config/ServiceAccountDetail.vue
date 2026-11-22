@@ -1,28 +1,25 @@
 <template>
-  <div class="serviceaccount-detail">
-    <div class="page-header">
-      <div class="header-left">
-        <el-button @click="handleBack">
-          <el-icon><ArrowLeft /></el-icon>
-          返回
-        </el-button>
-        <h1>{{ sa?.name || name }}</h1>
-      </div>
-      <div class="header-right">
-        <el-button @click="handleMore('editInfo')">
-          <el-icon><EditPen /></el-icon>
-          编辑
-        </el-button>
-        <el-button @click="handleMore('yaml')">
-          <el-icon><Document /></el-icon>
-          查看YAML
-        </el-button>
-        <el-button type="danger" @click="openDelete">
-          <el-icon><Delete /></el-icon>
-          删除
-        </el-button>
-      </div>
-    </div>
+  <div class="serviceaccount-detail detail-page">
+    <PageHeader
+      :title="sa?.name || name"
+      :subtitle="sa ? `命名空间：${sa.namespace}` : 'ServiceAccount 详情'"
+      icon="sa"
+      back
+      @back="handleBack"
+    >
+      <el-button @click="handleMore('editInfo')">
+        <el-icon><EditPen /></el-icon>
+        编辑
+      </el-button>
+      <el-button @click="handleMore('yaml')">
+        <el-icon><Document /></el-icon>
+        查看YAML
+      </el-button>
+      <el-button type="danger" @click="openDelete">
+        <el-icon><Delete /></el-icon>
+        删除
+      </el-button>
+    </PageHeader>
 
     <div v-if="loading" class="loading-container">
       <el-skeleton :rows="8" animated />
@@ -34,10 +31,10 @@
           <div class="card-header"><span>基本信息</span></div>
         </template>
         <div class="info-grid">
-          <div class="info-item"><label>名称：</label><span>{{ sa.name }}</span></div>
-          <div class="info-item"><label>命名空间：</label><span>{{ sa.namespace }}</span></div>
-          <div class="info-item"><label>自动挂载令牌：</label><span>{{ sa.automountServiceAccountToken === false ? '否' : '是' }}</span></div>
-          <div class="info-item"><label>创建时间：</label><span>{{ formatDate(sa.creationTimestamp) }}</span></div>
+          <div class="info-item"><label>名称</label><span>{{ sa.name }}</span></div>
+          <div class="info-item"><label>命名空间</label><span>{{ sa.namespace }}</span></div>
+          <div class="info-item"><label>自动挂载令牌</label><span>{{ sa.automountServiceAccountToken === false ? '否' : '是' }}</span></div>
+          <div class="info-item"><label>创建时间</label><span>{{ formatDate(sa.creationTimestamp) }}</span></div>
         </div>
       </el-card>
 
@@ -135,18 +132,17 @@
     </div>
 
     <!-- 编辑信息(与命名空间编辑弹窗同款) -->
-    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="80%" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="800px" :close-on-click-modal="false" class="config-dialog form-dialog--compact">
       <template #header>
         <div class="dialog-header">
           <div>
             <h3 class="dialog-title">编辑信息</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">ServiceAccount 基础信息</div>
           </div>
         </div>
       </template>
       <div class="config-editor">
         <div class="config-content">
-          <el-form :model="editInfoForm" label-width="100px" class="serviceaccount-form">
+          <el-form :model="editInfoForm" label-width="96px" class="serviceaccount-form">
             <el-form-item label="名称">
               <el-input :model-value="sa?.name || ''" disabled />
             </el-form-item>
@@ -168,27 +164,14 @@
     </el-dialog>
 
     <!-- 查看/编辑YAML -->
-    <el-dialog v-model="yamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <h3 class="dialog-title">查看/编辑YAML</h3>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-editor-wrapper">
-            <YamlEditor :model-value="yamlContent" :readonly="false" height="100%" @update:model-value="val => yamlContent = val" />
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlDialogVisible = false">关闭</el-button>
-          <el-button type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
-          <span style="color:#909399;font-size:12px;margin-left:10px;">应用到当前集群：{{ clusterId }}</span>
-        </div>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="yamlDialogVisible"
+      title="查看/编辑YAML"
+      v-model:content="yamlContent"
+      :readonly="false"
+      :submitting="yamlApplyLoading"
+      @confirm="confirmApplyYaml"
+    />
 
     <!-- 删除确认 -->
     <DeleteConfirmDialog
@@ -203,17 +186,21 @@
 </template>
 
 <script setup lang="ts">
+import { fetchResourceYaml } from '@/api/resource'
+import PageHeader from '@/components/PageHeader.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, EditPen, Document, Delete } from '@element-plus/icons-vue'
+import { EditPen, Document, Delete } from '@element-plus/icons-vue'
 import { serviceAccountApi, type ServiceAccountVO } from '@/api/serviceaccount'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
-import YamlEditor from '@/components/YamlEditor.vue'
+import YamlDialog from '@/components/YamlDialog.vue'
 import '@/assets/styles/config-editor.css'
+import { useTabBack } from '@/composables/useTabBack'
 
 const route = useRoute()
-const router = useRouter()
+// 返回当前标签内的上一页
+const goBack = useTabBack()
 
 const clusterId = ref('')
 const namespace = ref('')
@@ -228,7 +215,16 @@ const annotationRows = ref<{ key: string; value: string }[]>([])
 const imagePullSecretNames = computed(() => (sa.value?.imagePullSecrets || []).map(x => x.name).filter(Boolean))
 const secretNames = computed(() => (sa.value?.secrets || []).map(x => x.name).filter(Boolean))
 
-const handleBack = () => router.back()
+const handleBack = () => goBack()
+
+const openYaml = async () => {
+  try {
+    yamlContent.value = await fetchResourceYaml({ clusterId: clusterId.value, kind: 'serviceaccount', namespace: namespace.value, name: name.value })
+    yamlDialogVisible.value = true
+  } catch {
+    // 请求拦截器已提示错误
+  }
+}
 
 const handleMore = (cmd: string) => {
   switch (cmd) {
@@ -239,8 +235,7 @@ const handleMore = (cmd: string) => {
       editInfoDialogVisible.value = true
       break
     case 'yaml':
-      yamlContent.value = sa.value?.yaml || ''
-      yamlDialogVisible.value = true
+      openYaml()
       break
     case 'delete':
       openDelete()

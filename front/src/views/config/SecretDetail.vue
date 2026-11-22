@@ -1,32 +1,32 @@
 <template>
-  <div class="secret-detail">
-    <div class="page-header">
-      <div class="header-left">
-        <el-button @click="handleBack">
-          <el-icon><ArrowLeft /></el-icon>
-          返回
-        </el-button>
-        <h1>{{ secret?.name || name }}</h1>
-      </div>
-      <div class="header-right">
-        <el-button @click="handleMore('editInfo')">
-          <el-icon><EditPen /></el-icon>
-          编辑
-        </el-button>
-        <el-button @click="handleMore('editData')">
-          <el-icon><Setting /></el-icon>
-          编辑设置
-        </el-button>
-        <el-button @click="handleMore('yaml')">
-          <el-icon><Document /></el-icon>
-          查看YAML
-        </el-button>
-        <el-button type="danger" @click="openDelete">
-          <el-icon><Delete /></el-icon>
-          删除
-        </el-button>
-      </div>
-    </div>
+  <div class="secret-detail detail-page">
+    <PageHeader
+      :title="secret?.name || name"
+      :subtitle="secret ? `命名空间：${secret.namespace}` : 'Secret 详情'"
+      icon="secret"
+      back
+      @back="handleBack"
+    >
+      <template v-if="secret?.type" #meta>
+        <el-tag type="info" effect="light">{{ secret?.type }}</el-tag>
+      </template>
+      <el-button @click="handleMore('editInfo')">
+        <el-icon><EditPen /></el-icon>
+        编辑
+      </el-button>
+      <el-button @click="handleMore('editData')">
+        <el-icon><Setting /></el-icon>
+        编辑设置
+      </el-button>
+      <el-button @click="handleMore('yaml')">
+        <el-icon><Document /></el-icon>
+        查看YAML
+      </el-button>
+      <el-button type="danger" @click="openDelete">
+        <el-icon><Delete /></el-icon>
+        删除
+      </el-button>
+    </PageHeader>
 
     <div v-if="loading" class="loading-container">
       <el-skeleton :rows="8" animated />
@@ -38,12 +38,12 @@
           <div class="card-header"><span>基本信息</span></div>
         </template>
         <div class="info-grid">
-          <div class="info-item"><label>名称：</label><span>{{ secret.name }}</span></div>
-          <div class="info-item"><label>命名空间：</label><span>{{ secret.namespace }}</span></div>
-          <div class="info-item"><label>类型：</label><span>{{ secret.type || '-' }}</span></div>
-          <div class="info-item"><label>别名：</label><span>{{ secret.alias || '-' }}</span></div>
-          <div class="info-item"><label>备注：</label><span>{{ secret.describe || '-' }}</span></div>
-          <div class="info-item"><label>创建时间：</label><span>{{ formatDate(secret.creationTimestamp) }}</span></div>
+          <div class="info-item"><label>名称</label><span>{{ secret.name }}</span></div>
+          <div class="info-item"><label>命名空间</label><span>{{ secret.namespace }}</span></div>
+          <div class="info-item"><label>类型</label><span>{{ secret.type || '-' }}</span></div>
+          <div class="info-item"><label>别名</label><span>{{ secret.alias || '-' }}</span></div>
+          <div class="info-item"><label>备注</label><span>{{ secret.describe || '-' }}</span></div>
+          <div class="info-item"><label>创建时间</label><span>{{ formatDate(secret.creationTimestamp) }}</span></div>
         </div>
       </el-card>
 
@@ -120,26 +120,25 @@
     </div>
 
     <!-- 编辑信息(与命名空间编辑弹窗同款) -->
-    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="80%" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="800px" :close-on-click-modal="false" class="config-dialog form-dialog--compact">
       <template #header>
         <div class="dialog-header">
           <div>
             <h3 class="dialog-title">编辑信息</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">Secret 基础信息</div>
           </div>
         </div>
       </template>
       <div class="config-editor">
         <div class="config-content">
-          <el-form :model="editInfoForm" label-width="100px" class="secret-form">
+          <el-form :model="editInfoForm" label-width="96px" class="secret-form">
             <el-form-item label="名称">
               <el-input :model-value="secret?.name || ''" disabled />
             </el-form-item>
             <el-form-item label="别名" prop="alias">
-              <el-input v-model="editInfoForm.alias" placeholder="请输入别名" />
+              <el-input v-model="editInfoForm.alias" placeholder="请输入别名" maxlength="50" show-word-limit />
             </el-form-item>
             <el-form-item label="备注" prop="describe">
-              <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" placeholder="请输入备注" />
+              <el-input v-model="editInfoForm.describe" type="textarea" :rows="3" placeholder="请输入备注" maxlength="200" show-word-limit />
             </el-form-item>
           </el-form>
         </div>
@@ -153,7 +152,7 @@
     </el-dialog>
 
     <!-- 编辑数据设置(与列表页同款) -->
-    <el-dialog v-model="editDataDialogVisible" title="编辑数据设置" width="1600px" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="editDataDialogVisible" title="编辑数据设置" width="1200px" top="6vh" :close-on-click-modal="false" class="config-dialog form-dialog--wide">
       <template #header>
         <div class="dialog-header">
           <h3 class="dialog-title">编辑数据设置</h3>
@@ -201,27 +200,14 @@
     </el-dialog>
 
     <!-- 查看/编辑YAML -->
-    <el-dialog v-model="yamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <h3 class="dialog-title">查看/编辑YAML</h3>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-editor-wrapper">
-            <YamlEditor :model-value="yamlContent" :readonly="false" height="100%" @update:model-value="val => yamlContent = val" />
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlDialogVisible = false">关闭</el-button>
-          <el-button type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
-          <span style="color:#909399;font-size:12px;margin-left:10px;">应用到当前集群：{{ clusterId }}</span>
-        </div>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="yamlDialogVisible"
+      title="查看/编辑YAML"
+      v-model:content="yamlContent"
+      :readonly="false"
+      :submitting="yamlApplyLoading"
+      @confirm="confirmApplyYaml"
+    />
 
     <!-- 删除确认 -->
     <DeleteConfirmDialog
@@ -236,15 +222,17 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/PageHeader.vue'
 import { ref, reactive, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, EditPen, Document, Setting, Delete } from '@element-plus/icons-vue'
+import { EditPen, Document, Setting, Delete } from '@element-plus/icons-vue'
 import { secretApi, type SecretVO } from '@/api/secret'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
-import YamlEditor from '@/components/YamlEditor.vue'
+import YamlDialog from '@/components/YamlDialog.vue'
 import KVEditorPane from '@/components/KVEditorPane.vue'
 import '@/assets/styles/config-editor.css'
+import { useTabBack } from '@/composables/useTabBack'
 
 type KvRow = { key: string; value: string }
 
@@ -258,7 +246,8 @@ const rowsFromSecret = (row?: SecretVO | null) => {
 }
 
 const route = useRoute()
-const router = useRouter()
+// 返回当前标签内的上一页
+const goBack = useTabBack()
 
 const clusterId = ref('')
 const namespace = ref('')
@@ -271,7 +260,7 @@ const labelRows = ref<{ key: string; value: string }[]>([])
 const annotationRows = ref<{ key: string; value: string }[]>([])
 const dataRows = ref<{ key: string; value: string }[]>([])
 
-const handleBack = () => router.back()
+const handleBack = () => goBack()
 
 const handleMore = (cmd: string) => {
   switch (cmd) {

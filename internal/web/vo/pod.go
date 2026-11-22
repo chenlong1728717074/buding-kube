@@ -1,148 +1,275 @@
 package vo
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"fmt"
+	"strings"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
-// PodVO Pod 列表项. 不包含 YAML, YAML 由详情接口按需加载
+// PodVO Pod 列表项. 不包含 YAML, YAML 按需加载
 type PodVO struct {
 	CreationTimestamp time.Time `json:"creationTimestamp"`
 	Namespace         string    `json:"namespace"`
 	Name              string    `json:"name"`
-	Status            string    `json:"status"`
-	NodeName          string    `json:"nodeName"`
-	HostIP            string    `json:"hostIP"`
-	PodIP             string    `json:"podIP"`
+	Alias             string    `json:"alias"`
+	Describe          string    `json:"describe"`
+	// Status 阶段(Pending / Running / Succeeded / Failed / Unknown)
+	Status string `json:"status"`
+	// DisplayStatus 与 kubectl get pod 的 STATUS 列一致, 例如 CrashLoopBackOff
+	DisplayStatus string `json:"displayStatus"`
+	Message       string `json:"message"`
+	Ready         string `json:"ready"`
+	Restarts      int32  `json:"restarts"`
+	NodeName      string `json:"nodeName"`
+	HostIP        string `json:"hostIP"`
+	PodIP         string `json:"podIP"`
+	// OwnerKind / OwnerName 所属工作负载; ReplicaSet 创建的显示为所属的 Deployment
+	OwnerKind string `json:"ownerKind"`
+	OwnerName string `json:"ownerName"`
+	PodResources
+	PodUsage
+}
+
+// PodContainerStatusVO 容器运行状态
+type PodContainerStatusVO struct {
+	Name         string `json:"name"`
+	Init         bool   `json:"init"`
+	Ready        bool   `json:"ready"`
+	Started      bool   `json:"started"`
+	RestartCount int32  `json:"restartCount"`
+	// State Running / Waiting / Terminated
+	State      string     `json:"state"`
+	Reason     string     `json:"reason"`
+	Message    string     `json:"message"`
+	ExitCode   int32      `json:"exitCode"`
+	StartedAt  *time.Time `json:"startedAt"`
+	FinishedAt *time.Time `json:"finishedAt"`
+	// 上一次退出的信息, 排查容器反复重启时使用
+	LastReason     string     `json:"lastReason"`
+	LastExitCode   int32      `json:"lastExitCode"`
+	LastFinishedAt *time.Time `json:"lastFinishedAt"`
+	ImageID        string     `json:"imageID"`
+}
+
+// PodDetailVO 容器组详情
+type PodDetailVO struct {
+	BaseVO
+	Status             string                 `json:"status"`
+	DisplayStatus      string                 `json:"displayStatus"`
+	Message            string                 `json:"message"`
+	Reason             string                 `json:"reason"`
+	Ready              string                 `json:"ready"`
+	Restarts           int32                  `json:"restarts"`
+	NodeName           string                 `json:"nodeName"`
+	HostIP             string                 `json:"hostIP"`
+	PodIP              string                 `json:"podIP"`
+	PodIPs             []string               `json:"podIPs"`
+	QosClass           string                 `json:"qosClass"`
+	RestartPolicy      string                 `json:"restartPolicy"`
+	ServiceAccountName string                 `json:"serviceAccountName"`
+	PriorityClassName  string                 `json:"priorityClassName"`
+	DNSPolicy          string                 `json:"dnsPolicy"`
+	HostNetwork        bool                   `json:"hostNetwork"`
+	OwnerKind          string                 `json:"ownerKind"`
+	OwnerName          string                 `json:"ownerName"`
+	Creator            string                 `json:"creator"`
+	Uid                string                 `json:"uid"`
+	StartTime          *time.Time             `json:"startTime"`
+	CreateTime         time.Time              `json:"createTime"`
+	DeletionTime       *time.Time             `json:"deletionTime"`
+	Labels             map[string]string      `json:"labels"`
+	Annotations        map[string]string      `json:"annotations"`
+	NodeSelector       map[string]string      `json:"nodeSelector"`
+	Tolerations        []string               `json:"tolerations"`
+	Conditions         []WorkloadConditionVO  `json:"conditions"`
+	Containers         []ContainerTemplateVO  `json:"containers"`
+	ContainerStatuses  []PodContainerStatusVO `json:"containerStatuses"`
+	Volumes            []WorkloadVolumeVO     `json:"volumes"`
+	Events             []EventVO              `json:"events"`
+	PodResources
+	PodUsage
+	// ContainerUsages 每个容器的资源设置与用量
+	ContainerUsages []PodContainerUsageVO `json:"containerUsages"`
+}
+
+// PodOwner 所属的控制器; ReplicaSet 按 pod-template-hash 推断出 Deployment 名称
+func PodOwner(pod *corev1.Pod) (string, string) {
+	for _, ref := range pod.OwnerReferences {
+		if ref.Controller == nil || !*ref.Controller {
+			continue
+		}
+		if ref.Kind == "ReplicaSet" {
+			if hash := pod.Labels["pod-template-hash"]; hash != "" && strings.HasSuffix(ref.Name, "-"+hash) {
+				return "Deployment", strings.TrimSuffix(ref.Name, "-"+hash)
+			}
+		}
+		return ref.Kind, ref.Name
+	}
+	return "", ""
+}
+
+func podReadyAndRestarts(pod *corev1.Pod) (string, int32) {
+	ready := 0
+	var restarts int32
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.Ready {
+			ready++
+		}
+		restarts += cs.RestartCount
+	}
+	return fmt.Sprintf("%d/%d", ready, len(pod.Spec.Containers)), restarts
 }
 
 func Pod2VO(item *corev1.Pod) PodVO {
+	status, message := podDisplayStatus(item)
+	ready, restarts := podReadyAndRestarts(item)
+	ownerKind, ownerName := PodOwner(item)
 	return PodVO{
 		CreationTimestamp: item.CreationTimestamp.Time,
 		Name:              item.Name,
 		Namespace:         item.Namespace,
+		Alias:             item.Annotations["alias"],
+		Describe:          item.Annotations["describe"],
 		Status:            string(item.Status.Phase),
+		DisplayStatus:     status,
+		Message:           message,
+		Ready:             ready,
+		Restarts:          restarts,
 		HostIP:            item.Status.HostIP,
 		PodIP:             item.Status.PodIP,
 		NodeName:          item.Spec.NodeName,
+		OwnerKind:         ownerKind,
+		OwnerName:         ownerName,
+		PodResources:      PodResourceTotals(&item.Spec),
 	}
 }
 
-type PodInfoVO struct {
-	BaseVO
-	CreationTimestamp time.Time         `json:"creationTimestamp"`
-	Status            string            `json:"status"`
-	NodeName          string            `json:"nodeName"`
-	HostIP            string            `json:"hostIP"`
-	PodIP             string            `json:"podIP"`
-	Yaml              string            `json:"yaml"`
-	Containers        []PodContainerVO  `json:"containers"`
-	Annotations       map[string]string `json:"annotations,omitempty"`
-	Labels            map[string]string `json:"labels,omitempty"`
-	MetaData          metav1.ObjectMeta `json:"metaData"`
-	Spec              corev1.PodSpec    `json:"spec"`
-	Events            []EventVO         `json:"events"`
+func timePtr(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return &t
 }
 
-type PodContainerVO struct {
-	Name         string               `json:"name"`
-	Ready        bool                 `json:"ready"`
-	RestartCount int32                `json:"restartCount"`
-	Image        string               `json:"image"`
-	Started      bool                 `json:"started"`
-	VolumeMounts []corev1.VolumeMount `json:"volumeMounts"`
-	StartedAt    time.Time            `json:"startedAt"`
-	Args         []string             `json:"args"`
-	Envs         []PodEnvVO           `json:"envs"`
-	Ports        []PodPortVO          `json:"ports"`
+func containerStatus2VO(cs corev1.ContainerStatus, init bool) PodContainerStatusVO {
+	item := PodContainerStatusVO{
+		Name:         cs.Name,
+		Init:         init,
+		Ready:        cs.Ready,
+		Started:      cs.Started != nil && *cs.Started,
+		RestartCount: cs.RestartCount,
+		ImageID:      cs.ImageID,
+	}
+	switch {
+	case cs.State.Running != nil:
+		item.State = "Running"
+		item.StartedAt = timePtr(cs.State.Running.StartedAt.Time)
+	case cs.State.Waiting != nil:
+		item.State = "Waiting"
+		item.Reason = cs.State.Waiting.Reason
+		item.Message = cs.State.Waiting.Message
+	case cs.State.Terminated != nil:
+		t := cs.State.Terminated
+		item.State = "Terminated"
+		item.Reason = t.Reason
+		item.Message = t.Message
+		item.ExitCode = t.ExitCode
+		item.StartedAt = timePtr(t.StartedAt.Time)
+		item.FinishedAt = timePtr(t.FinishedAt.Time)
+	}
+	if t := cs.LastTerminationState.Terminated; t != nil {
+		item.LastReason = t.Reason
+		item.LastExitCode = t.ExitCode
+		item.LastFinishedAt = timePtr(t.FinishedAt.Time)
+	}
+	return item
 }
 
-type PodEnvVO struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
+func tolerationText(t corev1.Toleration) string {
+	key := t.Key
+	if key == "" {
+		key = "*"
+	}
+	text := key
+	if t.Operator == corev1.TolerationOpEqual || (t.Operator == "" && t.Value != "") {
+		text += "=" + t.Value
+	}
+	if t.Effect != "" {
+		text += ":" + string(t.Effect)
+	}
+	if t.TolerationSeconds != nil {
+		text += fmt.Sprintf("（%d 秒）", *t.TolerationSeconds)
+	}
+	return text
 }
 
-type PodPortVO struct {
-	Name          string `json:"name"`
-	HostPort      int32  `json:"hostPort"`
-	ContainerPort int32  `json:"containerPort"`
-	HostIP        string `json:"hostIP"`
-	Protocol      string `json:"protocol"`
-}
-
-func Pod2InfoVO(item *corev1.Pod, events *corev1.EventList) PodInfoVO {
-	return PodInfoVO{
-		CreationTimestamp: item.CreationTimestamp.Time,
+// Pod2DetailVO 详情; 所属工作负载和事件由 service 层补充
+func Pod2DetailVO(pod *corev1.Pod) PodDetailVO {
+	status, message := podDisplayStatus(pod)
+	ready, restarts := podReadyAndRestarts(pod)
+	ownerKind, ownerName := PodOwner(pod)
+	result := PodDetailVO{
 		BaseVO: BaseVO{
-			Name:      item.Name,
-			Namespace: item.Namespace,
+			Name:      pod.Name,
+			Namespace: pod.Namespace,
+			Alias:     pod.Annotations["alias"],
+			Describe:  pod.Annotations["describe"],
 		},
-		Status:      string(item.Status.Phase),
-		HostIP:      item.Status.HostIP,
-		PodIP:       item.Status.PodIP,
-		NodeName:    item.Spec.NodeName,
-		Containers:  buildPodContainer(item),
-		Annotations: item.Annotations,
-		Labels:      item.Labels,
-		MetaData:    item.ObjectMeta,
-		Spec:        item.Spec,
-		Events:      buildNodeEvents(events),
+		Status:             string(pod.Status.Phase),
+		DisplayStatus:      status,
+		Message:            firstNonEmpty(message, pod.Status.Message),
+		Reason:             pod.Status.Reason,
+		Ready:              ready,
+		Restarts:           restarts,
+		NodeName:           pod.Spec.NodeName,
+		HostIP:             pod.Status.HostIP,
+		PodIP:              pod.Status.PodIP,
+		PodIPs:             []string{},
+		QosClass:           string(pod.Status.QOSClass),
+		RestartPolicy:      string(pod.Spec.RestartPolicy),
+		ServiceAccountName: pod.Spec.ServiceAccountName,
+		PriorityClassName:  pod.Spec.PriorityClassName,
+		DNSPolicy:          string(pod.Spec.DNSPolicy),
+		HostNetwork:        pod.Spec.HostNetwork,
+		OwnerKind:          ownerKind,
+		OwnerName:          ownerName,
+		Creator:            ResourceCreator(pod.Annotations),
+		Uid:                string(pod.UID),
+		CreateTime:         pod.CreationTimestamp.Time,
+		Labels:             pod.Labels,
+		Annotations:        pod.Annotations,
+		NodeSelector:       pod.Spec.NodeSelector,
+		Tolerations:        []string{},
+		Conditions:         []WorkloadConditionVO{},
+		Containers:         PodSpec2Containers(&pod.Spec),
+		ContainerStatuses:  []PodContainerStatusVO{},
+		Volumes:            PodVolumes2VO(pod.Spec.Volumes),
+		Events:             []EventVO{},
+		PodResources:       PodResourceTotals(&pod.Spec),
+		ContainerUsages:    PodContainerUsages(&pod.Spec),
 	}
-}
-
-// buildPodContainer 构建容器信息.
-// 按容器名匹配状态(ContainerStatuses 与 Spec.Containers 的顺序不保证一致),
-// 并兼容 Pending 阶段还没有状态、Started 为 nil 的情况, 避免空指针 panic
-func buildPodContainer(item *corev1.Pod) []PodContainerVO {
-	statusMap := make(map[string]corev1.ContainerStatus, len(item.Status.ContainerStatuses))
-	for _, status := range item.Status.ContainerStatuses {
-		statusMap[status.Name] = status
+	if pod.Status.StartTime != nil {
+		result.StartTime = timePtr(pod.Status.StartTime.Time)
 	}
-	result := make([]PodContainerVO, 0, len(item.Spec.Containers))
-	for _, container := range item.Spec.Containers {
-		c := PodContainerVO{
-			Name:         container.Name,
-			Image:        container.Image,
-			VolumeMounts: container.VolumeMounts,
-			Args:         container.Args,
-			Envs:         buildPodEnvVO(container.Env),
-			Ports:        buildPodPorts(container.Ports),
-		}
-		if status, ok := statusMap[container.Name]; ok {
-			c.Ready = status.Ready
-			c.RestartCount = status.RestartCount
-			c.Started = status.Started != nil && *status.Started
-			if status.State.Running != nil {
-				c.StartedAt = status.State.Running.StartedAt.Time
-			}
-		}
-		result = append(result, c)
+	if pod.DeletionTimestamp != nil {
+		result.DeletionTime = timePtr(pod.DeletionTimestamp.Time)
 	}
-	return result
-}
-
-func buildPodPorts(ports []corev1.ContainerPort) []PodPortVO {
-	result := make([]PodPortVO, 0)
-	for _, item := range ports {
-		result = append(result, PodPortVO{
-			Name:          item.Name,
-			HostPort:      item.HostPort,
-			ContainerPort: item.ContainerPort,
-			HostIP:        item.HostIP,
-			Protocol:      string(item.Protocol),
-		})
+	for _, ip := range pod.Status.PodIPs {
+		result.PodIPs = append(result.PodIPs, ip.IP)
 	}
-	return result
-}
-
-func buildPodEnvVO(env []corev1.EnvVar) []PodEnvVO {
-	result := make([]PodEnvVO, 0)
-	for _, envVar := range env {
-		result = append(result, PodEnvVO{
-			Name:  envVar.Name,
-			Value: envVar.Value,
-		})
+	for _, t := range pod.Spec.Tolerations {
+		result.Tolerations = append(result.Tolerations, tolerationText(t))
+	}
+	for _, c := range pod.Status.Conditions {
+		result.Conditions = append(result.Conditions, newCondition(string(c.Type), string(c.Status), c.Reason, c.Message, c.LastTransitionTime))
+	}
+	for _, cs := range pod.Status.InitContainerStatuses {
+		result.ContainerStatuses = append(result.ContainerStatuses, containerStatus2VO(cs, true))
+	}
+	for _, cs := range pod.Status.ContainerStatuses {
+		result.ContainerStatuses = append(result.ContainerStatuses, containerStatus2VO(cs, false))
 	}
 	return result
 }

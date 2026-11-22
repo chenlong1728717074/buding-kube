@@ -1,549 +1,251 @@
 <template>
-  <div class="namespace-detail">
-    <div class="page-header">
-      <div class="header-left">
-        <el-button @click="handleBack">
-          <el-icon><ArrowLeft /></el-icon>
-          返回
-        </el-button>
-        <h1>{{ namespaceInfo?.name || '命名空间详情' }}</h1>
-      </div>
-      <div class="header-right">
-        <el-button @click="handleEdit">
-          <el-icon><Edit /></el-icon>
-          编辑
-        </el-button>
-        <el-button @click="handleViewYaml">
-          <el-icon><Document /></el-icon>
-          查看YAML
-        </el-button>
-        <el-button type="danger" @click="handleDelete">
-          <el-icon><Delete /></el-icon>
-          删除
-        </el-button>
-      </div>
+  <div class="namespace-detail detail-page job-detail">
+    <PageHeader :title="ns?.name || namespace" subtitle="命名空间详情" icon="ns" back @back="goBack">
+      <template v-if="ns" #meta>
+        <el-tag :type="ns.active === 'Active' ? 'success' : 'warning'" effect="light">{{ ns.active === 'Active' ? '活跃' : ns.active === 'Terminating' ? '删除中' : ns.active }}</el-tag>
+      </template>
+      <el-button @click="refresh">
+        <el-icon><Refresh /></el-icon>
+        刷新
+      </el-button>
+      <el-button :disabled="!ns" @click="editVisible = true">
+        <el-icon><Edit /></el-icon>
+        编辑信息
+      </el-button>
+      <el-button :disabled="!ns" @click="openYaml">
+        <el-icon><Document /></el-icon>
+        编辑YAML
+      </el-button>
+      <el-button type="danger" :disabled="!ns" @click="deleteVisible = true">
+        <el-icon><Delete /></el-icon>
+        删除
+      </el-button>
+    </PageHeader>
+
+    <div v-if="loading && !ns" class="loading-container">
+      <el-skeleton :rows="8" animated />
     </div>
 
-    <div v-loading="loading" class="detail-content">
-      <!-- 基本信息 -->
-      <el-card class="info-card">
+    <div v-else-if="ns" class="detail-content">
+      <el-card class="info-card jd-attr-card">
         <template #header>
-          <div class="card-header">
-            <span>基本信息</span>
+          <div class="card-header" @click="attrOpen = !attrOpen">
+            <span>属性</span>
+            <el-icon :class="['jd-collapse', { 'is-collapsed': !attrOpen }]"><ArrowDown /></el-icon>
           </div>
         </template>
-        <div class="info-grid">
-          <div class="info-item">
-            <label>命名空间名称：</label>
-            <span>{{ namespaceInfo?.name || '-' }}</span>
+        <el-collapse-transition>
+          <div v-show="attrOpen" class="jd-attr-grid">
+            <div class="jd-attr"><label>名称</label><span>{{ ns.name }}</span></div>
+            <div class="jd-attr"><label>别名</label><span>{{ ns.alias || '-' }}</span></div>
+            <div class="jd-attr"><label>描述</label><span>{{ ns.describe || '-' }}</span></div>
+            <div class="jd-attr"><label>集群</label><span>{{ clusterName || '-' }}</span></div>
+            <div class="jd-attr"><label>创建时间</label><span>{{ formatDateTime(ns.creationTimestamp) }}</span></div>
+            <div class="jd-attr"><label>Finalizers</label><span>{{ ns.spec?.finalizers?.join(', ') || '-' }}</span></div>
+            <div class="jd-attr"><label>UID</label><span class="mono">{{ ns.uid }}</span></div>
+            <div class="jd-attr">
+              <label>事件</label>
+              <span><el-link type="primary" @click="goEventCenter">在事件中心查看全部事件</el-link></span>
+            </div>
           </div>
-          <div class="info-item">
-            <label>别名：</label>
-            <span>{{ namespaceInfo?.alias || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <label>描述：</label>
-            <span>{{ namespaceInfo?.describe || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <label>状态：</label>
-            <el-tag 
-              :type="getStatusType(namespaceInfo?.active)"
-              size="small"
-            >
-              {{ getStatusText(namespaceInfo?.active) }}
-            </el-tag>
-          </div>
-          <div class="info-item">
-            <label>UID：</label>
-            <span class="uid-text">{{ namespaceInfo?.uid || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <label>资源版本：</label>
-            <span>{{ namespaceInfo?.resourceVersion || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <label>API版本：</label>
-            <span>{{ namespaceInfo?.version || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <label>创建时间：</label>
-            <span>{{ formatDate(namespaceInfo?.creationTimestamp) }}</span>
-          </div>
-        </div>
+        </el-collapse-transition>
       </el-card>
 
-      <el-row :gutter="20" style="margin-top: 20px;">
-        <!-- Labels -->
-        <el-col :span="12">
-          <el-card class="info-card">
-            <template #header>
-              <div class="card-header">
-                <span>Labels</span>
-                <el-tag size="small" type="info">{{ Object.keys(namespaceInfo?.labels || {}).length }}</el-tag>
-              </div>
-            </template>
-            <div class="labels-content">
-              <div v-if="!namespaceInfo?.labels || Object.keys(namespaceInfo.labels).length === 0" class="empty-state">
-                <el-empty description="暂无Labels" :image-size="60" />
-              </div>
-              <div v-else class="labels-list">
-                <div 
-                  v-for="(value, key) in namespaceInfo.labels" 
-                  :key="key" 
-                  class="label-item"
-                >
-                  <div class="label-key">{{ key }}</div>
-                  <div class="label-value">{{ value }}</div>
-                </div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
+      <div class="jd-tabbar">
+        <button v-for="t in tabs" :key="t.key" type="button" :class="['jd-tab', { 'is-active': activeTab === t.key }]" @click="activeTab = t.key">
+          {{ t.label }}
+          <span v-if="t.count !== undefined && t.count !== null" class="jd-tab__count">{{ t.count }}</span>
+        </button>
+      </div>
 
-        <!-- Annotations -->
-        <el-col :span="12">
-          <el-card class="info-card">
-            <template #header>
-              <div class="card-header">
-                <span>Annotations</span>
-                <el-tag size="small" type="info">{{ Object.keys(namespaceInfo?.annotations || {}).length }}</el-tag>
-              </div>
-            </template>
-            <div class="annotations-content">
-              <div v-if="!namespaceInfo?.annotations || Object.keys(namespaceInfo.annotations).length === 0" class="empty-state">
-                <el-empty description="暂无Annotations" :image-size="60" />
-              </div>
-              <div v-else class="annotations-list">
-                <div 
-                  v-for="(value, key) in namespaceInfo.annotations" 
-                  :key="key" 
-                  class="annotation-item"
-                >
-                  <div class="annotation-key">{{ key }}</div>
-                  <div class="annotation-value">{{ value }}</div>
-                </div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <!-- Spec信息 -->
-      <el-row style="margin-top: 20px;">
-        <el-col :span="24">
-          <el-card class="info-card">
-            <template #header>
-              <div class="card-header">
-                <span>Spec配置</span>
-              </div>
-            </template>
-            <div class="spec-content">
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="Finalizers">
-                  <div v-if="namespaceInfo?.spec?.finalizers && namespaceInfo.spec.finalizers.length > 0">
-                    <el-tag 
-                      v-for="finalizer in namespaceInfo.spec.finalizers" 
-                      :key="finalizer" 
-                      size="small" 
-                      style="margin-right: 8px; margin-bottom: 4px;"
-                    >
-                      {{ finalizer }}
-                    </el-tag>
-                  </div>
-                  <span v-else>-</span>
-                </el-descriptions-item>
-              </el-descriptions>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
+      <!-- 切换页签时保留各面板状态, 避免重复请求 -->
+      <el-card v-show="activeTab === 'quota'" class="info-card">
+        <template #header>
+          <div class="card-header">
+            <span>资源配额</span>
+            <span class="card-header__hint">限制命名空间可以使用的资源总量（ResourceQuota）</span>
+          </div>
+        </template>
+        <QuotaPanel :key="`q${panelKey}`" :cluster-id="clusterId" :namespace="namespace" @change="(n: number) => (counts.quota = n)" />
+      </el-card>
+      <el-card v-show="activeTab === 'limits'" class="info-card">
+        <template #header>
+          <div class="card-header">
+            <span>默认资源限制</span>
+            <span class="card-header__hint">容器的默认资源预留 / 上限及允许范围（LimitRange）</span>
+          </div>
+        </template>
+        <LimitRangePanel :key="`l${panelKey}`" :cluster-id="clusterId" :namespace="namespace" @change="(n: number) => (counts.limits = n)" />
+      </el-card>
+      <el-card v-show="activeTab === 'network'" class="info-card">
+        <template #header>
+          <div class="card-header">
+            <span>网络策略</span>
+            <span class="card-header__hint">控制容器组的入站 / 出站流量（NetworkPolicy），需要网络插件支持</span>
+          </div>
+        </template>
+        <NetworkPolicyPanel :key="`n${panelKey}`" :cluster-id="clusterId" :namespace="namespace" @change="(n: number) => (counts.network = n)" />
+      </el-card>
+      <el-card v-show="activeTab === 'metadata'" class="info-card">
+        <template #header>
+          <div class="card-header"><span>元数据</span></div>
+        </template>
+        <MetadataPanel :labels="ns.labels" :annotations="ns.annotations" />
+      </el-card>
+      <el-card v-show="activeTab === 'events'" class="info-card">
+        <template #header>
+          <div class="card-header">
+            <span>事件</span>
+            <el-tag size="small" type="info">{{ events.length }}</el-tag>
+            <span class="card-header__hint">命名空间对象本身的事件，命名空间内其他资源的事件请到事件中心查看</span>
+          </div>
+        </template>
+        <EventsTable :events="events" />
+      </el-card>
     </div>
 
-    <!-- YAML查看对话框 -->
-    <el-dialog v-model="yamlDialogVisible" title="查看YAML" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">查看YAML</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">Namespace 配置</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-dialog-content">
-            <div class="yaml-info">
-              <div class="info-item">
-                <span class="label">集群:</span>
-                <span class="value">{{ route.query.clusterName || '-' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">命名空间:</span>
-                <span class="value">{{ namespaceInfo?.name }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">资源类型:</span>
-                <span class="value">Namespace</span>
-              </div>
-            </div>
+    <el-empty v-else description="命名空间不存在或已被删除" />
 
-            <div class="yaml-view">
-              <YamlEditor :model-value="yamlContent" :readonly="true" height="100%" />
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlDialogVisible = false">关闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="yamlVisible"
+      title="编辑YAML"
+      subtitle="Namespace 配置"
+      :info="[{ label: '集群', value: clusterName }, { label: '命名空间', value: namespace }, { label: '资源类型', value: 'Namespace' }]"
+      :content="yamlContent"
+      :filename="`${namespace}.yaml`"
+      :apply-target="{ clusterId, kind: 'namespace', name: namespace }"
+      @applied="fetchDetail(true)"
+    />
 
-    <!-- 删除确认对话框 -->
+    <NamespaceFormDialog v-model="editVisible" :cluster-id="clusterId" :namespace="editingNamespace" @success="fetchDetail(true)" />
+
     <DeleteConfirmDialog
-      v-model="deleteDialogVisible"
-      :item-name="namespaceInfo?.name || ''"
-      message="确定要删除命名空间吗？"
-      :loading="deleteLoading"
-      @confirm="confirmDeleteNamespace"
-      @cancel="cancelDeleteNamespace"
+      v-model="deleteVisible"
+      :item-name="namespace"
+      message="删除命名空间会同时删除其中的所有资源，确定要删除吗？"
+      :loading="deleting"
+      @confirm="confirmDelete"
+      @cancel="deleteVisible = false"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { 
-  ArrowLeft,
-  Edit,
-  Document,
-  Delete
-} from '@element-plus/icons-vue'
-import { namespaceApi, type NamespaceVO, type NamespaceBaseDTO } from '@/api/namespace'
+import { ArrowDown, Delete, Document, Edit, Refresh } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
+import YamlDialog from '@/components/YamlDialog.vue'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
-import YamlEditor from '@/components/YamlEditor.vue'
-import '@/assets/styles/config-editor.css'
+import NamespaceFormDialog from '@/components/NamespaceFormDialog.vue'
+import MetadataPanel from '@/components/job/MetadataPanel.vue'
+import EventsTable from '@/components/job/EventsTable.vue'
+import QuotaPanel from '@/components/policy/QuotaPanel.vue'
+import LimitRangePanel from '@/components/policy/LimitRangePanel.vue'
+import NetworkPolicyPanel from '@/components/policy/NetworkPolicyPanel.vue'
+import { namespaceApi, type NamespaceVO } from '@/api/namespace'
+import { fetchResourceYaml } from '@/api/resource'
+import { eventApi } from '@/api/event'
+import type { EventVO } from '@/api/job'
+import { useClusterStore } from '@/stores/cluster'
+import { useTabBack } from '@/composables/useTabBack'
+import { formatDateTime } from '@/utils/job'
+import '@/assets/styles/job-detail.css'
+
+type TabKey = 'quota' | 'limits' | 'network' | 'metadata' | 'events'
 
 const route = useRoute()
 const router = useRouter()
+const goBack = useTabBack()
+const clusterStore = useClusterStore()
+
+// 详情页按完整路径缓存, 参数在创建时取一次
+const clusterId = ref((route.query.clusterId as string) || (route.params.clusterId as string) || clusterStore.currentClusterId || '')
+const namespace = ref((route.query.namespace as string) || '')
+const clusterName = computed(() => clusterStore.currentClusterName)
 
 const loading = ref(false)
-const namespaceInfo = ref<NamespaceVO | null>(null)
-const yamlDialogVisible = ref(false)
-const yamlContent = ref('')
+const ns = ref<NamespaceVO | null>(null)
+const events = ref<EventVO[]>([])
+const attrOpen = ref(true)
+const activeTab = ref<TabKey>('quota')
+const counts = reactive<{ quota: number | null; limits: number | null; network: number | null }>({ quota: null, limits: null, network: null })
+const tabs = computed(() => [
+  { key: 'quota' as TabKey, label: '资源配额', count: counts.quota },
+  { key: 'limits' as TabKey, label: '默认资源限制', count: counts.limits },
+  { key: 'network' as TabKey, label: '网络策略', count: counts.network },
+  { key: 'metadata' as TabKey, label: '元数据' },
+  { key: 'events' as TabKey, label: '事件', count: events.value.length }
+])
 
-// 获取命名空间详情
-const fetchNamespaceDetail = async () => {
+const editVisible = ref(false)
+const editingNamespace = computed(() => (ns.value ? { name: ns.value.name, alias: ns.value.alias, describe: ns.value.describe } : null))
+
+const fetchDetail = async (silent = false) => {
+  if (!clusterId.value || !namespace.value) return
+  if (!silent) loading.value = true
   try {
-    loading.value = true
-    const params: NamespaceBaseDTO = {
-      clusterId: route.query.clusterId as string,
-      namespace: route.query.namespace as string
-    }
-    
-    const response = await namespaceApi.getInfo(params)
-    namespaceInfo.value = response.data
-  } catch (error: any) {
-    ElMessage.error('获取命名空间详情失败')
+    const resp = await namespaceApi.getInfo({ clusterId: clusterId.value, namespace: namespace.value })
+    ns.value = resp.data
+    const ev = await eventApi.list({ clusterId: clusterId.value, kind: 'Namespace', name: namespace.value, page: 1, pageSize: 200 })
+    events.value = ev.data?.items || []
+  } catch {
+    if (!silent) ns.value = null
   } finally {
     loading.value = false
   }
 }
 
-// 返回列表
-const handleBack = () => {
-  router.back()
+// 各面板在挂载时加载, 刷新时通过改变 key 重新挂载
+const panelKey = ref(0)
+const refresh = () => {
+  fetchDetail(true)
+  panelKey.value++
 }
 
-// 编辑
-const handleEdit = () => {
-  // 跳转到编辑页面或打开编辑对话框
-  ElMessage.info('编辑功能待实现')
-}
-
-// 查看YAML
-const handleViewYaml = () => {
-  if (namespaceInfo.value?.yaml) {
-    yamlContent.value = namespaceInfo.value.yaml
-    yamlDialogVisible.value = true
-  } else {
-    ElMessage.warning('暂无YAML配置')
+const yamlVisible = ref(false)
+const yamlContent = ref('')
+const openYaml = async () => {
+  try {
+    yamlContent.value = await fetchResourceYaml({ clusterId: clusterId.value, kind: 'namespace', name: namespace.value })
+    yamlVisible.value = true
+  } catch {
+    // 请求拦截器已提示错误
   }
 }
 
-// 复制YAML
-const handleCopyYaml = async () => {
+const goEventCenter = () => router.push({ path: `/cluster/${clusterId.value}/resource/events`, query: { namespace: namespace.value } })
+
+const deleteVisible = ref(false)
+const deleting = ref(false)
+const confirmDelete = async () => {
+  deleting.value = true
   try {
-    await navigator.clipboard.writeText(yamlContent.value)
-    ElMessage.success('复制成功')
-  } catch (error) {
-    ElMessage.error('复制失败')
-  }
-}
-
-// 删除相关状态
-const deleteDialogVisible = ref(false)
-const deleteLoading = ref(false)
-
-// 删除
-const handleDelete = () => {
-  deleteDialogVisible.value = true
-}
-
-// 确认删除命名空间
-const confirmDeleteNamespace = async () => {
-  deleteLoading.value = true
-  try {
-    const params: NamespaceBaseDTO = {
-      clusterId: route.query.clusterId as string,
-      namespace: namespaceInfo.value?.name || ''
-    }
-    await namespaceApi.delete(params)
-    ElMessage.success('删除成功')
-    deleteDialogVisible.value = false
-    router.back()
-  } catch (error) {
-    ElMessage.error('删除失败')
+    await namespaceApi.delete({ clusterId: clusterId.value, namespace: namespace.value })
+    ElMessage.success('已提交删除，命名空间中的资源会被逐步清理')
+    deleteVisible.value = false
+    goBack()
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
-    deleteLoading.value = false
+    deleting.value = false
   }
 }
 
-// 取消删除
-const cancelDeleteNamespace = () => {
-  deleteDialogVisible.value = false
-}
-
-// 状态相关
-const getStatusType = (status?: string) => {
-  switch (status) {
-    case 'Active':
-      return 'success'
-    case 'Terminating':
-      return 'warning'
-    default:
-      return 'danger'
-  }
-}
-
-const getStatusText = (status?: string) => {
-  switch (status) {
-    case 'Active':
-      return '活跃'
-    case 'Terminating':
-      return '终止中'
-    default:
-      return status || '-'
-  }
-}
-
-// 格式化日期
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
-
-// 页面加载时获取详情
 onMounted(() => {
-  if (route.query.clusterId && route.query.namespace) {
-    fetchNamespaceDetail()
-  } else {
+  if (!clusterId.value || !namespace.value) {
     ElMessage.error('缺少必要参数')
-    router.back()
+    goBack()
+    return
   }
+  fetchDetail()
 })
 </script>
 
 <style scoped>
-.namespace-detail {
-  padding: 20px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.header-left h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.detail-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-}
-
-.info-item label {
-  font-weight: 500;
-  color: #606266;
-  min-width: 120px;
-}
-
-.uid-text {
-  font-family: 'Courier New', monospace;
+.mono {
+  font-family: 'JetBrains Mono', Consolas, Menlo, monospace;
   font-size: 12px;
-  background: #f5f5f5;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.labels-content,
-.annotations-content {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 20px;
-}
-
-.labels-list,
-.annotations-list {
-  padding: 0;
-}
-
-.label-item,
-.annotation-item {
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  margin-bottom: 8px;
-  background-color: #fafafa;
-}
-
-.label-key,
-.annotation-key {
-  font-weight: 500;
-  color: #409eff;
-  font-size: 12px;
-  margin-bottom: 4px;
-  word-break: break-all;
-}
-
-.label-value,
-.annotation-value {
-  color: #606266;
-  font-size: 13px;
-  word-break: break-all;
-  font-family: 'Courier New', monospace;
-}
-
-.spec-content {
-  padding: 0;
-}
-
-.dialog-footer {
-  text-align: right;
-}
-
-@media (max-width: 768px) {
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-:deep(.el-card__header) {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #ebeef5;
-}
-
-:deep(.el-card__body) {
-  padding: 20px;
-}
-
-/* YAML对话框样式 */
-.yaml-dialog-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.yaml-info {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 16px;
-  padding: 12px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  flex-wrap: wrap;
-}
-
-.yaml-info .info-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.yaml-info .label {
-  font-weight: 500;
-  color: #606266;
-}
-
-.yaml-info .value {
-  color: #409eff;
-  font-weight: 500;
-}
-
-.yaml-editor-wrapper {
-  flex: 1;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-:deep(.el-descriptions__label) {
-  font-weight: 500;
-}
-
-:deep(.el-button + .el-button) {
-  margin-left: 8px;
-}
-
-:deep(.el-empty) {
-  padding: 20px 0;
 }
 </style>

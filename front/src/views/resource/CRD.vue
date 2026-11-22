@@ -1,14 +1,11 @@
 <template>
-  <div class="crd-page">
-    <div class="page-header">
-      <h1>CRD管理</h1>
-      <div class="header-actions">
-        <el-button @click="loadCrds">
-          <el-icon><Refresh /></el-icon>
-          刷新
-        </el-button>
-      </div>
-    </div>
+  <div class="crd-page list-page">
+    <PageHeader title="CRD管理" subtitle="查看集群中注册的自定义资源定义" icon="crd">
+      <el-button @click="loadCrds(true)">
+        <el-icon><Refresh /></el-icon>
+        刷新
+      </el-button>
+    </PageHeader>
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
@@ -36,10 +33,10 @@
     </el-card>
 
     <el-card class="table-card">
-      <el-table v-loading="loading" :data="crds" stripe style="width: 100%">
+      <el-table v-loading="loading" :data="crds" style="width: 100%" :header-cell-class-name="tableHeaderClass" :cell-class-name="tableCellClass">
         <el-table-column prop="name" label="名称" min-width="280" header-align="center" align="center">
           <template #default="{ row }">
-            <el-link type="primary" @click="openDetail(row)">{{ row.name }}</el-link>
+            <el-link type="primary" @click="openInstances(row)">{{ row.name }}</el-link>
           </template>
         </el-table-column>
         <el-table-column prop="group" label="组" min-width="180" :show-overflow-tooltip="true" header-align="center" align="center" />
@@ -62,14 +59,15 @@
         <el-table-column label="操作" width="200" fixed="right" header-align="center" align="center">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" class="btn-main" @click="openDetail(row)">详情</el-button>
+              <el-button size="small" type="primary" class="btn-main" @click="openInstances(row)">查看实例</el-button>
               <el-dropdown trigger="click" @command="(cmd: string) => handleRowAction(cmd, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
+                    <el-dropdown-item command="detail">定义详情</el-dropdown-item>
+                    <el-dropdown-item command="yaml">编辑YAML</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -79,17 +77,14 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
+      <ListPagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50, 100]"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </el-card>
 
     <!-- CRD 详情抽屉(KubeSphere 风格) -->
@@ -107,8 +102,12 @@
             <div class="ks-info-row"><span class="ks-info-label">单数名</span><span class="ks-info-value">{{ detailData.singular }}</span></div>
             <div class="ks-info-row"><span class="ks-info-label">短名</span><span class="ks-info-value">{{ detailData.shortNames?.length ? detailData.shortNames.join(', ') : '-' }}</span></div>
             <div class="ks-info-row"><span class="ks-info-label">创建时间</span><span class="ks-info-value">{{ detailData.createTime }}</span></div>
+            <div class="ks-info-row">
+              <span class="ks-info-label">实例</span>
+              <span class="ks-info-value"><el-link type="primary" @click="currentCrd && openInstances(currentCrd)">查看 {{ detailData.kind }} 资源（分页）</el-link></span>
+            </div>
           </el-tab-pane>
-          <el-tab-pane name="versions" :label="`全部版本 (${detailData.versions?.length || 0})`">
+          <el-tab-pane name="versions" :label="`可用版本 (${detailData.versions?.length || 0})`">
             <div v-if="detailData.versions?.length" class="ks-chips">
               <span v-for="ver in detailData.versions" :key="ver" class="ks-chip">{{ ver }}</span>
             </div>
@@ -122,29 +121,37 @@
     </DetailDrawer>
 
     <!-- CRD YAML 对话框 -->
-    <el-dialog v-model="yamlVisible" :title="`YAML - ${currentCrd?.name || ''}`" width="70%" top="5vh">
-      <div v-loading="yamlLoading" class="yaml-wrapper">
-        <YamlEditor :model-value="yamlContent" :readonly="true" height="100%" class="yaml-editor" />
-      </div>
-      <template #footer>
-        <el-button @click="yamlVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="yamlVisible"
+      title="编辑YAML"
+      :subtitle="currentCrd?.name"
+      :content="yamlContent"
+      :loading="yamlLoading"
+      :apply-target="currentCrd ? { clusterId, kind: 'customresourcedefinition', name: currentCrd.name } : null"
+      @applied="loadCrds(true)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { fetchResourceYaml } from '@/api/resource'
+import YamlDialog from '@/components/YamlDialog.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import ListPagination from '@/components/ListPagination.vue'
+import { tableHeaderClass, tableCellClass } from '@/utils/table'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, MoreFilled } from '@element-plus/icons-vue'
 import { useClusterStore } from '@/stores/cluster'
+import { useRouter } from 'vue-router'
 import { crdApi, type CrdVO } from '@/api/crd'
-import { jsonToYaml } from '@/utils/yaml'
 import YamlEditor from '@/components/YamlEditor.vue'
 import DetailDrawer from '@/components/DetailDrawer.vue'
 import '@/assets/styles/config-editor.css'
 
 const clusterStore = useClusterStore()
+const router = useRouter()
+const clusterId = computed(() => clusterStore.currentClusterId)
 
 const loading = ref(false)
 const crds = ref<CrdVO[]>([])
@@ -166,7 +173,7 @@ const detailVisible = ref(false)
 const detailTab = ref('info')
 const detailLoading = ref(false)
 const detailYaml = ref('')
-const detailData = ref<Partial<CrdVO> & { listKind?: string; plural?: string; singular?: string; shortNames?: string[]; versions?: string[] }>({})
+const detailData = ref<Partial<CrdVO>>({})
 const detailMeta = computed(() => [
   { label: '组', value: detailData.value.group || '-' },
   { label: '存储版本', value: detailData.value.version || '-' },
@@ -176,53 +183,42 @@ const detailMeta = computed(() => [
 
 // 行操作分发
 const handleRowAction = (command: string, row: CrdVO) => {
-  if (command === 'yaml') {
-    openYaml(row)
-  }
+  if (command === 'yaml') openYaml(row)
+  else if (command === 'detail') openDetail(row)
 }
 
-// 打开结构化详情
-const openDetail = async (row: CrdVO) => {
-  const clusterId = clusterStore.currentClusterId
-  if (!clusterId) return
+// 自定义资源实例列表
+const openInstances = (row: CrdVO) =>
+  router.push({ path: `/cluster/${clusterStore.currentClusterId}/resource/crd/instances`, query: { name: row.name } })
+
+// 打开定义详情: 概要直接使用列表数据, YAML(包含完整 schema, 可能很大)切换到 YAML 页签时才加载
+const openDetail = (row: CrdVO) => {
   currentCrd.value = row
   detailTab.value = 'info'
   detailYaml.value = ''
+  detailData.value = { ...row }
   detailVisible.value = true
+}
+
+const loadDetailYaml = async () => {
+  if (detailYaml.value || !currentCrd.value) return
   detailLoading.value = true
-  detailData.value = {
-    name: row.name,
-    group: row.group,
-    kind: row.kind,
-    version: row.version,
-    scope: row.scope,
-    createTime: row.createTime
-  }
   try {
-    const response = await crdApi.getCrd(clusterId, row.name)
-    const data = response.data as any
-    const meta = data.metadata || {}
-    if (meta.managedFields) delete meta.managedFields
-    detailYaml.value = jsonToYaml(data)
-    detailData.value = {
-      ...detailData.value,
-      plural: data.spec?.names?.plural || '-',
-      singular: data.spec?.names?.singular || '-',
-      listKind: data.spec?.names?.listKind || '-',
-      shortNames: data.spec?.names?.shortNames || [],
-      versions: data.spec?.versions?.map((v: any) => v.name).filter(Boolean) || [],
-      createTime: meta.creationTimestamp ? String(meta.creationTimestamp).replace('T', ' ').slice(0, 19) : row.createTime
-    }
-  } catch (error) {
-    console.error('Failed to load CRD detail:', error)
-    // 获取失败时仍展示列表已知信息
+    detailYaml.value = await fetchResourceYaml({ clusterId: clusterId.value, kind: 'customresourcedefinition', name: currentCrd.value.name })
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     detailLoading.value = false
   }
 }
 
+watch(detailTab, tab => {
+  if (tab === 'yaml' && detailVisible.value) loadDetailYaml()
+})
+
 // 加载 CRD 列表
-const loadCrds = async () => {
+// refresh: 忽略后端缓存(点击刷新、编辑或删除 CRD 之后)
+const loadCrds = async (refresh = false) => {
   const clusterId = clusterStore.currentClusterId
   if (!clusterId) {
     ElMessage.warning('请先选择集群')
@@ -234,13 +230,13 @@ const loadCrds = async () => {
       clusterId,
       page: pagination.page,
       pageSize: pagination.pageSize,
-      keyword: searchForm.keyword || undefined
+      keyword: searchForm.keyword || undefined,
+      refresh: refresh || undefined
     })
     crds.value = response.data?.items || []
     pagination.total = response.data?.total || 0
-  } catch (error) {
-    console.error('Failed to load CRDs:', error)
-    ElMessage.error('加载CRD列表失败')
+  } catch {
+    // 请求拦截器已提示错误
     crds.value = []
     pagination.total = 0
   } finally {
@@ -272,22 +268,13 @@ const handleCurrentChange = (page: number) => {
 
 // 查看 CRD YAML 详情
 const openYaml = async (row: CrdVO) => {
-  const clusterId = clusterStore.currentClusterId
-  if (!clusterId) return
   currentCrd.value = row
+  yamlContent.value = ''
   yamlVisible.value = true
   yamlLoading.value = true
-  yamlContent.value = ''
   try {
-    const response = await crdApi.getCrd(clusterId, row.name)
-    const data = response.data as Record<string, unknown>
-    // managedFields 为 k8s 追踪字段, 体积大且无展示价值
-    const meta = data.metadata as Record<string, unknown> | undefined
-    if (meta) delete meta.managedFields
-    yamlContent.value = jsonToYaml(data)
-  } catch (error) {
-    console.error('Failed to load CRD detail:', error)
-    ElMessage.error('获取CRD详情失败')
+    yamlContent.value = await fetchResourceYaml({ clusterId: clusterId.value, kind: 'customresourcedefinition', name: row.name })
+  } catch {
     yamlVisible.value = false
   } finally {
     yamlLoading.value = false
@@ -308,10 +295,9 @@ const openDelete = (row: CrdVO) => {
     try {
       await crdApi.deleteCrd(clusterStore.currentClusterId, row.name)
       ElMessage.success('删除成功')
-      loadCrds()
-    } catch (error) {
-      console.error('Failed to delete CRD:', error)
-      ElMessage.error('删除失败')
+      loadCrds(true)
+    } catch {
+      // 请求拦截器已提示错误
     }
   }).catch(() => {})
 }

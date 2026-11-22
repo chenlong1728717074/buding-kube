@@ -24,6 +24,7 @@ func NewConfigMapApi(router *gin.RouterGroup) *ConfigMapApi {
 
 func (api *ConfigMapApi) Router() {
 	api.router.GET("/list", api.List)
+	api.router.GET("", api.Get)
 	api.router.POST("/add", middleware.Blocker(), api.Add)
 	api.router.POST("/apply", middleware.Blocker(), api.Apply)
 	api.router.DELETE("", middleware.Blocker(), api.Delete)
@@ -38,13 +39,28 @@ func (a *ConfigMapApi) List(ctx *gin.Context) {
 		a.ParamBindError(ctx, err)
 		return
 	}
-	list, err := a.srv.List(query)
+	list, err := a.srv.List(ctx.Request.Context(), query)
 	if err != nil {
 		a.InternalError(ctx, "查询失败:", err)
 		return
 	}
 	response := BuildPageResponse(list, query.Page, query.PageSize)
 	a.SuccessWithData(ctx, response)
+}
+
+// Get - 查询单个 ConfigMap(含 data 和 YAML)
+func (a *ConfigMapApi) Get(ctx *gin.Context) {
+	var base dto.BaseDTO
+	if err := a.BindQuery(ctx, &base); err != nil {
+		a.ParamBindError(ctx, err)
+		return
+	}
+	data, err := a.srv.Get(ctx.Request.Context(), base)
+	if err != nil {
+		a.InternalError(ctx, "查询失败", err)
+		return
+	}
+	a.SuccessWithData(ctx, data)
 }
 
 func (api *ConfigMapApi) Apply(ctx *gin.Context) {

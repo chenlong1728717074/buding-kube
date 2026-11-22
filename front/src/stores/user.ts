@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { loginApi } from '@/api/login'
-import { userApi, type UserVO, UserRole } from '@/api/user'
+import { type UserVO, UserRole } from '@/api/user'
 import type { LoginDTO } from '@/api/login'
 import { ElMessage } from 'element-plus'
 import router from '@/router'

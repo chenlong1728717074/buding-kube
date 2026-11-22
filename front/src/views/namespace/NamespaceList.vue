@@ -1,18 +1,15 @@
 <template>
-  <div class="namespace-list">
-    <div class="page-header">
-      <h1>命名空间列表</h1>
-      <div class="header-actions">
-        <el-button type="primary" @click="handleAddNamespace">
-          <el-icon><Plus /></el-icon>
-          添加命名空间
-        </el-button>
-        <el-button type="success" @click="handleAddNamespaceByYaml">
-          <el-icon><Document /></el-icon>
-          YAML添加
-        </el-button>
-      </div>
-    </div>
+  <div class="namespace-list list-page">
+    <PageHeader title="命名空间列表" subtitle="管理集群中的命名空间" icon="ns">
+      <el-button type="primary" @click="handleAddNamespace">
+        <el-icon><Plus /></el-icon>
+        添加命名空间
+      </el-button>
+      <el-button type="success" @click="handleAddNamespaceByYaml">
+        <el-icon><Document /></el-icon>
+        YAML添加
+      </el-button>
+    </PageHeader>
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
@@ -40,10 +37,11 @@
     <el-card class="table-card">
       <el-table 
         v-loading="loading" 
-        :data="namespaceList" 
-        stripe
+        :data="namespaceList"
         style="width: 100%"
         @selection-change="handleSelectionChange"
+        :header-cell-class-name="tableHeaderClass"
+        :cell-class-name="tableCellClass"
       >
         <el-table-column type="selection" width="55" header-align="center" align="center" />
         <el-table-column prop="name" label="命名空间名称" min-width="180" header-align="center" align="center">
@@ -108,141 +106,52 @@
       </el-table>
 
       <!-- 分页器 -->
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
+      <ListPagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50, 100]"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </el-card>
 
     <!-- 新增/编辑命名空间对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="80%" :close-on-click-modal="false" class="config-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">{{ dialogTitle }}</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">命名空间基础信息</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <el-form ref="formRef" :model="namespaceForm" :rules="formRules" label-width="100px" class="namespace-form">
-        <el-form-item label="命名空间" prop="namespace">
-          <el-input 
-            v-model="namespaceForm.namespace" 
-            placeholder="请输入命名空间名称" 
-            :disabled="isEdit"
-          />
-        </el-form-item>
-        
-        <el-form-item label="别名" prop="alias">
-          <el-input 
-            v-model="namespaceForm.alias" 
-            placeholder="请输入别名" 
-          />
-        </el-form-item>
-        
-        <el-form-item label="描述" prop="describe">
-          <el-input 
-            v-model="namespaceForm.describe" 
-            type="textarea" 
-            :rows="3" 
-            placeholder="请输入描述" 
-          />
-        </el-form-item>
-          </el-form>
-        </div>
-      </div>
-      
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="handleDialogClose">取消</el-button>
-          <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <NamespaceFormDialog
+      v-model="dialogVisible"
+      :cluster-id="clusterId"
+      :namespace="editingNamespace"
+      @success="fetchNamespaceList"
+    />
 
     <!-- YAML添加命名空间对话框 -->
-    <el-dialog v-model="yamlDialogVisible" title="YAML添加命名空间" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">YAML添加命名空间</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">通过 YAML 快速创建</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-editor-wrapper">
-            <YamlEditor
-              v-model="yamlForm.yaml"
-              title="命名空间 YAML"
-              :readonly="false"
-              height="100%"
-              filename="namespace.yaml"
-            />
-          </div>
-        </div>
-      </div>
-      
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleApplyYaml" :loading="yamlSubmitLoading">应用</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="yamlDialogVisible"
+      title="YAML添加命名空间"
+      subtitle="通过 YAML 快速创建"
+      v-model:content="yamlForm.yaml"
+      :readonly="false"
+      editor-title="命名空间 YAML"
+      filename="namespace.yaml"
+      :submitting="yamlSubmitLoading"
+      @confirm="handleApplyYaml"
+    />
 
     <!-- 查看/编辑YAML对话框 -->
-    <el-dialog v-model="viewYamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">查看/编辑YAML</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">命名空间配置</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-dialog-content">
-            <div class="yaml-info">
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
-                <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
-                <el-descriptions-item label="名称">{{ currentNamespace?.name }}</el-descriptions-item>
-                <el-descriptions-item label="类型">Namespace</el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <div class="yaml-view">
-              <YamlEditor
-                v-model="viewYamlForm.yaml"
-                :title="`${currentNamespace?.name} - Namespace YAML`"
-                :readonly="false"
-                :filename="`${currentNamespace?.name}-namespace.yaml`"
-                @change="handleYamlChange"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="viewYamlDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleApplyEditYaml" :loading="applyLoading">应用修改</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="viewYamlDialogVisible"
+      title="查看/编辑YAML"
+      subtitle="命名空间配置"
+      :info="[{ label: '集群', value: viewYamlForm.clusterName }, { label: '命名空间', value: viewYamlForm.namespace }, { label: '名称', value: currentNamespace?.name }, { label: '类型', value: 'Namespace' }]"
+      v-model:content="viewYamlForm.yaml"
+      :readonly="false"
+      :editor-title="`${currentNamespace?.name} - Namespace YAML`"
+      :filename="`${currentNamespace?.name}-namespace.yaml`"
+      @change="handleYamlChange"
+      :submitting="applyLoading"
+      confirm-text="应用修改"
+      @confirm="handleApplyEditYaml"
+    />
 
     <!-- 删除确认对话框 -->
     <DeleteConfirmDialog
@@ -257,6 +166,9 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/PageHeader.vue'
+import ListPagination from '@/components/ListPagination.vue'
+import { tableHeaderClass, tableCellClass } from '@/utils/table'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -271,20 +183,19 @@ import {
   namespaceApi, 
   type NamespaceVO, 
   type NamespacePageQueryDTO, 
-  type NamespaceCreateDTO, 
   type NamespaceApplyDTO,
   type NamespaceBaseDTO
 } from '@/api/namespace'
 import { clusterApi, type ClusterVO } from '@/api/cluster'
 import { useClusterStore } from '@/stores/cluster'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
-import YamlEditor from '@/components/YamlEditor.vue'
+import YamlDialog from '@/components/YamlDialog.vue'
+import NamespaceFormDialog from '@/components/NamespaceFormDialog.vue'
 import '@/assets/styles/config-editor.css'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
-const submitLoading = ref(false)
 const applyLoading = ref(false)
 const yamlSubmitLoading = ref(false)
 
@@ -307,23 +218,15 @@ const clusterList = ref<ClusterVO[]>([])
 // 分页
 const pagination = reactive({
   page: 1,
-  pageSize: 20,
+  pageSize: 10,
   total: 0
 })
 
 // 对话框
 const dialogVisible = ref(false)
 const yamlDialogVisible = ref(false)
-const isEdit = ref(false)
-const dialogTitle = ref('')
-const formRef = ref()
-
-// 命名空间表单
-const namespaceForm = reactive({
-  namespace: '',
-  alias: '',
-  describe: ''
-})
+// 为空时是添加, 有值时是编辑
+const editingNamespace = ref<{ name: string; alias?: string; describe?: string } | null>(null)
 
 // YAML表单
 const yamlForm = reactive({
@@ -338,14 +241,6 @@ const viewYamlForm = reactive({
   namespace: '',
   yaml: ''
 })
-
-// 表单验证规则
-const formRules = {
-  namespace: [
-    { required: true, message: '请输入命名空间名称', trigger: 'blur' },
-    { pattern: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, message: '命名空间名称格式不正确', trigger: 'blur' }
-  ]
-}
 
 // 获取命名空间列表
 const fetchNamespaceList = async () => {
@@ -425,13 +320,7 @@ const handleSelectionChange = (selection: NamespaceVO[]) => {
 
 // 添加命名空间
 const handleAddNamespace = () => {
-  isEdit.value = false
-  dialogTitle.value = '添加命名空间'
-  Object.assign(namespaceForm, {
-    namespace: '',
-    alias: '',
-    describe: ''
-  })
+  editingNamespace.value = null
   dialogVisible.value = true
 }
 
@@ -476,13 +365,7 @@ const handleApplyYaml = async () => {
 
 // 编辑命名空间
 const handleEdit = (row: NamespaceVO) => {
-  isEdit.value = true
-  dialogTitle.value = '编辑命名空间'
-  Object.assign(namespaceForm, {
-    namespace: row.name,
-    alias: row.alias || '',
-    describe: row.describe || ''
-  })
+  editingNamespace.value = { name: row.name, alias: row.alias, describe: row.describe }
   dialogVisible.value = true
 }
 
@@ -582,38 +465,6 @@ const cancelDeleteNamespace = () => {
   currentDeleteNamespace.value = null
 }
 
-// 提交表单
-const handleSubmit = async () => {
-  if (!formRef.value) return
-  
-  try {
-    await formRef.value.validate()
-    submitLoading.value = true
-    
-    const data: NamespaceCreateDTO = {
-      clusterId: clusterId.value,
-      namespace: namespaceForm.namespace,
-      alias: namespaceForm.alias,
-      describe: namespaceForm.describe
-    }
-    
-    if (isEdit.value) {
-      await namespaceApi.update(data)
-      ElMessage.success('更新成功')
-    } else {
-      await namespaceApi.create(data)
-      ElMessage.success('创建成功')
-    }
-    
-    dialogVisible.value = false
-    fetchNamespaceList()
-  } catch (error: any) {
-    ElMessage.error(isEdit.value ? '更新失败' : '创建失败')
-  } finally {
-    submitLoading.value = false
-  }
-}
-
 // 应用YAML修改
 const handleApplyEditYaml = async () => {
   if (!viewYamlForm.yaml.trim()) {
@@ -637,14 +488,6 @@ const handleApplyEditYaml = async () => {
     ElMessage.error('应用失败')
   } finally {
     applyLoading.value = false
-  }
-}
-
-// 关闭对话框
-const handleDialogClose = () => {
-  dialogVisible.value = false
-  if (formRef.value) {
-    formRef.value.resetFields()
   }
 }
 

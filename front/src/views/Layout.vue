@@ -31,7 +31,7 @@
       </div>
       <el-menu
         :default-active="activeMenu"
-        router
+        @select="handleMenuSelect"
         class="sidebar-menu"
         :collapse="isCollapsed"
         :collapse-transition="false"
@@ -79,6 +79,14 @@
             <el-icon class="k8s-menu-icon"><K8sIcon name="sts" :size="19" /></el-icon>
             <span>StatefulSet</span>
           </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/workload/replicaset`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="rs" :size="19" /></el-icon>
+            <span>ReplicaSet</span>
+          </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/workload/hpa`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="hpa" :size="19" /></el-icon>
+            <span>弹性伸缩</span>
+          </el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="service">
@@ -101,6 +109,10 @@
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/service/endpointslice`">
             <el-icon class="k8s-menu-icon"><K8sIcon name="ep" :size="19" /></el-icon>
             <span>EndpointSlice</span>
+          </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/service/ingressclass`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="ing" :size="19" /></el-icon>
+            <span>IngressClass</span>
           </el-menu-item>
         </el-sub-menu>
 
@@ -157,14 +169,49 @@
           </el-menu-item>
         </el-sub-menu>
 
+        <el-sub-menu index="policy">
+          <template #title>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="quota" :size="20" /></el-icon>
+            <span>策略管理</span>
+          </template>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/policy/resourcequota`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="quota" :size="19" /></el-icon>
+            <span>资源配额</span>
+          </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/policy/limitrange`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="limits" :size="19" /></el-icon>
+            <span>默认资源限制</span>
+          </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/policy/networkpolicy`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="netpol" :size="19" /></el-icon>
+            <span>网络策略</span>
+          </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/policy/pdb`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="quota" :size="19" /></el-icon>
+            <span>中断预算</span>
+          </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/policy/priorityclass`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="etcd" :size="19" /></el-icon>
+            <span>优先级</span>
+          </el-menu-item>
+        </el-sub-menu>
+
         <el-sub-menu index="advanced">
           <template #title>
             <el-icon class="k8s-menu-icon"><K8sIcon name="etcd" :size="20" /></el-icon>
-            <span>高级功能</span>
+            <span>运维工具</span>
           </template>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/resource/crd`">
             <el-icon class="k8s-menu-icon"><K8sIcon name="crd" :size="19" /></el-icon>
             <span>CRD</span>
+          </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/resource/events`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="etcd" :size="19" /></el-icon>
+            <span>事件中心</span>
+          </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/resource/kubectl`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="k8s" :size="19" /></el-icon>
+            <span>Web kubectl</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/resource/tools`">
             <el-icon class="k8s-menu-icon"><K8sIcon name="etcd" :size="19" /></el-icon>
@@ -275,7 +322,8 @@
       <el-main class="main-content">
         <router-view v-slot="{ Component }">
           <transition name="fade-transform" mode="out-in">
-            <keep-alive>
+            <!-- 列表页缓存, 从详情返回时保留筛选和分页; 详情 / 编辑页每次进入都重新加载 -->
+            <keep-alive :exclude="NO_CACHE" :max="20">
               <component :is="Component" :key="route.fullPath" />
             </keep-alive>
           </transition>
@@ -290,6 +338,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useClusterStore } from '@/stores/cluster'
+import { useTagsStore } from '@/stores/tags'
 import {
   Bell,
   ArrowDown,
@@ -309,6 +358,7 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const clusterStore = useClusterStore()
+const tagsStore = useTagsStore()
 const nowDateText = ref('')
 const nowTimeText = ref('')
 const isFullscreen = ref(false)
@@ -347,10 +397,11 @@ const switchCluster = (command: any) => {
   })
   
   // 刷新当前页面或跳转到集群概览
-  const currentPath = route.path
+  // 详情页的资源在新集群里不一定存在, 切换后打开当前标签所属的菜单页
+  const currentPath = tagsStore.activeKey || route.path
   if (currentPath.includes('/cluster/')) {
     const newPath = currentPath.replace(/\/cluster\/[^/]+/, `/cluster/${cluster.id}`)
-    router.push(newPath)
+    tagsStore.openMenu(router, newPath)
   } else {
     router.push(`/cluster/${cluster.id}/overview`)
   }
@@ -366,10 +417,16 @@ const goToClusterManage = () => {
   router.push('/cluster')
 }
 
-// 当前激活的菜单
-const activeMenu = computed(() => {
-  return route.path
-})
+// 当前激活的菜单: 当前标签所属的菜单(详情页高亮进入它的菜单)
+const activeMenu = computed(() => tagsStore.activeKey || route.path)
+
+// 菜单是唯一会打开新标签的入口
+const handleMenuSelect = (index: string) => {
+  if (index.startsWith('/')) tagsStore.openMenu(router, index)
+}
+
+// 不缓存的页面(按组件文件名匹配)
+const NO_CACHE = /(Detail|Edit)$/
 
 // 页面标题
 const pageTitle = computed(() => {

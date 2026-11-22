@@ -41,9 +41,10 @@ func NewPodApi(router *gin.RouterGroup) *PodApi {
 }
 
 func (api *PodApi) Router() {
-	api.router.POST("", middleware.Blocker(), api.Add)
+	api.router.POST("", middleware.Blocker(), BindJSON[dto.PodCreateDTO](api.Create))
 	api.router.DELETE("", middleware.Blocker(), api.Delete)
-	api.router.PUT("", middleware.Blocker(), api.Update)
+	api.router.PUT("", middleware.Blocker(), BindJSON[dto.PodInfoDTO](api.UpdateInfo))
+	api.router.PUT("/image", middleware.Blocker(), BindJSON[dto.PodImageDTO](api.UpdateImages))
 	api.router.GET("/list", api.List)
 	api.router.POST("/logs", api.Log)
 	api.router.POST("/download", middleware.Blocker(), api.Download)
@@ -66,12 +67,31 @@ func (api *PodApi) Expel(ctx *gin.Context) {
 	api.SuccessMsg(ctx, "驱逐成功")
 }
 
-func (api *PodApi) Add(ctx *gin.Context) {
-	api.InternalError(ctx, "操作失败", errors.New("pod暂不开放添加和修改能力"))
+// Create 创建容器组
+func (api *PodApi) Create(ctx *gin.Context, req dto.PodCreateDTO) {
+	if err := api.srv.Create(ctx.Request.Context(), req, api.CurrentUser(ctx).Username); err != nil {
+		api.InternalError(ctx, "创建失败", err)
+		return
+	}
+	api.SuccessMsg(ctx, "创建成功")
 }
 
-func (api *PodApi) Update(ctx *gin.Context) {
-	api.InternalError(ctx, "操作失败", errors.New("pod暂不开放添加和修改能力"))
+// UpdateInfo 编辑别名和描述
+func (api *PodApi) UpdateInfo(ctx *gin.Context, req dto.PodInfoDTO) {
+	if err := api.srv.UpdateInfo(ctx.Request.Context(), req); err != nil {
+		api.InternalError(ctx, "修改失败", err)
+		return
+	}
+	api.SuccessMsg(ctx, "修改成功")
+}
+
+// UpdateImages 更新镜像
+func (api *PodApi) UpdateImages(ctx *gin.Context, req dto.PodImageDTO) {
+	if err := api.srv.UpdateImages(ctx.Request.Context(), req); err != nil {
+		api.InternalError(ctx, "更新镜像失败", err)
+		return
+	}
+	api.SuccessMsg(ctx, "镜像已更新")
 }
 
 func (api *PodApi) Delete(ctx *gin.Context) {
@@ -107,7 +127,7 @@ func (api *PodApi) Info(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	result, err := api.srv.GetById(query)
+	result, err := api.srv.Get(ctx.Request.Context(), query)
 	if err != nil {
 		api.InternalError(ctx, "获取失败", err)
 		return

@@ -1,74 +1,118 @@
 import request from '@/utils/request'
 import { redirectToLogin } from '@/utils/request'
 import type { ApiResponse, PageResponse } from '@/utils/request'
+import type { ContainerTemplateVO, EventVO } from '@/api/job'
+import type { PodResources, PodUsage } from '@/utils/resource'
+import type { WorkloadConditionVO, WorkloadContainerDTO, WorkloadVolumeDTO, WorkloadVolumeVO } from '@/api/workload'
 
-// Pod基础信息
-export interface PodVO {
+// Pod列表项(资源设置与实时用量见 PodResources / PodUsage)
+export interface PodVO extends PodResources, PodUsage {
   creationTimestamp: string
   namespace: string
   name: string
+  alias?: string
+  describe?: string
+  // 阶段: Pending / Running / Succeeded / Failed / Unknown
   status: string
+  // 与 kubectl get pod 的 STATUS 列一致, 例如 CrashLoopBackOff
+  displayStatus: string
+  message?: string
+  ready: string
+  restarts: number
   nodeName: string
   hostIP: string
   podIP: string
+  // 所属工作负载, ReplicaSet 创建的显示为 Deployment
+  ownerKind?: string
+  ownerName?: string
 }
 
-// Pod详情信息
-export interface PodInfoVO {
-  creationTimestamp: string
-  namespace: string
+// 容器运行状态
+export interface PodContainerStatusVO {
   name: string
-  status: string
-  nodeName: string
-  hostIP: string
-  podIP: string
-  restartCount?: number
-  yaml: string
-  containers: PodContainerVO[]
-  annotations: Record<string, string>
-  labels: Record<string, string>
-  metaData: any
-  spec: any
-  events: EventVO[]
-}
-
-// Pod容器信息
-export interface PodContainerVO {
-  name: string
+  init: boolean
   ready: boolean
-  restartCount: number
-  image: string
   started: boolean
-  volumeMounts: any[]
-  startedAt: string
-  args: string[]
-  envs: PodEnvVO[]
-  ports: PodPortVO[]
+  restartCount: number
+  // Running / Waiting / Terminated
+  state: string
+  reason?: string
+  message?: string
+  exitCode: number
+  startedAt?: string | null
+  finishedAt?: string | null
+  lastReason?: string
+  lastExitCode: number
+  lastFinishedAt?: string | null
+  imageID?: string
 }
 
-// Pod环境变量
-export interface PodEnvVO {
+// 容器的资源设置与用量
+export interface PodContainerUsageVO extends PodResources, PodUsage {
   name: string
-  value: string
+  init: boolean
 }
 
-// Pod端口信息
-export interface PodPortVO {
+// Pod详情
+export interface PodDetailVO extends PodResources, PodUsage {
   name: string
-  hostPort: number
-  containerPort: number
+  namespace: string
+  alias?: string
+  describe?: string
+  status: string
+  displayStatus: string
+  message?: string
+  reason?: string
+  ready: string
+  restarts: number
+  nodeName: string
   hostIP: string
-  protocol: string
+  podIP: string
+  podIPs: string[]
+  qosClass: string
+  restartPolicy: string
+  serviceAccountName?: string
+  priorityClassName?: string
+  dnsPolicy?: string
+  hostNetwork: boolean
+  ownerKind?: string
+  ownerName?: string
+  creator?: string
+  uid: string
+  startTime?: string | null
+  createTime: string
+  deletionTime?: string | null
+  labels?: Record<string, string> | null
+  annotations?: Record<string, string> | null
+  nodeSelector?: Record<string, string> | null
+  tolerations: string[]
+  conditions: WorkloadConditionVO[]
+  containers: ContainerTemplateVO[]
+  containerStatuses: PodContainerStatusVO[]
+  volumes: WorkloadVolumeVO[]
+  events: EventVO[]
+  containerUsages: PodContainerUsageVO[]
 }
 
-// 事件信息
-export interface EventVO {
-  type: string
-  reason: string
-  message: string
-  firstTimestamp: string
-  lastTimestamp: string
-  count: number
+// 分步创建
+export interface PodCreateDTO {
+  clusterId: string
+  namespace: string
+  name: string
+  alias?: string
+  describe?: string
+  labels?: Record<string, string>
+  annotations?: Record<string, string>
+  containers: WorkloadContainerDTO[]
+  volumes?: WorkloadVolumeDTO[]
+  restartPolicy?: 'Always' | 'OnFailure' | 'Never'
+  nodeName?: string
+  nodeSelector?: Record<string, string>
+  serviceAccountName?: string
+  imagePullSecrets?: string[]
+  syncHostTimezone?: boolean
+  terminationGracePeriodSeconds?: number
+  hostNetwork?: boolean
 }
 
 // Pod查询参数
@@ -76,6 +120,10 @@ export interface PodQueryDTO {
   clusterId: string
   namespace?: string
   status?: string
+  keyword?: string
+  // createTime(默认) / cpu / memory / restarts / name
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
   page: number
   pageSize: number
 }
@@ -85,6 +133,8 @@ export interface PodDTO {
   clusterId: string
   namespace: string
   name: string
+  // 强制删除(不等待优雅终止), 用于一直处于删除中的容器组
+  force?: boolean
 }
 
 // Pod日志查询参数
@@ -115,8 +165,23 @@ export const podApi = {
   },
 
   // 获取Pod详情
-  getInfo(params: PodDTO): Promise<ApiResponse<PodInfoVO>> {
+  getDetail(params: PodDTO): Promise<ApiResponse<PodDetailVO>> {
     return request.get('/pod', { params })
+  },
+
+  // 分步创建
+  create(data: PodCreateDTO): Promise<ApiResponse<void>> {
+    return request.post('/pod', data)
+  },
+
+  // 编辑别名和描述
+  updateInfo(data: PodDTO & { alias: string; describe: string }): Promise<ApiResponse<void>> {
+    return request.put('/pod', data)
+  },
+
+  // 更新镜像, 键为容器名
+  updateImages(data: PodDTO & { images: Record<string, string> }): Promise<ApiResponse<void>> {
+    return request.put('/pod/image', data)
   },
 
   // 删除Pod

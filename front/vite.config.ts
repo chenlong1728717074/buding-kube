@@ -16,6 +16,8 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        // 转发容器终端的 WebSocket
+        ws: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }
     }

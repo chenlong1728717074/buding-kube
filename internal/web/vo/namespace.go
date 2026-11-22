@@ -7,23 +7,20 @@ import (
 )
 
 type NamespaceVO struct {
-	Name              string                `json:"name"`
-	Alias             string                `json:"alias"`
-	Describe          string                `json:"describe"`
-	Generation        int64                 `json:"generation"`
-	Version           string                `json:"version"`
-	Status            string                `json:"active"`
-	Uid               string                `json:"uid"`
-	ResourceVersion   string                `json:"resourceVersion"`
-	Annotations       map[string]string     `json:"annotations"`
-	Labels            map[string]string     `json:"labels"`
-	CreationTimestamp time.Time             `json:"creationTimestamp"`
-	Metadata          metav1.ObjectMeta     `json:"metadata"`
-	Spec              corev1.NamespaceSpec  `json:"spec"`
-	Yaml              string                `json:"yaml"`
-	Resources         NamespaceResourceStat `json:"resources"`
-}
-type NamespaceResourceStat struct {
+	Name              string               `json:"name"`
+	Alias             string               `json:"alias"`
+	Describe          string               `json:"describe"`
+	Generation        int64                `json:"generation"`
+	Version           string               `json:"version"`
+	Status            string               `json:"active"`
+	Uid               string               `json:"uid"`
+	ResourceVersion   string               `json:"resourceVersion"`
+	Annotations       map[string]string    `json:"annotations"`
+	Labels            map[string]string    `json:"labels"`
+	CreationTimestamp time.Time            `json:"creationTimestamp"`
+	Metadata          metav1.ObjectMeta    `json:"metadata"`
+	Spec              corev1.NamespaceSpec `json:"spec"`
+	Yaml              string               `json:"yaml"`
 }
 
 func Namespace2VO(ns *corev1.Namespace) NamespaceVO {

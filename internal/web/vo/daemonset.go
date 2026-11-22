@@ -10,9 +10,9 @@ func DaemonSet2WorkloadVO(item v1.DaemonSet) WorkloadVO {
 		BaseVO: BaseVO{
 			Name:      item.Name,
 			Namespace: item.Namespace,
+			Alias:     item.Annotations["alias"],
+			Describe:  item.Annotations["describe"],
 		},
-		Alias:         item.Annotations["alias"],
-		Describe:      item.Annotations["describe"],
 		Status:        GetDaemonSetStatusText(item),
 		Replicas:      int(item.Status.DesiredNumberScheduled),
 		ReadyReplicas: int(item.Status.NumberReady),

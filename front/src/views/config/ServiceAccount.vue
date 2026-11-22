@@ -1,18 +1,15 @@
 <template>
-  <div class="sa-page">
-    <div class="page-header">
-      <h1>ServiceAccount管理</h1>
-      <div class="header-actions">
-        <el-button type="primary" @click="openCreate">
-          <el-icon><Plus /></el-icon>
-          添加ServiceAccount
-        </el-button>
-        <el-button type="success" @click="openYamlAdd">
-          <el-icon><Document /></el-icon>
-          YAML添加
-        </el-button>
-      </div>
-    </div>
+  <div class="sa-page list-page">
+    <PageHeader title="ServiceAccount管理" subtitle="管理 Pod 访问集群 API 时使用的身份" icon="sa">
+      <el-button type="primary" @click="openCreate">
+        <el-icon><Plus /></el-icon>
+        添加ServiceAccount
+      </el-button>
+      <el-button type="success" @click="openYamlAdd">
+        <el-icon><Document /></el-icon>
+        YAML添加
+      </el-button>
+    </PageHeader>
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
@@ -35,7 +32,7 @@
     </el-card>
 
     <el-card class="table-card">
-      <el-table v-loading="loading" :data="serviceAccounts" stripe style="width: 100%" @selection-change="handleSelectionChange">
+      <el-table v-loading="loading" :data="serviceAccounts" style="width: 100%" @selection-change="handleSelectionChange" :header-cell-class-name="tableHeaderClass" :cell-class-name="tableCellClass">
         <el-table-column type="selection" width="55" header-align="center" align="center" />
         <el-table-column prop="name" label="名称" min-width="160" header-align="center" align="center">
           <template #default="{ row }">
@@ -74,48 +71,36 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
+      <ListPagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50, 100]"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </el-card>
 
-    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加" width="1200px" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <h3 class="dialog-title">YAML添加</h3>
-        </div>
+    <YamlDialog
+      v-model="yamlAddDialogVisible"
+      title="YAML添加"
+      v-model:content="yamlAddContent"
+      :readonly="false"
+      :submitting="yamlAddLoading"
+      @confirm="confirmYamlAdd"
+    >
+      <template #extra>
+        <el-form :model="yamlAddForm" label-width="100px">
+          <el-form-item label="命名空间">
+            <el-select v-model="yamlAddForm.namespace" placeholder="请选择命名空间" style="width: 240px">
+              <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
+            </el-select>
+          </el-form-item>
+        </el-form>
       </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <el-form :model="yamlAddForm" label-width="100px">
-            <el-form-item label="命名空间">
-              <el-select v-model="yamlAddForm.namespace" placeholder="请选择命名空间" style="width: 240px">
-                <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
-              </el-select>
-            </el-form-item>
-          </el-form>
-          <div class="yaml-editor-wrapper">
-            <YamlEditor :model-value="yamlAddContent" :readonly="false" height="100%" @update:modelValue="val => yamlAddContent = val" />
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
-          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    </YamlDialog>
 
-    <el-dialog v-model="createDialogVisible" title="创建ServiceAccount" width="1600px" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="createDialogVisible" title="创建ServiceAccount" width="1080px" top="6vh" :close-on-click-modal="false" class="config-dialog form-dialog--wide">
       <template #header>
         <div class="dialog-header">
           <h3 class="dialog-title">创建ServiceAccount</h3>
@@ -134,7 +119,7 @@
             </div>
             <div class="step-info">
               <div class="step-title">基本信息</div>
-              <div class="step-desc">已设置</div>
+              <div class="step-desc">命名空间、名称与元数据</div>
             </div>
           </div>
           <div :class="['step-tab', { active: createSection === 'settings' }]" @click="createSection = 'settings'">
@@ -143,7 +128,7 @@
             </div>
             <div class="step-info">
               <div class="step-title">关联设置</div>
-              <div class="step-desc">当前</div>
+              <div class="step-desc">关联 Secret</div>
             </div>
           </div>
         </div>
@@ -154,7 +139,7 @@
           </div>
 
           <div v-else-if="createSection === 'basic'" class="basic-form">
-            <el-form :model="createForm" label-width="100px" label-position="right">
+            <el-form :model="createForm" label-width="110px" label-position="right">
               <el-form-item label="命名空间" required>
                 <el-select v-model="createForm.namespace" placeholder="请选择命名空间" style="width: 100%">
                   <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
@@ -248,18 +233,17 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="80%" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="editInfoDialogVisible" title="编辑信息" width="800px" :close-on-click-modal="false" class="config-dialog form-dialog--compact">
       <template #header>
         <div class="dialog-header">
           <div>
             <h3 class="dialog-title">编辑信息</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">ServiceAccount 基础信息</div>
           </div>
         </div>
       </template>
       <div class="config-editor">
         <div class="config-content">
-          <el-form :model="editInfoForm" label-width="100px" class="serviceaccount-form">
+          <el-form :model="editInfoForm" label-width="96px" class="serviceaccount-form">
             <el-form-item label="名称">
               <el-input :model-value="currentRow?.name || ''" disabled />
             </el-form-item>
@@ -280,26 +264,15 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="yamlDialogVisible" title="查看/编辑YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <h3 class="dialog-title">查看/编辑YAML</h3>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-editor-wrapper">
-            <YamlEditor :model-value="yamlContent" :readonly="yamlReadOnly" :loading="yamlLoading" height="100%" @update:modelValue="val => yamlContent = val" />
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlDialogVisible = false">关闭</el-button>
-          <el-button v-if="!yamlReadOnly" type="primary" :loading="yamlApplyLoading" @click="confirmApplyYaml">应用</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="yamlDialogVisible"
+      title="查看/编辑YAML"
+      v-model:content="yamlContent"
+      :readonly="yamlReadOnly"
+      :loading="yamlLoading"
+      :submitting="yamlApplyLoading"
+      @confirm="confirmApplyYaml"
+    />
 
     <DeleteConfirmDialog
       v-model="deleteDialogVisible"
@@ -313,6 +286,11 @@
 </template>
 
 <script setup lang="ts">
+import { fetchResourceYaml } from '@/api/resource'
+import YamlDialog from '@/components/YamlDialog.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import ListPagination from '@/components/ListPagination.vue'
+import { tableHeaderClass, tableCellClass } from '@/utils/table'
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, MoreFilled, Plus, Document, Check } from '@element-plus/icons-vue'
@@ -348,7 +326,7 @@ const namespaceList = ref<NamespaceVO[]>([])
 
 const pagination = reactive({
   page: 1,
-  pageSize: 20,
+  pageSize: 10,
   total: 0
 })
 
@@ -523,6 +501,21 @@ const handleCurrentChange = (page: number) => {
   fetchList()
 }
 
+// 列表接口不返回 yaml, 打开时按需获取
+const openYaml = async (row: ServiceAccountVO) => {
+  yamlReadOnly.value = false
+  yamlContent.value = ''
+  yamlDialogVisible.value = true
+  yamlLoading.value = true
+  try {
+    yamlContent.value = await fetchResourceYaml({ clusterId: clusterId.value, kind: 'serviceaccount', namespace: row.namespace, name: row.name })
+  } catch {
+    yamlDialogVisible.value = false
+  } finally {
+    yamlLoading.value = false
+  }
+}
+
 const handleRowAction = (cmd: string, row: ServiceAccountVO) => {
   currentRow.value = row
   switch (cmd) {
@@ -532,11 +525,7 @@ const handleRowAction = (cmd: string, row: ServiceAccountVO) => {
       editInfoDialogVisible.value = true
       break
     case 'yaml':
-      yamlLoading.value = true
-      yamlDialogVisible.value = true
-      yamlReadOnly.value = false
-      yamlContent.value = row.yaml || ''
-      yamlLoading.value = false
+      openYaml(row)
       break
   }
 }

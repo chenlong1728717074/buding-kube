@@ -92,29 +92,5 @@ export const clusterApi = {
   // 获取集群节点资源使用情况
   getClusterUsage: (clusterId: string): Promise<ApiResponse<ClusterResourceUsageVO>> => {
     return request.get('/node/usage', { params: { clusterId } })
-  },
-
-  // 获取节点详情
-  getNodeDetail: (clusterId: string, hostname: string): Promise<ApiResponse<any>> => {
-    return request.get('/node', {
-      params: {
-        clusterId,
-        hostname
-      }
-    })
-  },
-
-  // 切换节点调度状态
-  toggleNodeSchedule: (clusterId: string, hostname: string, unSchedule: boolean) => {
-    return request.put('/node/unSchedule', {
-      clusterId,
-      hostname,
-      unSchedule
-    })
-  },
-
-  // 删除Node对象(节点重新注册后会再次出现)
-  deleteNode: (clusterId: string, name: string) => {
-    return request.delete('/node', { params: { clusterId, name } })
   }
 }

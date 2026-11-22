@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -36,185 +37,71 @@ func GetSingletonSecretService() *SecretService {
 	return secretSrv
 }
 
-func (s *SecretService) List(query dto.ResourcePageQueryBaseDTO) ([]vo.SecretVO, error) {
-	clientSet, err := ClusterMap.Get(query.ClusterId)
+func (s *SecretService) List(ctx context.Context, query dto.ResourcePageQueryBaseDTO) ([]vo.SecretVO, error) {
+	clientSet, err := s.getClientSet(query.ClusterId)
 	if err != nil {
-		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
-		return nil, errors.New("获取集群失败")
+		return nil, err
 	}
-	var items []corev1.Secret
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
-	// 使用 Stream 方式获取数据
-	if query.Namespace == metav1.NamespaceAll {
-		namespaces, err := namespaceSrv.getAllNamespaces(metav1.ListOptions{}, clientSet)
-		if err != nil {
-			logs.Error("获取命名空间失败: %v", err)
-			return nil, fmt.Errorf("获取命名空间失败: %v", err)
-		}
-		for _, ns := range namespaces.Items {
-			itemsList, err := clientSet.CoreV1().Secrets(ns.Name).List(context.TODO(), metav1.ListOptions{})
-			if err != nil {
-				logs.Error("获取Secret失败: %v", err)
-				return nil, fmt.Errorf("获取Secret失败: %v", err)
-			}
-
-			// 把当前 namespace 的 Secret append 到 allSecrets
-			for i := range itemsList.Items {
-				items = append(items, itemsList.Items[i])
-			}
-		}
-	} else {
-		// 指定 namespace，使用原来的方式
-		itemsList, err := clientSet.CoreV1().Secrets(query.Namespace).List(context.TODO(), metav1.ListOptions{})
+	start := time.Now()
+	items, err := s.listSecretSummaries(ctx, clientSet, query.Namespace)
+	if err != nil {
+		// 极老版本的集群不支持 Table 格式时, 回退为普通列表
+		logs.Warn("以 Table 格式查询 Secret 失败, 回退为普通列表: %v", err)
+		items, err = s.listSecretsFallback(ctx, clientSet, query.Namespace)
 		if err != nil {
 			logs.Error("获取Secret失败: %v", err)
 			return nil, fmt.Errorf("获取Secret失败: %v", err)
 		}
-		items = itemsList.Items
 	}
+	logs.Debug("查询 Secret 列表: namespace=%q 共 %d 条, 耗时 %v", query.Namespace, len(items), time.Since(start))
 
-	result := make([]vo.SecretVO, 0)
+	result := make([]vo.SecretVO, 0, len(items))
 	for _, item := range items {
-		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
-			vi := vo.Secret2VO(item)
-			vi.Data = nil
-			vi.StringData = nil
-			vi.Metadata = metav1.ObjectMeta{}
-			vi.Annotations = nil
-			vi.Labels = nil
-			vi.ResourceVersion = ""
-			vi.Uid = ""
-			vi.Version = ""
-			vi.Yaml = ""
-			result = append(result, vi)
+		if query.Keyword != "" && !strings.Contains(item.Name, query.Keyword) {
+			continue
 		}
+		result = append(result, item)
 	}
-
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].CreateTime.After(result[j].CreateTime)
 	})
-
 	return result, nil
 }
 
-// List - 查询Secret列表
-//func (s *SecretService) List(query dto.ResourcePageQueryBaseDTO) ([]vo.SecretVO, error) {
-//	clientSet, err := ClusterMap.Get(query.ClusterId)
-//	if err != nil {
-//		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
-//		return nil, errors.New("获取集群失败")
-//	}
-//
-//	namespace := query.Namespace
-//	if namespace == "" {
-//		namespace = metav1.NamespaceAll
-//	}
-//
-//	items, err := clientSet.CoreV1().Secrets(namespace).List(context.TODO(), metav1.ListOptions{})
-//	if err != nil {
-//		logs.Error("获取Secret失败: %v", err)
-//		return nil, fmt.Errorf("获取Secret失败: %v", err)
-//	}
-//
-//	result := make([]vo.SecretVO, 0)
-//	for _, item := range items.Items {
-//		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
-//			vi := vo.Secret2VO(item)
-//			vi.Data = nil
-//			vi.StringData = nil
-//			vi.Metadata = metav1.ObjectMeta{}
-//			vi.Annotations = nil
-//			vi.Labels = nil
-//			vi.ResourceVersion = ""
-//			vi.Uid = ""
-//			vi.Version = ""
-//			vi.Yaml = ""
-//			result = append(result, vi)
-//		}
-//	}
-//
-//	sort.Slice(result, func(i, j int) bool {
-//		return result[i].CreateTime.After(result[j].CreateTime)
-//	})
-//	return result, nil
-
-/*logs.Info("========== 开始调试 Secret List ==========")
-
-// 1. 确定 namespace
-t0 := time.Now()
-namespace := query.Namespace
-if namespace == "" {
-	namespace = metav1.NamespaceAll
-	logs.Info("使用 NamespaceAll 查询全部命名空间")
-} else {
-	logs.Info("查询指定命名空间: %s", namespace)
-}
-logs.Info("[步骤1] 确定 namespace 耗时: %v", time.Since(t0))
-
-// 2. 创建 context（带超时和追踪）
-t1 := time.Now()
-ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-defer cancel()
-logs.Info("[步骤2] 创建 context 耗时: %v", time.Since(t1))
-
-// 3. 创建 ListOptions
-t2 := time.Now()
-listOpts := metav1.ListOptions{}
-logs.Info("[步骤3] 创建 ListOptions 耗时: %v", time.Since(t2))
-
-// 4. 调用 API（这是关键）
-t3 := time.Now()
-logs.Info("[步骤4] 开始调用 API: clientSet.CoreV1().Secrets(%s).List()", namespace)
-
-items, err := clientSet.CoreV1().Secrets(namespace).List(ctx, listOpts)
-
-apiCallDuration := time.Since(t3)
-logs.Info("[步骤4] API 调用完成，耗时: %v", apiCallDuration)
-
-if err != nil {
-	logs.Error("获取Secret失败: %v, 耗时: %v", err, apiCallDuration)
-	return nil, fmt.Errorf("获取Secret失败: %v", err)
-}
-
-// 5. 处理返回结果
-t4 := time.Now()
-resultCount := len(items.Items)
-logs.Info("[步骤5] 返回数据: %d 条 Secret", resultCount)
-logs.Info("[步骤5] 处理结果耗时: %v", time.Since(t4))
-
-// 6. 总耗时
-totalDuration := time.Since(t0)
-logs.Info("========== 总耗时: %v ==========", totalDuration)
-
-// 7. 如果 API 调用超过 1 秒，打印警告
-if apiCallDuration > time.Second {
-	logs.Warn("!!! API 调用异常缓慢: %v (正常应该 < 1s)", apiCallDuration)
-	logs.Warn("!!! namespace: %s, 返回数量: %d", namespace, resultCount)
-}
-
-t5 := time.Now()
-var totalSize int64
-var largestSecret string
-var largestSize int64
-
-for _, secret := range items.Items {
-	var secretSize int64
-	for k, v := range secret.Data {
-		size := int64(len(v))
-		secretSize += size
-		if size > largestSize {
-			largestSize = size
-			largestSecret = fmt.Sprintf("%s/%s (key: %s)", secret.Namespace, secret.Name, k)
-		}
+// listSecretSummaries 以 Table 格式查询 Secret, 只取元数据和展示列
+func (s *SecretService) listSecretSummaries(ctx context.Context, clientSet *kubernetes.Clientset, namespace string) ([]vo.SecretVO, error) {
+	rows, err := listAsTable(ctx, clientSet.CoreV1().RESTClient(), "secrets", namespace)
+	if err != nil {
+		return nil, err
 	}
-	totalSize += secretSize
+	result := make([]vo.SecretVO, 0, len(rows))
+	for _, row := range rows {
+		item := vo.SecretSummary2VO(row.Meta)
+		item.Type = corev1.SecretType(row.cellString("Type"))
+		item.DataCount = row.cellInt("Data")
+		result = append(result, item)
+	}
+	return result, nil
 }
 
-logs.Info("[数据分析] 总数据大小: %.2f MB", float64(totalSize)/(1024*1024))
-logs.Info("[数据分析] 最大 Secret: %s, 大小: %.2f MB", largestSecret, float64(largestSize)/(1024*1024))
-logs.Info("[数据分析] 统计耗时: %v", time.Since(t5))*/
-
-//}
+// listSecretsFallback 普通列表查询, 仅在集群不支持 Table 格式时使用
+func (s *SecretService) listSecretsFallback(ctx context.Context, clientSet *kubernetes.Clientset, namespace string) ([]vo.SecretVO, error) {
+	list, err := clientSet.CoreV1().Secrets(namespace).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]vo.SecretVO, 0, len(list.Items))
+	for i := range list.Items {
+		item := vo.SecretSummary2VO(list.Items[i].ObjectMeta)
+		item.Type = list.Items[i].Type
+		item.DataCount = len(list.Items[i].Data)
+		result = append(result, item)
+	}
+	return result, nil
+}
 
 func (s *SecretService) Get(base dto.BaseDTO) (*vo.SecretVO, error) {
 	clientSet, err := s.getClientSet(base.ClusterId)

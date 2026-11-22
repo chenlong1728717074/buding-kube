@@ -1,5 +1,5 @@
 <template>
-  <div class="user-list-container">
+  <div class="user-list-container list-page">
     <!-- 头部横幅 -->
     <el-card class="hero-card" shadow="never">
       <div class="hero-content">
@@ -115,11 +115,12 @@
       <el-table
         v-loading="loading"
         :data="displayList"
-        stripe
         class="user-table"
         :row-class-name="tableRowClassName"
         @selection-change="handleSelectionChange"
         style="width: 100%"
+        :header-cell-class-name="tableHeaderClass"
+        :cell-class-name="tableCellClass"
       >
         <el-table-column type="selection" width="50" />
 
@@ -230,21 +231,18 @@
       </el-table>
 
       <!-- 分页器 -->
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.size"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
+      <ListPagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.size"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50, 100]"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </el-card>
 
     <!-- 新增/编辑用户对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="80%" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="880px" :close-on-click-modal="false" class="config-dialog form-dialog--compact">
       <template #header>
         <div class="dialog-header">
           <h3 class="dialog-title">{{ dialogTitle }}</h3>
@@ -365,6 +363,8 @@
 </template>
 
 <script setup lang="ts">
+import { tableHeaderClass, tableCellClass } from '@/utils/table'
+import ListPagination from '@/components/ListPagination.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -419,7 +419,7 @@ const adminCount = computed(() => displayList.value.filter(u => ['super', 'admin
 // 分页
 const pagination = reactive({
   page: 1,
-  size: 20,
+  size: 10,
   total: 0
 })
 

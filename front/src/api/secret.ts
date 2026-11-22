@@ -73,7 +73,8 @@ export interface SecretVO {
 
 export const secretApi = {
   getList(params: SecretPageQueryDTO): Promise<ApiResponse<PageResponse<SecretVO>>> {
-    return request.get('/secret/list', { params })
+    // 全部命名空间的 Secret 较多时查询稍慢, 单独放宽超时
+    return request.get('/secret/list', { params, timeout: 30000 })
   },
   getInfo(params: SecretBaseDTO): Promise<ApiResponse<SecretVO>> {
     return request.get('/secret', { params })

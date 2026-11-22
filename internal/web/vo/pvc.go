@@ -33,6 +33,8 @@ func PVC2VO(pvc corev1.PersistentVolumeClaim) PVCVO {
 		BaseVO: BaseVO{
 			Name:      pvc.Name,
 			Namespace: pvc.Namespace,
+			Alias:     pvc.Annotations["alias"],
+			Describe:  pvc.Annotations["describe"],
 		},
 		AccessModes:       pvc.Spec.AccessModes,
 		Resources:         pvc.Spec.Resources,

@@ -20,6 +20,7 @@ type ConfigMapVO struct {
 	CreateTime        time.Time         `json:"createTime"`
 	Metadata          metav1.ObjectMeta `json:"metadata"`
 	Yaml              string            `json:"yaml"`
+	DataCount         int               `json:"dataCount"` // 数据条数(列表接口不返回 data 本身)
 }
 
 func ConfigMap2VO(cm corev1.ConfigMap) ConfigMapVO {
@@ -43,4 +44,18 @@ func ConfigMap2VO(cm corev1.ConfigMap) ConfigMapVO {
 		Metadata:          cm.ObjectMeta,
 	}
 	return vo
+}
+
+// ConfigMapSummary2VO 只根据元数据构造列表项, 不包含 data / labels 等大字段
+func ConfigMapSummary2VO(meta metav1.ObjectMeta) ConfigMapVO {
+	return ConfigMapVO{
+		BaseVO: BaseVO{
+			Name:      meta.Name,
+			Namespace: meta.Namespace,
+			Alias:     meta.Annotations["alias"],
+			Describe:  meta.Annotations["describe"],
+		},
+		CreationTimestamp: meta.CreationTimestamp.Time,
+		CreateTime:        meta.CreationTimestamp.Time,
+	}
 }

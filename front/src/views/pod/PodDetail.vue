@@ -1,393 +1,389 @@
 <template>
-  <div class="pod-detail">
-    <div class="page-header">
-      <div class="header-left">
-        <el-button @click="handleBack" style="margin-right: 16px;">
-          <el-icon><ArrowLeft /></el-icon>
-          返回
+  <div class="job-detail detail-page">
+    <PageHeader
+      :title="pod?.name || name || 'Pod详情'"
+      :subtitle="pod ? pod.alias || pod.describe || `命名空间：${pod.namespace}` : 'Pod 详情'"
+      icon="pod"
+      back
+      @back="goBack"
+    >
+      <template v-if="pod" #meta>
+        <el-tag :type="podStatusTag(pod.displayStatus)" effect="dark">{{ podStatusText(pod.displayStatus) }}</el-tag>
+        <el-tag v-if="pod.qosClass" type="info" effect="light">{{ pod.qosClass }}</el-tag>
+      </template>
+      <template v-if="pod">
+        <el-button :loading="loading" @click="fetchDetail()">
+          <el-icon><Refresh /></el-icon>
+          刷新
         </el-button>
-        <h1>Pod详情</h1>
-      </div>
-      <div class="header-actions" v-if="podInfo">
-        <el-button size="small" @click="handleViewLogs" :disabled="podInfo.status !== 'Running'">
-          <el-icon><Document /></el-icon>
+        <el-button type="primary" :disabled="!canTerminal" @click="openTerminal()">
+          <el-icon><Monitor /></el-icon>
+          终端
+        </el-button>
+        <el-button @click="openLogs()">
+          <el-icon><Tickets /></el-icon>
           查看日志
         </el-button>
-        <el-button size="small" @click="handleViewYaml" v-if="podInfo.yaml">
+        <el-button @click="infoVisible = true">
+          <el-icon><Edit /></el-icon>
+          编辑信息
+        </el-button>
+        <el-button @click="openImageDialog">
+          <el-icon><Picture /></el-icon>
+          更新镜像
+        </el-button>
+        <el-button @click="openYaml">
           <el-icon><Document /></el-icon>
-          查看YAML
+          编辑YAML
         </el-button>
-        <el-button size="small" type="warning" @click="handleExpel">
-          驱逐
-        </el-button>
-        <el-button size="small" type="danger" @click="handleDelete">
+        <el-button type="warning" plain :disabled="!!pod.deletionTime" @click="handleExpel">驱逐</el-button>
+        <el-button type="danger" @click="handleDelete">
           <el-icon><Delete /></el-icon>
-          删除
+          {{ pod.deletionTime ? '强制删除' : '删除' }}
         </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <div v-if="loading" class="loading-container">
+    <div v-if="loading && !pod" class="loading-container">
       <el-skeleton :rows="10" animated />
     </div>
 
-    <div v-else-if="podInfo" class="detail-content">
-      <!-- 基本信息 -->
-      <el-card class="info-card">
+    <div v-else-if="pod" class="detail-content">
+      <el-card class="info-card jd-attr-card">
         <template #header>
-          <span>基本信息</span>
+          <div class="card-header" @click="attrOpen = !attrOpen">
+            <span>属性</span>
+            <el-icon :class="['jd-collapse', { 'is-collapsed': !attrOpen }]"><ArrowDown /></el-icon>
+          </div>
         </template>
-        
-        <div class="info-grid">
-          <div class="info-item">
-            <label>集群ID:</label>
-            <span>{{ clusterId || '-' }}</span>
+        <el-collapse-transition>
+          <div v-show="attrOpen" class="jd-attr-grid">
+            <div class="jd-attr"><label>集群</label><span>{{ clusterName || clusterId }}</span></div>
+            <div class="jd-attr">
+              <label>命名空间</label>
+              <span><el-link type="primary" @click="goNamespace">{{ pod.namespace }}</el-link></span>
+            </div>
+            <div class="jd-attr">
+              <label>状态</label>
+              <span>
+                {{ podStatusText(pod.displayStatus) }}
+                <span v-if="pod.message" class="jd-msg">{{ pod.message }}</span>
+              </span>
+            </div>
+            <div class="jd-attr"><label>就绪容器</label><span>{{ pod.ready }}</span></div>
+            <div class="jd-attr">
+              <label>CPU 用量</label>
+              <span><ResourceUsageBar kind="cpu" :used="pod.cpuUsage" :request="pod.cpuRequest" :limit="pod.cpuLimit" /></span>
+            </div>
+            <div class="jd-attr">
+              <label>内存用量</label>
+              <span><ResourceUsageBar kind="memory" :used="pod.memoryUsage" :request="pod.memoryRequest" :limit="pod.memoryLimit" /></span>
+            </div>
+            <div class="jd-attr">
+              <label>CPU 预留 / 上限</label>
+              <span>{{ pod.cpuRequest ? formatCpu(pod.cpuRequest) : '未设置' }} / {{ pod.cpuLimit ? formatCpu(pod.cpuLimit) : '不限制' }}</span>
+            </div>
+            <div class="jd-attr">
+              <label>内存预留 / 上限</label>
+              <span>{{ pod.memoryRequest ? formatMemory(pod.memoryRequest) : '未设置' }} / {{ pod.memoryLimit ? formatMemory(pod.memoryLimit) : '不限制' }}</span>
+            </div>
+            <div class="jd-attr"><label>重启次数</label><span :class="{ 'pd-warn': pod.restarts > 0 }">{{ pod.restarts }}</span></div>
+            <div class="jd-attr">
+              <label>所属工作负载</label>
+              <span>
+                <el-link v-if="ownerPath" type="primary" @click="goOwner">{{ pod.ownerName }}</el-link>
+                <template v-else>{{ pod.ownerName || '无（单独创建）' }}</template>
+                <span v-if="pod.ownerKind" class="jd-sub">{{ pod.ownerKind }}</span>
+              </span>
+            </div>
+            <div class="jd-attr">
+              <label>节点</label>
+              <span>
+                <el-link v-if="pod.nodeName" type="primary" @click="goNode">{{ pod.nodeName }}</el-link>
+                <template v-else>未调度</template>
+              </span>
+            </div>
+            <div class="jd-attr"><label>容器组 IP</label><span class="mono">{{ pod.podIPs.length ? pod.podIPs.join(', ') : pod.podIP || '-' }}</span></div>
+            <div class="jd-attr"><label>主机 IP</label><span class="mono">{{ pod.hostIP || '-' }}</span></div>
+            <div class="jd-attr"><label>QoS 类别</label><span>{{ QOS_TEXT[pod.qosClass] || pod.qosClass || '-' }}</span></div>
+            <div class="jd-attr"><label>重启策略</label><span>{{ RESTART_POLICY_TEXT[pod.restartPolicy] || pod.restartPolicy || '-' }}</span></div>
+            <div class="jd-attr"><label>服务账户</label><span>{{ pod.serviceAccountName || 'default' }}</span></div>
+            <div class="jd-attr"><label>网络</label><span>{{ pod.hostNetwork ? '节点网络（hostNetwork）' : '容器网络' }}</span></div>
+            <div v-if="pod.priorityClassName" class="jd-attr"><label>优先级类</label><span>{{ pod.priorityClassName }}</span></div>
+            <div class="jd-attr"><label>启动时间</label><span>{{ formatDateTime(pod.startTime) }}</span></div>
+            <div class="jd-attr"><label>创建时间</label><span>{{ formatDateTime(pod.createTime) }}</span></div>
+            <div class="jd-attr"><label>创建者</label><span>{{ pod.creator || '-' }}</span></div>
+            <div v-if="pod.deletionTime" class="jd-attr"><label>开始删除时间</label><span class="pd-warn">{{ formatDateTime(pod.deletionTime) }}</span></div>
           </div>
-          <div class="info-item">
-            <label>集群名称:</label>
-            <span>{{ clusterName || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <label>Pod名称:</label>
-            <span>{{ podInfo.name }}</span>
-          </div>
-          <div class="info-item">
-            <label>命名空间:</label>
-            <span>{{ podInfo.namespace }}</span>
-          </div>
-          <div class="info-item">
-            <label>状态:</label>
-            <el-tag :type="getStatusType(podInfo.status)">
-              {{ getStatusText(podInfo.status) }}
-            </el-tag>
-          </div>
-          <div class="info-item">
-            <label>节点:</label>
-            <span>{{ podInfo.nodeName || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <label>Pod IP:</label>
-            <span>{{ podInfo.podIP || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <label>主机IP:</label>
-            <span>{{ podInfo.hostIP || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <label>创建时间:</label>
-            <span>{{ formatDate(podInfo.creationTimestamp) }}</span>
-          </div>
-          <div class="info-item">
-            <label>重启次数:</label>
-            <span>{{ podInfo.restartCount || 0 }}</span>
-          </div>
-        </div>
+        </el-collapse-transition>
       </el-card>
 
-      <!-- 容器信息 -->
-      <el-card class="info-card" v-if="podInfo.containers && podInfo.containers.length > 0">
-        <template #header>
-          <span>容器信息</span>
-        </template>
-        
-        <el-table :data="podInfo.containers" stripe style="width: 100%">
-          <el-table-column prop="name" label="容器名称" width="180" show-overflow-tooltip />
-          <el-table-column prop="image" label="镜像" min-width="250" show-overflow-tooltip />
-          <el-table-column prop="ready" label="就绪状态" width="120" align="center">
-            <template #default="{ row }">
-              <el-tag :type="row.ready ? 'success' : 'danger'" size="small">
-                {{ row.ready ? '就绪' : '未就绪' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="restartCount" label="重启次数" width="120" align="center" />
-          <el-table-column label="端口" width="200">
-            <template #default="{ row }">
-              <div v-if="row.ports && row.ports.length > 0" class="ports-container">
-                <el-tag 
-                  v-for="port in row.ports" 
-                  :key="port.containerPort" 
-                  size="small" 
-                  style="margin-right: 4px; margin-bottom: 4px;"
-                >
-                  {{ port.containerPort }}{{ port.protocol ? '/' + port.protocol : '' }}
-                </el-tag>
-              </div>
-              <span v-else class="text-muted">-</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="状态" min-width="150">
-            <template #default="{ row }">
-              <div class="container-status">
-                <div v-if="row.state">
-                  <el-tag 
-                    :type="getContainerStateType(row.state)" 
-                    size="small"
-                  >
-                    {{ getContainerStateText(row.state) }}
-                  </el-tag>
-                </div>
-                <span v-else class="text-muted">-</span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="200" align="center">
-            <template #default="{ row }">
-              <el-button-group size="small">
-                <el-button 
-                  type="primary" 
-                  size="small" 
-                  @click="handleContainerLogs(row)"
-                  title="查看日志"
-                  :disabled="!isContainerRunning(row)"
-                >
-                  <el-icon><Document /></el-icon>
-                </el-button>
-                <el-button 
-                  type="success" 
-                  size="small" 
-                  @click="handleContainerDownload(row)"
-                  title="下载文件"
-                  :disabled="!isContainerRunning(row)"
-                >
-                  <el-icon><Download /></el-icon>
-                </el-button>
-                <el-button 
-                  type="warning" 
-                  size="small" 
-                  @click="handleContainerUpload(row)"
-                  title="上传文件"
-                  :disabled="!isContainerRunning(row)"
-                >
-                  <el-icon><Upload /></el-icon>
-                </el-button>
-              </el-button-group>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-card>
+      <div class="jd-tabbar">
+        <button v-for="t in tabs" :key="t.key" type="button" :class="['jd-tab', { 'is-active': activeTab === t.key }]" @click="activeTab = t.key">
+          {{ t.label }}
+          <span v-if="t.count !== undefined" class="jd-tab__count">{{ t.count }}</span>
+        </button>
+      </div>
 
-      <!-- 环境变量 -->
-      <el-card class="info-card" v-if="hasEnvironmentVariables">
-        <template #header>
-          <span>环境变量</span>
-        </template>
-        
-        <div v-for="(container, index) in podInfo.containers" :key="index">
-          <div v-if="container.envs && container.envs.length > 0">
-            <h4>{{ container.name }}</h4>
-            <el-table :data="container.envs" stripe size="small">
-              <el-table-column prop="name" label="变量名" min-width="200" />
-              <el-table-column prop="value" label="值" min-width="300">
-                <template #default="{ row }">
-                  <span v-if="row.value">{{ row.value }}</span>
-                  <span v-else-if="row.valueFrom" class="text-info">引用值</span>
-                  <span v-else>-</span>
+      <!-- 资源状态 -->
+      <template v-if="activeTab === 'resources'">
+        <el-card class="info-card">
+          <template #header>
+            <div class="card-header">
+              <span>容器</span>
+              <el-tag size="small" type="info">{{ containerRows.length }}</el-tag>
+              <span class="card-header__hint">文件下载和上传需要容器内有 tar 命令</span>
+            </div>
+          </template>
+          <el-table :data="containerRows" style="width: 100%" :header-cell-class-name="tableHeaderClass" :cell-class-name="tableCellClass">
+            <el-table-column label="容器名称" min-width="170">
+              <template #default="{ row }">
+                <span class="pd-cname">{{ row.name }}</span>
+                <el-tag v-if="row.init" size="small" type="warning" effect="plain">初始化</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="镜像" min-width="240" show-overflow-tooltip>
+              <template #default="{ row }"><span class="mono">{{ row.image }}</span></template>
+            </el-table-column>
+            <el-table-column label="状态" min-width="190">
+              <template #default="{ row }">
+                <el-tag :type="containerStateTag(row.status)" size="small">{{ containerStateText(row.status) }}</el-tag>
+                <span v-if="row.status?.message" class="jd-msg" :title="row.status.message">{{ row.status.message }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="CPU" width="140" align="center" header-align="center">
+              <template #default="{ row }">
+                <ResourceUsageBar kind="cpu" compact :used="row.usage?.cpuUsage" :request="row.usage?.cpuRequest" :limit="row.usage?.cpuLimit" />
+              </template>
+            </el-table-column>
+            <el-table-column label="内存" width="150" align="center" header-align="center">
+              <template #default="{ row }">
+                <ResourceUsageBar kind="memory" compact :used="row.usage?.memoryUsage" :request="row.usage?.memoryRequest" :limit="row.usage?.memoryLimit" />
+              </template>
+            </el-table-column>
+            <el-table-column label="重启次数" width="96" align="center" header-align="center">
+              <template #default="{ row }">{{ row.status?.restartCount ?? 0 }}</template>
+            </el-table-column>
+            <el-table-column label="上次退出" min-width="200">
+              <template #default="{ row }">
+                <template v-if="row.status?.lastReason">
+                  <span class="pd-warn">{{ row.status.lastReason }}（退出码 {{ row.status.lastExitCode }}）</span>
+                  <span class="jd-muted pd-block">{{ formatDateTime(row.status.lastFinishedAt) }}</span>
                 </template>
-              </el-table-column>
-            </el-table>
+                <span v-else class="jd-muted">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="启动时间" width="170">
+              <template #default="{ row }">{{ formatDateTime(row.status?.startedAt) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="190" align="center" header-align="center">
+              <template #default="{ row }">
+                <el-button-group size="small">
+                  <el-button type="primary" title="进入终端" :disabled="row.status?.state !== 'Running' || !!pod?.deletionTime" @click="openTerminal(row.name)">
+                    <el-icon><Monitor /></el-icon>
+                  </el-button>
+                  <el-button type="primary" title="查看日志" :disabled="!row.status || row.status.state === 'Waiting'" @click="openLogs(row.name)">
+                    <el-icon><Tickets /></el-icon>
+                  </el-button>
+                  <el-button type="success" title="下载文件" :disabled="row.status?.state !== 'Running'" @click="openDownload(row.name)">
+                    <el-icon><Download /></el-icon>
+                  </el-button>
+                  <el-button type="warning" title="上传文件" :disabled="row.status?.state !== 'Running'" @click="openUpload(row.name)">
+                    <el-icon><Upload /></el-icon>
+                  </el-button>
+                </el-button-group>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+
+        <el-card class="info-card">
+          <template #header>
+            <div class="card-header">
+              <span>容器设置</span>
+              <span class="card-header__hint">端口、命令、资源配额、健康检查和存储挂载</span>
+            </div>
+          </template>
+          <ContainerTemplates :containers="pod.containers" />
+        </el-card>
+
+        <el-card class="info-card">
+          <template #header>
+            <div class="card-header">
+              <span>存储卷</span>
+              <el-tag size="small" type="info">{{ pod.volumes.length }}</el-tag>
+            </div>
+          </template>
+          <el-table :data="pod.volumes" style="width: 100%" :header-cell-class-name="tableHeaderClass">
+            <el-table-column label="名称" min-width="200" prop="name" />
+            <el-table-column label="类型" width="140">
+              <template #default="{ row }">{{ volumeTypeText(row.type) }}</template>
+            </el-table-column>
+            <el-table-column label="来源" min-width="300">
+              <template #default="{ row }"><span class="mono">{{ row.source || '-' }}</span></template>
+            </el-table-column>
+            <template #empty>
+              <span class="jd-muted">没有存储卷</span>
+            </template>
+          </el-table>
+        </el-card>
+
+        <el-card class="info-card">
+          <template #header>
+            <div class="card-header">
+              <span>状态条件</span>
+              <el-tag size="small" type="info">{{ pod.conditions.length }}</el-tag>
+            </div>
+          </template>
+          <el-table :data="pod.conditions" style="width: 100%" :header-cell-class-name="tableHeaderClass" :cell-class-name="tableCellClass">
+            <el-table-column label="类型" min-width="170">
+              <template #default="{ row }">{{ CONDITION_TEXT[row.type] || row.type }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 'True' ? 'success' : 'warning'" size="small">{{ row.status }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="原因" min-width="160" prop="reason" />
+            <el-table-column label="消息" min-width="300" prop="message" />
+            <el-table-column label="更新时间" width="170">
+              <template #default="{ row }">{{ formatDateTime(row.lastTime) }}</template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </template>
+
+      <!-- 元数据 -->
+      <template v-else-if="activeTab === 'metadata'">
+        <el-card class="info-card">
+          <template #header>
+            <div class="card-header"><span>元数据</span></div>
+          </template>
+          <MetadataPanel :labels="pod.labels" :annotations="pod.annotations" />
+        </el-card>
+        <el-card class="info-card">
+          <template #header>
+            <div class="card-header"><span>调度</span></div>
+          </template>
+          <div class="jd-attr-grid">
+            <div class="jd-attr"><label>节点选择器</label><span class="mono">{{ formatMap(pod.nodeSelector) || '不限制' }}</span></div>
+            <div class="jd-attr"><label>DNS 策略</label><span>{{ pod.dnsPolicy || '-' }}</span></div>
           </div>
-        </div>
-      </el-card>
+          <h4 class="jd-section__title pd-tol-title">容忍（{{ pod.tolerations.length }}）</h4>
+          <div v-if="pod.tolerations.length" class="pd-tags">
+            <el-tag v-for="t in pod.tolerations" :key="t" type="info" class="mono">{{ t }}</el-tag>
+          </div>
+          <span v-else class="jd-muted">没有容忍设置</span>
+        </el-card>
+      </template>
 
-      <!-- 标签 -->
-      <el-card class="info-card" v-if="podInfo.labels && Object.keys(podInfo.labels).length > 0">
+      <el-card v-else-if="activeTab === 'env'" class="info-card">
         <template #header>
-          <span>标签</span>
+          <div class="card-header"><span>环境变量</span></div>
         </template>
-        
-        <div class="labels-container">
-          <el-tag 
-            v-for="(value, key) in podInfo.labels" 
-            :key="key"
-            class="label-tag"
-          >
-            {{ key }}: {{ value }}
-          </el-tag>
-        </div>
+        <ContainerEnvList :containers="pod.containers" />
       </el-card>
 
-      <!-- 注解 -->
-      <el-card class="info-card" v-if="podInfo.annotations && Object.keys(podInfo.annotations).length > 0">
+      <el-card v-else class="info-card">
         <template #header>
           <div class="card-header">
-            <span>注解</span>
-            <el-tag size="small" type="info">{{ Object.keys(podInfo.annotations).length }}</el-tag>
+            <span>事件</span>
+            <el-tag size="small" type="info">{{ pod.events.length }}</el-tag>
           </div>
         </template>
-        
-        <div class="annotations-grid">
-          <div 
-            v-for="(value, key) in podInfo.annotations" 
-            :key="key"
-            class="annotation-item"
-          >
-            <div class="annotation-key">{{ key }}</div>
-            <div class="annotation-value">{{ value }}</div>
-          </div>
+        <EventsTable :events="pod.events" />
+      </el-card>
+    </div>
+
+    <el-empty v-else description="容器组不存在或已被删除" />
+
+    <ResourceInfoDialog v-model="infoVisible" :name="pod?.name || ''" :alias="pod?.alias" :describe="pod?.describe" :submit="saveInfo" @success="fetchDetail()" />
+
+    <el-dialog v-model="imageVisible" title="更新镜像" width="720px" :close-on-click-modal="false" class="config-dialog form-dialog--compact">
+      <template #header>
+        <div class="dialog-header"><h3 class="dialog-title">更新镜像</h3></div>
+      </template>
+      <div class="config-editor">
+        <div class="config-content">
+          <el-alert v-if="pod?.ownerKind" type="warning" :closable="false" show-icon class="pd-alert">
+            该容器组由 {{ pod.ownerKind }} {{ pod.ownerName }} 管理，直接修改会在容器组重建后失效，建议在工作负载中更新镜像。
+          </el-alert>
+          <p class="pd-tip">修改后 kubelet 会重启对应的容器，容器组名称和 IP 保持不变。</p>
+          <el-form label-width="140px">
+            <el-form-item v-for="c in pod?.containers || []" :key="(c.init ? 'init-' : '') + c.name" :label="c.name">
+              <el-input v-model="imageForm[c.name]" class="mono-input">
+                <template v-if="c.init" #prepend>初始化</template>
+              </el-input>
+            </el-form-item>
+          </el-form>
         </div>
-      </el-card>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="imageVisible = false">取消</el-button>
+          <el-button type="primary" :loading="imageSaving" @click="saveImages">更新</el-button>
+        </div>
+      </template>
+    </el-dialog>
 
-      <!-- 事件 -->
-      <el-card class="info-card" v-if="podInfo.events && podInfo.events.length > 0">
-        <template #header>
-          <span>事件</span>
-        </template>
-        
-        <el-table :data="podInfo.events" stripe>
-          <el-table-column prop="type" label="类型" width="100" align="center">
-            <template #default="{ row }">
-              <el-tag :type="row.type === 'Warning' ? 'warning' : 'info'" size="small">
-                {{ row.type }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="reason" label="原因" min-width="150" />
-          <el-table-column prop="message" label="消息" min-width="300" />
-          <el-table-column prop="firstTimestamp" label="首次时间" min-width="180">
-            <template #default="{ row }">
-              {{ formatDate(row.firstTimestamp) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="lastTimestamp" label="最后时间" min-width="180">
-            <template #default="{ row }">
-              {{ formatDate(row.lastTimestamp) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="count" label="次数" width="80" align="center" />
-        </el-table>
-      </el-card>
-
-
-    </div>
-
-    <div v-else class="empty-container">
-      <el-empty description="未找到Pod信息" />
-    </div>
-
-    <!-- 删除确认对话框 -->
-    <DeleteConfirmDialog
-      v-model="deleteDialogVisible"
-      :item-name="podInfo?.name || ''"
-      message="确定要删除Pod吗？"
-      :loading="deleteLoading"
-      @confirm="confirmDeletePod"
-      @cancel="cancelDeletePod"
+    <YamlDialog
+      v-model="yamlVisible"
+      v-model:content="yamlContent"
+      title="编辑YAML"
+      subtitle="Pod 配置"
+      :info="[{ label: '集群', value: clusterName || clusterId }, { label: '命名空间', value: pod?.namespace }, { label: '名称', value: pod?.name }, { label: '类型', value: 'Pod' }]"
+      :editor-title="`${pod?.name} - Pod YAML`"
+      :filename="`${pod?.name}-pod.yaml`"
+      tip="Pod 创建后只能修改镜像、标签、注解等少量字段，其余修改会被拒绝"
+      :apply-target="pod ? { clusterId, kind: 'pod', namespace: pod.namespace, name: pod.name } : null"
+      @applied="fetchDetail()"
     />
 
-    <!-- YAML查看对话框 -->
-    <el-dialog v-model="yamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
+    <!-- 文件下载 -->
+    <el-dialog v-model="downloadVisible" title="下载文件" width="800px" :close-on-click-modal="false" class="config-dialog form-dialog--compact">
       <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">查看YAML</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">Pod 配置</div>
-          </div>
-        </div>
+        <div class="dialog-header"><h3 class="dialog-title">下载文件</h3></div>
       </template>
       <div class="config-editor">
         <div class="config-content">
-          <div class="yaml-dialog-content">
-            <div class="yaml-info">
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="集群">{{ clusterName || clusterId }}</el-descriptions-item>
-                <el-descriptions-item label="命名空间">{{ podInfo?.namespace }}</el-descriptions-item>
-                <el-descriptions-item label="名称">{{ podInfo?.name }}</el-descriptions-item>
-                <el-descriptions-item label="类型">Pod</el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <div class="yaml-view">
-              <YamlEditor :model-value="yamlContent" :loading="yamlLoading" :readonly="true" height="100%" />
-            </div>
-          </div>
+          <el-alert type="warning" :closable="false" class="pd-alert">
+            需要容器镜像中包含 <strong>tar</strong> 命令；文件以 <strong>.tar</strong> 格式下载，可使用 tar 命令解压。
+          </el-alert>
+          <el-form label-width="96px">
+            <el-form-item label="容器">
+              <el-input v-model="fileForm.containerName" disabled />
+            </el-form-item>
+            <el-form-item label="文件路径" required>
+              <el-input v-model="fileForm.filePath" placeholder="文件或目录的路径，如 /app/config.json" class="mono-input" @keyup.enter="confirmDownload" />
+            </el-form-item>
+          </el-form>
         </div>
       </div>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="yamlDialogVisible = false">关闭</el-button>
-          <span style="color: #909399; font-size: 12px; margin-left: 10px;">注意：Pod不支持修改操作</span>
+          <el-button @click="downloadVisible = false">取消</el-button>
+          <el-button type="primary" :loading="fileLoading" :disabled="!fileForm.filePath.trim()" @click="confirmDownload">下载</el-button>
         </div>
       </template>
     </el-dialog>
 
-    <!-- 文件下载对话框 -->
-    <el-dialog v-model="downloadDialogVisible" title="下载文件" width="80%" :close-on-click-modal="false" class="config-dialog">
+    <!-- 文件上传 -->
+    <el-dialog v-model="uploadVisible" title="上传文件" width="800px" :close-on-click-modal="false" class="config-dialog form-dialog--compact">
       <template #header>
-        <div class="dialog-header">
-          <h3 class="dialog-title">下载文件</h3>
-        </div>
+        <div class="dialog-header"><h3 class="dialog-title">上传文件</h3></div>
       </template>
       <div class="config-editor">
         <div class="config-content">
-      <el-alert
-        title="重要提示"
-        type="warning"
-        :closable="false"
-        style="margin-bottom: 20px;"
-      >
-        <template #default>
-          <div>文件下载功能需要容器基础镜像中包含 <strong>tar</strong> 命令才能正常工作。</div>
-          <div>下载的文件将以 <strong>.tar</strong> 格式保存，可使用 tar 命令解压。</div>
-        </template>
-      </el-alert>
-      <el-form :model="downloadForm" label-width="100px">
-        <el-form-item label="容器名称:">
-          <el-input v-model="downloadForm.containerName" disabled />
-        </el-form-item>
-        <el-form-item label="文件路径:" required>
-          <el-input 
-            v-model="downloadForm.filePath" 
-            placeholder="请输入要下载的文件路径，如: /app/config.json"
-          />
-        </el-form-item>
-      </el-form>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="downloadDialogVisible = false">取消</el-button>
-          <el-button 
-            type="primary" 
-            @click="confirmDownload"
-            :loading="downloadLoading"
-            :disabled="!downloadForm.filePath"
-          >
-            下载
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
-
-    <!-- 文件上传对话框 -->
-    <el-dialog v-model="uploadDialogVisible" title="上传文件" width="80%" :close-on-click-modal="false" class="config-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <h3 class="dialog-title">上传文件</h3>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <el-form :model="uploadForm" label-width="100px">
-            <el-form-item label="容器名称:">
-              <el-input v-model="uploadForm.containerName" disabled />
+          <el-form label-width="96px">
+            <el-form-item label="容器">
+              <el-input v-model="fileForm.containerName" disabled />
             </el-form-item>
-            <el-form-item label="目标路径:" required>
-              <el-input v-model="uploadForm.filePath" placeholder="请输入目标路径，如: /app/config.json" />
+            <el-form-item label="目标路径" required>
+              <el-input v-model="fileForm.filePath" placeholder="目标目录或文件路径，如 /tmp/ 或 /app/config.json" class="mono-input" />
             </el-form-item>
-            <el-form-item label="选择文件:" required>
-              <el-upload
-                ref="uploadRef"
-                :auto-upload="false"
-                :show-file-list="true"
-                :limit="1"
-                :on-change="handleFileChange"
-                :on-remove="handleFileRemove"
-              >
+            <el-form-item label="选择文件" required>
+              <el-upload ref="uploadRef" :auto-upload="false" :limit="1" :on-change="onFileChange" :on-remove="() => (selectedFile = null)">
                 <el-button type="primary">选择文件</el-button>
-                <template #tip>
-                  <div class="el-upload__tip">只能上传一个文件</div>
-                </template>
               </el-upload>
             </el-form-item>
           </el-form>
@@ -395,22 +391,22 @@
       </div>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="uploadDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="confirmUpload" :loading="uploadLoading" :disabled="!uploadForm.filePath || !selectedFile">
-            上传
-          </el-button>
+          <el-button @click="uploadVisible = false">取消</el-button>
+          <el-button type="primary" :loading="fileLoading" :disabled="!fileForm.filePath.trim() || !selectedFile" @click="confirmUpload">上传</el-button>
         </div>
       </template>
     </el-dialog>
 
+    <PodTerminal v-model="terminalVisible" :cluster-id="clusterId" :namespace="namespace" :pod-name="name" :container="terminalContainer" />
+
     <PodLogViewer
-      v-model="logDialogVisible"
-      v-model:containerName="logContainerName"
-      :title="`查看日志 - ${podInfo?.name || ''}`"
+      v-model="logVisible"
+      v-model:containerName="logContainer"
+      :title="`查看日志 - ${pod?.name || ''}`"
       :cluster-id="clusterId"
-      :namespace="podInfo?.namespace || ''"
-      :pod-name="podInfo?.name || ''"
-      :containers="podInfo?.containers || []"
+      :namespace="pod?.namespace || ''"
+      :pod-name="pod?.name || ''"
+      :containers="logContainers"
       :container-selectable="true"
       :allow-all-containers="true"
     />
@@ -418,679 +414,339 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  ArrowLeft,
-  Delete,
-  Document,
-  Download,
-  Upload
-} from '@element-plus/icons-vue'
-import { 
-  podApi, 
-  type PodInfoVO, 
-  type PodDTO,
-  type PodFileDTO
-} from '@/api/pod'
-import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
-import YamlEditor from '@/components/YamlEditor.vue'
+import { ElMessage, ElMessageBox, type UploadFile, type UploadInstance } from 'element-plus'
+import { ArrowDown, Delete, Document, Download, Edit, Monitor, Picture, Refresh, Tickets, Upload } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
+import YamlDialog from '@/components/YamlDialog.vue'
 import PodLogViewer from '@/components/PodLogViewer.vue'
+import PodTerminal from '@/components/pod/PodTerminal.vue'
+import ResourceUsageBar from '@/components/ResourceUsageBar.vue'
+import ResourceInfoDialog from '@/components/ResourceInfoDialog.vue'
+import ContainerTemplates from '@/components/job/ContainerTemplates.vue'
+import ContainerEnvList from '@/components/job/ContainerEnvList.vue'
+import MetadataPanel from '@/components/job/MetadataPanel.vue'
+import EventsTable from '@/components/job/EventsTable.vue'
+import { podApi, type PodDetailVO } from '@/api/pod'
+import { fetchResourceYaml } from '@/api/resource'
+import { useClusterStore } from '@/stores/cluster'
+import { useTabBack } from '@/composables/useTabBack'
+import { tableHeaderClass, tableCellClass } from '@/utils/table'
+import { formatDateTime, podStatusTag, podStatusText } from '@/utils/job'
+import { ownerDetailPath, volumeTypeText } from '@/utils/workload'
+import { QOS_TEXT, RESTART_POLICY_TEXT, containerStateTag, containerStateText } from '@/utils/pod'
+import { formatCpu, formatMemory } from '@/utils/resource'
 import '@/assets/styles/config-editor.css'
+import '@/assets/styles/job-detail.css'
+
+type TabKey = 'resources' | 'metadata' | 'env' | 'events'
+
+const CONDITION_TEXT: Record<string, string> = {
+  PodScheduled: '已调度（PodScheduled）',
+  Initialized: '初始化完成（Initialized）',
+  ContainersReady: '容器就绪（ContainersReady）',
+  Ready: '容器组就绪（Ready）',
+  PodReadyToStartContainers: '网络就绪（PodReadyToStartContainers）',
+  DisruptionTarget: '即将中断（DisruptionTarget）'
+}
 
 const route = useRoute()
 const router = useRouter()
+// 返回当前标签内的上一页
+const goBack = useTabBack()
+const clusterStore = useClusterStore()
+
+// 页面被 keep-alive 按完整路径缓存, 参数在创建时取一次
+const clusterId = ref((route.params.clusterId as string) || (route.query.clusterId as string) || clusterStore.currentClusterId || '')
+const namespace = ref((route.query.namespace as string) || '')
+const name = ref((route.query.name as string) || '')
+const clusterName = computed(() => clusterStore.currentClusterName)
+
 const loading = ref(false)
-const podInfo = ref<PodInfoVO | null>(null)
+const pod = ref<PodDetailVO | null>(null)
+const attrOpen = ref(true)
+const activeTab = ref<TabKey>('resources')
+const tabs = computed(() => [
+  { key: 'resources' as TabKey, label: '资源状态', count: pod.value?.containers.length },
+  { key: 'metadata' as TabKey, label: '元数据' },
+  { key: 'env' as TabKey, label: '环境变量' },
+  { key: 'events' as TabKey, label: '事件', count: pod.value?.events.length }
+])
 
-// 集群信息
-const clusterId = ref('')
-const clusterName = ref('')
+// 容器设置与运行状态按名称合并, 初始化容器在前
+const containerRows = computed(() =>
+  (pod.value?.containers || []).map(c => ({
+    name: c.name,
+    init: c.init,
+    image: c.image,
+    status: pod.value?.containerStatuses.find(s => s.name === c.name && s.init === c.init),
+    usage: pod.value?.containerUsages?.find(u => u.name === c.name && u.init === c.init)
+  }))
+)
+const logContainers = computed(() => (pod.value?.containers || []).map(c => c.name))
 
-const routeClusterId = computed(() => (route.params.clusterId as string) || (route.query.clusterId as string) || '')
+const ownerPath = computed(() => ownerDetailPath(pod.value?.ownerKind))
 
-// YAML对话框相关
-const yamlDialogVisible = ref(false)
-const yamlContent = ref('')
-const yamlLoading = ref(false)
+const target = () => ({ clusterId: clusterId.value, namespace: namespace.value, name: name.value })
 
-// 日志对话框相关
-const logDialogVisible = ref(false)
-const logContainerName = ref('')
+// 启动中、删除中或有容器未就绪时定时刷新; 页面切走后停止
+const active = ref(true)
+let timer: ReturnType<typeof setTimeout> | undefined
+const needPoll = (p: PodDetailVO) =>
+  !!p.deletionTime || p.status === 'Pending' || (p.status === 'Running' && p.containerStatuses.some(s => !s.init && !s.ready))
+const schedulePoll = () => {
+  clearTimeout(timer)
+  if (active.value && pod.value && needPoll(pod.value)) timer = setTimeout(() => fetchDetail(true), 5000)
+}
 
-// 文件下载相关
-const downloadDialogVisible = ref(false)
-const downloadLoading = ref(false)
-const downloadForm = ref({
-  containerName: '',
-  filePath: ''
-})
-
-// 文件上传相关
-const uploadDialogVisible = ref(false)
-const uploadLoading = ref(false)
-const uploadForm = ref({
-  containerName: '',
-  filePath: ''
-})
-const selectedFile = ref<File | null>(null)
-const uploadRef = ref()
-// 计算属性：是否有环境变量
-const hasEnvironmentVariables = computed(() => {
-  if (!podInfo.value?.containers) return false
-  return podInfo.value.containers.some(container => 
-    container.envs && container.envs.length > 0
-  )
-})
-
-// 获取Pod详情
-const fetchPodDetail = async () => {
-  const clusterIdParam = routeClusterId.value
-  const clusterNameParam = route.query.clusterName as string
-  const namespace = route.query.namespace as string
-  const name = route.query.name as string
-  
-  if (!clusterIdParam || !namespace || !name) {
-    ElMessage.error('缺少必要参数')
-    handleBack()
-    return
-  }
-  
-  // 设置集群信息
-  clusterId.value = clusterIdParam
-  clusterName.value = clusterNameParam || ''
-  
+const fetchDetail = async (silent = false) => {
+  if (!clusterId.value || !namespace.value || !name.value) return
+  if (!silent) loading.value = true
   try {
-    loading.value = true
-    const params: PodDTO = {
-      clusterId: clusterIdParam,
-      namespace,
-      name
-    }
-    
-    const response = await podApi.getInfo(params)
-    
-    if (response.code === 200 && response.data) {
-      podInfo.value = response.data
-    } else {
-      ElMessage.error('获取Pod详情失败')
-    }
-  } catch (error: any) {
-    console.error('获取Pod详情失败:', error)
-    ElMessage.error('获取Pod详情失败')
+    const resp = await podApi.getDetail(target())
+    pod.value = resp.code === 200 ? resp.data : null
+  } catch {
+    // 删除完成后轮询会查不到, 保留最后一次的数据
+    if (!silent) pod.value = null
   } finally {
     loading.value = false
+    schedulePoll()
   }
 }
 
-// 驱逐Pod
-const handleExpel = async () => {
-  if (!podInfo.value) return
-  try {
-    await ElMessageBox.confirm(
-      '确定要驱逐该Pod吗？驱逐会向调度器发起逐出请求。',
-      '驱逐确认',
-      { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' }
-    )
-    const params: PodDTO = {
-      clusterId: clusterId.value,
-      namespace: podInfo.value.namespace,
-      name: podInfo.value.name
-    }
-    const resp = await podApi.expel(params)
-    if ((resp as any)?.code === 200) {
-      ElMessage.success('已触发驱逐，正在返回列表')
-      router.push({
-        path: `/cluster/${clusterId.value}/pod`,
-        query: {
-          namespace: podInfo.value.namespace,
-          refresh: '1'
-        }
-      })
-    } else {
-      ElMessage.error('驱逐失败')
-    }
-  } catch (e: any) {
-    if (e && e !== 'cancel') {
-      ElMessage.error('驱逐失败')
-    }
-  }
+const formatMap = (m?: Record<string, string> | null) =>
+  Object.entries(m || {})
+    .map(([k, v]) => `${k}=${v}`)
+    .join(', ')
+
+const base = computed(() => `/cluster/${clusterId.value}`)
+const goNamespace = () => router.push({ path: `${base.value}/namespace/detail`, query: { namespace: namespace.value } })
+const goNode = () => router.push({ path: `${base.value}/node/detail`, query: { hostname: pod.value?.nodeName } })
+const goOwner = () => {
+  if (!ownerPath.value || !pod.value) return
+  router.push({ path: `${base.value}/${ownerPath.value}`, query: { namespace: namespace.value, name: pod.value.ownerName } })
 }
 
-// 查看YAML
-const handleViewYaml = () => {
-  if (podInfo.value?.yaml) {
-    yamlContent.value = podInfo.value.yaml
-    yamlDialogVisible.value = true
-  }
+// 终端
+const terminalVisible = ref(false)
+const terminalContainer = ref('')
+const canTerminal = computed(() => !!pod.value && !pod.value.deletionTime && pod.value.containerStatuses.some(s => s.state === 'Running'))
+const openTerminal = (container?: string) => {
+  terminalContainer.value = container || ''
+  terminalVisible.value = true
 }
 
-// 查看日志
-const handleViewLogs = () => {
-  if (!podInfo.value) return
-  const first = podInfo.value.containers?.[0]?.name
-  logContainerName.value = first || ''
-  logDialogVisible.value = true
+// 日志
+const logVisible = ref(false)
+const logContainer = ref('')
+const openLogs = (container?: string) => {
+  logContainer.value = container || pod.value?.containers.find(c => !c.init)?.name || ''
+  logVisible.value = true
 }
 
-// 返回
-const handleBack = () => {
-  router.back()
+// 编辑信息
+const infoVisible = ref(false)
+const saveInfo = (alias: string, describe: string) => podApi.updateInfo({ ...target(), alias, describe })
+
+// 更新镜像
+const imageVisible = ref(false)
+const imageSaving = ref(false)
+const imageForm = reactive<Record<string, string>>({})
+const openImageDialog = () => {
+  Object.keys(imageForm).forEach(k => delete imageForm[k])
+  pod.value?.containers.forEach(c => (imageForm[c.name] = c.image))
+  imageVisible.value = true
 }
-
-// 删除相关状态
-const deleteDialogVisible = ref(false)
-const deleteLoading = ref(false)
-
-// 删除Pod
-const handleDelete = () => {
-  if (!podInfo.value) return
-  deleteDialogVisible.value = true
-}
-
-// 确认删除Pod
-const confirmDeletePod = async () => {
-  if (!podInfo.value) return
-  
-  deleteLoading.value = true
-  try {
-    const params: PodDTO = {
-      clusterId: clusterId.value,
-      namespace: podInfo.value.namespace,
-      name: podInfo.value.name
-    }
-    await podApi.delete(params)
-    ElMessage.success('删除成功')
-    deleteDialogVisible.value = false
-    router.back()
-  } catch (error) {
-    ElMessage.error('删除失败')
-  } finally {
-    deleteLoading.value = false
-  }
-}
-
-// 取消删除
-const cancelDeletePod = () => {
-  deleteDialogVisible.value = false
-}
-
-// 获取状态类型
-const getStatusType = (status: string) => {
-  switch (status) {
-    case 'Running':
-      return 'success'
-    case 'Pending':
-      return 'warning'
-    case 'Succeeded':
-      return 'success'
-    case 'Failed':
-      return 'danger'
-    default:
-      return 'info'
-  }
-}
-
-// 获取状态文本
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'Running':
-      return '运行中'
-    case 'Pending':
-      return '等待中'
-    case 'Succeeded':
-      return '成功'
-    case 'Failed':
-      return '失败'
-    case 'Unknown':
-      return '未知'
-    default:
-      return status
-  }
-}
-
-// 获取容器状态类型
-const getContainerStateType = (state: any) => {
-  if (state.running) return 'success'
-  if (state.waiting) return 'warning'
-  if (state.terminated) {
-    return state.terminated.exitCode === 0 ? 'success' : 'danger'
-  }
-  return 'info'
-}
-
-// 获取容器状态文本
-const getContainerStateText = (state: any) => {
-  if (state.running) return '运行中'
-  if (state.waiting) return `等待中: ${state.waiting.reason || ''}`
-  if (state.terminated) {
-    const reason = state.terminated.reason || '已终止'
-    const exitCode = state.terminated.exitCode
-    return `${reason} (${exitCode})`
-  }
-  return '未知'
-}
-
-// 判断容器是否运行中
-const isContainerRunning = (container: any) => {
-  const podRunning = podInfo.value?.status === 'Running'
-  const containerReady = !!(container && (container.ready || container.started))
-  return !!(podRunning && containerReady)
-}
-
-// 格式化日期
-const formatDate = (dateString?: string) => {
-  if (!dateString) return '-'
-  try {
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return '-'
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  } catch (error) {
-    return '-'
-  }
-}
-
-// 容器日志查看
-const handleContainerLogs = (container: any) => {
-  logContainerName.value = container.name
-  logDialogVisible.value = true
-}
-
-// 容器文件下载
-const handleContainerDownload = (container: any) => {
-  downloadForm.value.containerName = container.name
-  downloadForm.value.filePath = ''
-  downloadDialogVisible.value = true
-}
-
-// 容器文件上传
-const handleContainerUpload = (container: any) => {
-  uploadForm.value.containerName = container.name
-  uploadForm.value.filePath = ''
-  selectedFile.value = null
-  uploadDialogVisible.value = true
-}
-
-// 文件下载确认
-const confirmDownload = async () => {
-  if (!downloadForm.value.filePath) {
-    ElMessage.warning('请输入文件路径')
+const saveImages = async () => {
+  const images: Record<string, string> = {}
+  pod.value?.containers.forEach(c => {
+    const v = (imageForm[c.name] || '').trim()
+    if (v && v !== c.image) images[c.name] = v
+  })
+  if (!Object.keys(images).length) {
+    ElMessage.info('镜像没有变化')
     return
   }
-  
-  downloadLoading.value = true
+  imageSaving.value = true
   try {
-    const params: PodFileDTO = {
-      clusterId: clusterId.value,
-      namespace: podInfo.value?.namespace || '',
-      name: podInfo.value?.name || '',
-      containerName: downloadForm.value.containerName,
-      filePath: downloadForm.value.filePath
-    }
-    
-    const blob = await podApi.downloadFile(params)
-    
-    // 创建下载链接
+    await podApi.updateImages({ ...target(), images })
+    ElMessage.success('镜像已更新，容器正在重启')
+    imageVisible.value = false
+    fetchDetail()
+  } catch {
+    // 请求拦截器已提示错误
+  } finally {
+    imageSaving.value = false
+  }
+}
+
+// YAML
+const yamlVisible = ref(false)
+const yamlContent = ref('')
+const openYaml = async () => {
+  try {
+    yamlContent.value = await fetchResourceYaml({ ...target(), kind: 'pod' })
+    yamlVisible.value = true
+  } catch {
+    // 请求拦截器已提示错误
+  }
+}
+
+// 文件下载 / 上传
+const downloadVisible = ref(false)
+const uploadVisible = ref(false)
+const fileLoading = ref(false)
+const fileForm = reactive({ containerName: '', filePath: '' })
+const selectedFile = ref<File | null>(null)
+const uploadRef = ref<UploadInstance>()
+
+const openDownload = (container: string) => {
+  Object.assign(fileForm, { containerName: container, filePath: '' })
+  downloadVisible.value = true
+}
+const openUpload = (container: string) => {
+  Object.assign(fileForm, { containerName: container, filePath: '/tmp/' })
+  selectedFile.value = null
+  uploadRef.value?.clearFiles()
+  uploadVisible.value = true
+}
+const onFileChange = (file: UploadFile) => {
+  selectedFile.value = file.raw || null
+}
+
+const confirmDownload = async () => {
+  const filePath = fileForm.filePath.trim()
+  if (!filePath) return
+  fileLoading.value = true
+  try {
+    const blob = await podApi.downloadFile({ ...target(), containerName: fileForm.containerName, filePath })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    
-    // 从文件路径中提取文件名并添加.tar后缀
-    const baseName = downloadForm.value.filePath.split('/').pop() || 'download'
-    const fileName = `${baseName}.tar`
-    link.download = fileName
-    
+    link.download = `${filePath.replace(/\/+$/, '').split('/').pop() || 'download'}.tar`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-    
     ElMessage.success('文件下载成功')
-    downloadDialogVisible.value = false
-  } catch (error: any) {
-    console.error('下载文件失败:', error)
-    ElMessage.error(error?.message || '下载文件失败')
-  } finally {
-    downloadLoading.value = false
-  }
-}
-
-// 文件选择处理
-const handleFileChange = (file: any) => {
-  selectedFile.value = file.raw
-}
-
-const handleFileRemove = () => {
-  selectedFile.value = null
-}
-
-// 文件上传确认
-const confirmUpload = async () => {
-  if (!uploadForm.value.filePath) {
-    ElMessage.warning('请输入目标路径')
-    return
-  }
-  
-  if (!selectedFile.value) {
-    ElMessage.warning('请选择要上传的文件')
-    return
-  }
-  
-  uploadLoading.value = true
-  try {
-    const params: PodFileDTO = {
-      clusterId: clusterId.value,
-      namespace: podInfo.value?.namespace || '',
-      name: podInfo.value?.name || '',
-      containerName: uploadForm.value.containerName,
-      filePath: uploadForm.value.filePath
-    }
-    
-    await podApi.uploadFile(params, selectedFile.value)
-    
-    ElMessage.success('文件上传成功')
-    uploadDialogVisible.value = false
-    
-    // 清理上传组件
-    if (uploadRef.value) {
-      uploadRef.value.clearFiles()
-    }
-    selectedFile.value = null
+    downloadVisible.value = false
   } catch (error) {
-    console.error('上传文件失败:', error)
-    ElMessage.error('上传文件失败')
+    ElMessage.error((error as Error)?.message || '下载文件失败')
   } finally {
-    uploadLoading.value = false
+    fileLoading.value = false
   }
 }
 
-// 页面加载时获取数据
-onMounted(() => {
-  fetchPodDetail()
+const confirmUpload = async () => {
+  const filePath = fileForm.filePath.trim()
+  if (!filePath || !selectedFile.value) return
+  fileLoading.value = true
+  try {
+    await podApi.uploadFile({ ...target(), containerName: fileForm.containerName, filePath }, selectedFile.value)
+    ElMessage.success('文件上传成功')
+    uploadVisible.value = false
+  } catch {
+    // 请求拦截器已提示错误
+  } finally {
+    fileLoading.value = false
+  }
+}
+
+const handleExpel = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `驱逐会遵守 PodDisruptionBudget，由所属的工作负载在其他节点重建容器组${pod.value?.ownerKind ? '' : '；该容器组没有所属工作负载，驱逐后不会重建'}。`,
+      `驱逐 "${name.value}"`,
+      { type: 'warning', confirmButtonText: '驱逐', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  try {
+    await podApi.expel(target())
+    ElMessage.success('已发起驱逐')
+    fetchDetail()
+  } catch {
+    // 请求拦截器已提示错误
+  }
+}
+
+const handleDelete = async () => {
+  if (!pod.value) return
+  const force = !!pod.value.deletionTime
+  try {
+    await ElMessageBox.confirm(
+      force
+        ? '容器组一直处于删除中，强制删除会立即从集群中移除记录，不再等待容器退出（节点失联时容器可能仍在运行）。确定强制删除吗？'
+        : `确定要删除容器组 "${name.value}" 吗？${pod.value.ownerKind ? `它由 ${pod.value.ownerKind} ${pod.value.ownerName} 管理，删除后会自动重建。` : '它没有所属工作负载，删除后不会重建。'}`,
+      force ? '强制删除' : '确认删除',
+      { type: 'warning', confirmButtonText: force ? '强制删除' : '确定删除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  try {
+    await podApi.delete({ ...target(), force })
+    ElMessage.success(force ? '已强制删除' : '已开始删除')
+    goBack()
+  } catch {
+    // 请求拦截器已提示错误
+  }
+}
+
+onMounted(() => fetchDetail())
+onActivated(() => {
+  if (!active.value) {
+    active.value = true
+    fetchDetail(true)
+  }
 })
+onDeactivated(() => {
+  active.value = false
+  clearTimeout(timer)
+})
+onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
 <style scoped>
-.pod-detail {
-  padding: 20px;
-  background-color: #f5f7fa;
-  min-height: 100vh;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.loading-container {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.detail-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.info-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-}
-
-.info-item label {
-  font-weight: 500;
-  color: #606266;
-  min-width: 120px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.pd-cname {
+  margin-right: 6px;
+  color: #1e293b;
   font-weight: 600;
 }
 
-.labels-container {
+.pd-warn {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.pd-block {
+  display: block;
+  font-size: 12px;
+}
+
+.pd-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.label-tag {
-  margin: 0;
+.pd-tol-title {
+  margin-top: 18px;
 }
 
-.annotations-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.annotation-item {
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #409eff;
-  transition: all 0.2s ease;
-}
-
-.annotation-item:hover {
-  background-color: #f0f2f5;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.annotation-key {
-  font-weight: 600;
-  color: #409eff;
-  font-size: 13px;
-  margin-bottom: 8px;
-  word-break: break-all;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-}
-
-.annotation-value {
-  color: #606266;
-  font-size: 13px;
-  word-break: break-all;
-  line-height: 1.5;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  background-color: #ffffff;
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #e4e7ed;
-}
-
-.ports-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.container-status {
-  display: flex;
-  align-items: center;
-}
-
-.text-muted {
-  color: #909399;
-  font-style: italic;
-}
-
-.yaml-dialog-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.yaml-info {
+.pd-alert {
   margin-bottom: 16px;
 }
 
-.yaml-editor-wrapper {
-  flex: 1;
+.pd-tip {
+  margin: 0 0 14px;
+  color: #64748b;
+  font-size: 13px;
 }
 
-/* 日志相关样式 */
-.log-dialog .el-dialog__body {
-  padding: 10px 20px;
-}
-
-.log-header {
-  margin-bottom: 16px;
-  border-bottom: 1px solid #e4e7ed;
-  padding-bottom: 16px;
-}
-
-.log-controls .el-form {
-  margin: 0;
-}
-
-.log-controls .el-form-item {
-  margin-bottom: 0;
-  margin-right: 16px;
-}
-
-.log-container {
-  position: relative;
-  height: 600px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.log-content {
-  height: 100%;
-  overflow-y: auto;
-  padding: 12px;
-  margin: 0;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.log-search-count {
-  margin-left: 8px;
-  font-size: 12px;
-  color: #909399;
-}
-
-.log-search-hit {
-  background-color: rgba(255, 213, 0, 0.35);
-  border-radius: 2px;
-  padding: 0 1px;
-}
-
-.log-search-hit[data-log-active='1'] {
-  background-color: rgba(255, 115, 0, 0.45);
-}
-
-.real-time-indicator {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background-color: rgba(0, 0, 0, 0.8);
-  color: #00ff00;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.blinking {
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
-}
-
-.dialog-footer {
-  text-align: right;
-}
-
-.empty-container {
-  background: white;
-  border-radius: 8px;
-  padding: 40px;
-  text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.text-info {
-  color: #909399;
-  font-style: italic;
-}
-
-@media (max-width: 768px) {
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-  
-  .header-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
+.mono-input :deep(input) {
+  font-family: 'JetBrains Mono', Consolas, Menlo, monospace;
 }
 </style>

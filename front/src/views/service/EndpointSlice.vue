@@ -1,16 +1,11 @@
 <template>
-  <div class="endpointslice-list">
-    <el-card class="header-card">
-      <div class="page-header">
-        <h1>EndpointSlice管理</h1>
-        <div class="header-actions">
-          <el-button type="success" @click="openYamlAdd">
-            <el-icon><Document /></el-icon>
-            YAML添加
-          </el-button>
-        </div>
-      </div>
-    </el-card>
+  <div class="endpointslice-list list-page">
+    <PageHeader title="EndpointSlice管理" subtitle="管理 Service 后端的端点分片" icon="ep">
+      <el-button type="success" @click="openYamlAdd">
+        <el-icon><Document /></el-icon>
+        YAML添加
+      </el-button>
+    </PageHeader>
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
@@ -47,9 +42,10 @@
     <el-card class="table-card">
       <el-table 
         v-loading="loading" 
-        :data="endpointSliceList" 
-        stripe
+        :data="endpointSliceList"
         style="width: 100%"
+        :header-cell-class-name="tableHeaderClass"
+        :cell-class-name="tableCellClass"
       >
         <el-table-column prop="name" label="名称" min-width="120" header-align="center" align="center" />
         <el-table-column prop="namespace" label="命名空间" min-width="100" header-align="center" align="center">
@@ -86,89 +82,48 @@
       </el-table>
 
       <!-- 分页器 -->
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
+      <ListPagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50, 100]"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </el-card>
 
     <!-- YAML添加对话框 -->
-    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加EndpointSlice" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">YAML添加EndpointSlice</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">已内置示例，可直接修改后使用</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-editor-wrapper">
-            <YamlEditor v-model="yamlAddContent" :readonly="false" height="100%" filename="endpointslice.yaml" />
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
-          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="yamlAddDialogVisible"
+      title="YAML添加EndpointSlice"
+      subtitle="已内置示例，可直接修改后使用"
+      v-model:content="yamlAddContent"
+      :readonly="false"
+      filename="endpointslice.yaml"
+      :submitting="yamlAddLoading"
+      @confirm="confirmYamlAdd"
+    />
 
     <!-- 查看YAML对话框 -->
-    <el-dialog v-model="viewYamlDialogVisible" title="查看YAML" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">查看YAML</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">EndpointSlice 配置</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-dialog-content">
-            <div class="yaml-info">
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
-                <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
-                <el-descriptions-item label="名称">{{ currentEndpointSlice?.name }}</el-descriptions-item>
-                <el-descriptions-item label="类型">EndpointSlice</el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <div class="yaml-view">
-              <YamlEditor
-                v-model="viewYamlForm.yaml"
-                :title="`${currentEndpointSlice?.name} - EndpointSlice YAML`"
-                :readonly="true"
-                height="100%"
-                :filename="`${currentEndpointSlice?.name}-endpointslice.yaml`"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="viewYamlDialogVisible = false">关闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <YamlDialog
+      v-model="viewYamlDialogVisible"
+      title="编辑YAML"
+      subtitle="EndpointSlice 配置"
+      :info="[{ label: '集群', value: viewYamlForm.clusterName }, { label: '命名空间', value: viewYamlForm.namespace }, { label: '名称', value: currentEndpointSlice?.name }, { label: '类型', value: 'EndpointSlice' }]"
+      v-model:content="viewYamlForm.yaml"
+      :editor-title="`${currentEndpointSlice?.name} - EndpointSlice YAML`"
+      :filename="`${currentEndpointSlice?.name}-endpointslice.yaml`"
+      :apply-target="currentEndpointSlice ? { clusterId, kind: 'endpointslice', namespace: currentEndpointSlice.namespace, name: currentEndpointSlice.name } : null"
+      @applied="fetchEndpointSliceList"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { fetchResourceYaml } from '@/api/resource'
+import PageHeader from '@/components/PageHeader.vue'
+import ListPagination from '@/components/ListPagination.vue'
+import { tableHeaderClass, tableCellClass } from '@/utils/table'
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -177,7 +132,7 @@ import { endpointSliceApi, type EndpointSliceVO, type EndpointSliceQueryDTO } fr
 
 import { useClusterStore } from '@/stores/cluster'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
-import YamlEditor from '@/components/YamlEditor.vue'
+import YamlDialog from '@/components/YamlDialog.vue'
 import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
 import '@/assets/styles/config-editor.css'
 
@@ -407,10 +362,16 @@ const confirmYamlAdd = async () => {
 
 // 查看YAML
 const handleViewYaml = async (row: EndpointSliceVO) => {
+  let yamlText = ''
+  try {
+    yamlText = await fetchResourceYaml({ clusterId: clusterId.value, kind: 'endpointslice', namespace: row.namespace, name: row.name })
+  } catch {
+    return
+  }
   currentEndpointSlice.value = row
   viewYamlForm.clusterName = clusterName.value
   viewYamlForm.namespace = row.namespace
-  viewYamlForm.yaml = row.yaml || '# YAML内容加载中...'
+  viewYamlForm.yaml = yamlText
   viewYamlDialogVisible.value = true
 }
 </script>

@@ -24,6 +24,10 @@ func SetupRouter(engine *gin.RouterGroup) {
 	pod := engine.Group("/pod", middleware.JWTAuth())
 	api.NewPodApi(pod)
 
+	//容器终端(WebSocket): 浏览器不能设置请求头, 认证在握手后由接口自己完成, 这里不挂 JWTAuth
+	terminal := engine.Group("/terminal")
+	api.NewTerminalApi(terminal)
+
 	//auth
 	auth := engine.Group("/auth")
 	api.NewAuthApi(auth)
@@ -44,13 +48,13 @@ func SetupRouter(engine *gin.RouterGroup) {
 	daemonSet := engine.Group("/daemonSet", middleware.JWTAuth())
 	api.NewDaemonSetApi(daemonSet)
 
+	//工作负载通用接口(详情、分步创建、调整副本、版本回退等)
+	workload := engine.Group("/workload", middleware.JWTAuth())
+	api.NewWorkloadApi(workload)
+
 	//service
 	service := engine.Group("/service", middleware.JWTAuth())
 	api.NewKubeSrvApi(service)
-
-	//replicaSet
-	replicaSet := engine.Group("/replicaSet", middleware.JWTAuth())
-	api.NewReplicaSetApi(replicaSet)
 
 	//configMap
 	configMap := engine.Group("/configMap", middleware.JWTAuth())
@@ -96,11 +100,19 @@ func SetupRouter(engine *gin.RouterGroup) {
 	job := engine.Group("/job", middleware.JWTAuth())
 	api.NewJobApi(job)
 
-	//apply
-	apply := engine.Group("/apply", middleware.JWTAuth())
-	api.NewApplyApi(apply)
-
 	//crd
 	crd := engine.Group("/crd", middleware.JWTAuth())
 	api.NewCrdApi(crd)
+
+	//通用资源接口(列表、对象、YAML、删除), 用于 ReplicaSet / HPA / NetworkPolicy / 配额 / CRD 实例等
+	resource := engine.Group("/resource", middleware.JWTAuth())
+	api.NewResourceApi(resource)
+
+	//事件中心
+	event := engine.Group("/event", middleware.JWTAuth())
+	api.NewEventApi(event)
+
+	//集群功能检测(例如网络插件是否支持网络策略)
+	capability := engine.Group("/capability", middleware.JWTAuth())
+	api.NewCapabilityApi(capability)
 }

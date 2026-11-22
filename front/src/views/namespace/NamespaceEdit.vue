@@ -76,9 +76,12 @@ import { namespaceApi } from '@/api/namespace'
 import { clusterApi } from '@/api/cluster'
 import type { NamespaceVO, NamespaceBaseDTO, NamespaceCreateDTO } from '@/api/namespace'
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog.vue'
+import { useTabBack } from '@/composables/useTabBack'
 
 const route = useRoute()
 const router = useRouter()
+// 返回当前标签内的上一页
+const goBack = useTabBack()
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -155,7 +158,7 @@ const fetchClusterName = async (clusterId: string) => {
 
 // 返回
 const handleBack = () => {
-  router.back()
+  goBack()
 }
 
 // 查看详情
@@ -213,7 +216,7 @@ onMounted(() => {
     fetchNamespaceDetail()
   } else {
     ElMessage.error('缺少必要参数')
-    router.back()
+    goBack()
   }
 })
 </script>

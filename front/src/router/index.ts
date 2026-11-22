@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useClusterStore } from '@/stores/cluster'
+import { useTagsStore } from '@/stores/tags'
 import { ElMessage } from 'element-plus'
 
 // 路由配置
@@ -93,13 +94,17 @@ const routes: Array<RouteRecordRaw> = [
         path: 'namespace/detail',
         name: 'NamespaceDetail',
         component: () => import('@/views/namespace/NamespaceDetail.vue'),
-        meta: { title: '命名空间详情', requiresAuth: true }
+        meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'namespace', title: '命名空间详情', requiresAuth: true }
       },
       {
         path: 'namespace/edit',
         name: 'NamespaceEdit',
         component: () => import('@/views/namespace/NamespaceEdit.vue'),
-        meta: { title: '编辑命名空间', requiresAuth: true }
+        meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'namespace', title: '编辑命名空间', requiresAuth: true }
       },
       {
         path: 'nodes',
@@ -114,7 +119,9 @@ const routes: Array<RouteRecordRaw> = [
         path: 'node/detail',
         name: 'NodeDetail',
         component: () => import('@/views/cluster/NodeDetail.vue'),
-        meta: { title: '节点详情', requiresAuth: true }
+        meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'nodes', title: '节点详情', requiresAuth: true }
       },
       {
         path: 'pod',
@@ -130,6 +137,8 @@ const routes: Array<RouteRecordRaw> = [
         name: 'PodDetail',
         component: () => import('@/views/pod/PodDetail.vue'),
         meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'pod',
           title: 'Pod详情',
           requiresAuth: true
         }
@@ -145,6 +154,18 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
+        path: 'workload/deployment/detail',
+        name: 'WorkloadDeploymentDetail',
+        component: () => import('@/views/workload/WorkloadDetail.vue'),
+        meta: {
+          title: 'Deployment详情',
+          requiresAuth: true,
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'workload/deployment',
+          kind: 'deployment',
+        }
+      },
+      {
         path: 'workload/daemonset',
         name: 'DaemonSet',
         component: () => import('@/views/workload/DaemonSet.vue'),
@@ -154,12 +175,36 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
+        path: 'workload/daemonset/detail',
+        name: 'WorkloadDaemonSetDetail',
+        component: () => import('@/views/workload/WorkloadDetail.vue'),
+        meta: {
+          title: 'DaemonSet详情',
+          requiresAuth: true,
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'workload/daemonset',
+          kind: 'daemonset',
+        }
+      },
+      {
         path: 'workload/statefulset',
         name: 'StatefulSet',
         component: () => import('@/views/workload/StatefulSet.vue'),
         meta: {
           title: 'StatefulSet',
           requiresAuth: true
+        }
+      },
+      {
+        path: 'workload/statefulset/detail',
+        name: 'WorkloadStatefulSetDetail',
+        component: () => import('@/views/workload/WorkloadDetail.vue'),
+        meta: {
+          title: 'StatefulSet详情',
+          requiresAuth: true,
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'workload/statefulset',
+          kind: 'statefulset',
         }
       },
       // 任务调度
@@ -181,6 +226,28 @@ const routes: Array<RouteRecordRaw> = [
           requiresAuth: true
         }
       },
+      {
+        path: 'job/job/detail',
+        name: 'JobDetail',
+        component: () => import('@/views/job/JobDetail.vue'),
+        meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'job/job',
+          title: 'Job详情',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'job/cronjob/detail',
+        name: 'CronJobDetail',
+        component: () => import('@/views/job/CronJobDetail.vue'),
+        meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'job/cronjob',
+          title: 'CronJob详情',
+          requiresAuth: true
+        }
+      },
       // 服务发现
       {
         path: 'service/service',
@@ -192,12 +259,34 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
+        path: 'service/service/detail',
+        name: 'ServiceDetail',
+        component: () => import('@/views/service/ServiceDetail.vue'),
+        meta: {
+          title: 'Service详情',
+          requiresAuth: true,
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'service/service',
+        }
+      },
+      {
         path: 'service/ingress',
         name: 'Ingress',
         component: () => import('@/views/service/Ingress.vue'),
         meta: {
           title: 'Ingress',
           requiresAuth: true
+        }
+      },
+      {
+        path: 'service/ingress/detail',
+        name: 'IngressDetail',
+        component: () => import('@/views/service/IngressDetail.vue'),
+        meta: {
+          title: 'Ingress详情',
+          requiresAuth: true,
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'service/ingress',
         }
       },
       {
@@ -233,6 +322,8 @@ const routes: Array<RouteRecordRaw> = [
         name: 'ConfigMapDetail',
         component: () => import('@/views/config/ConfigMapDetail.vue'),
         meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'config/configmap',
           title: 'ConfigMap详情',
           requiresAuth: true
         }
@@ -251,6 +342,8 @@ const routes: Array<RouteRecordRaw> = [
         name: 'SecretDetail',
         component: () => import('@/views/config/SecretDetail.vue'),
         meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'config/secret',
           title: 'Secret详情',
           requiresAuth: true
         }
@@ -269,6 +362,8 @@ const routes: Array<RouteRecordRaw> = [
         name: 'ServiceAccountDetail',
         component: () => import('@/views/config/ServiceAccountDetail.vue'),
         meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'config/serviceaccount',
           title: 'ServiceAccount详情',
           requiresAuth: true
         }
@@ -298,6 +393,121 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@/views/storage/StorageClass.vue'),
         meta: {
           title: 'StorageClass',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'storage/storageclass/detail',
+        name: 'StorageClassDetail',
+        component: () => import('@/views/storage/StorageClassDetail.vue'),
+        meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'storage/storageclass',
+          title: 'StorageClass详情',
+          requiresAuth: true
+        }
+      },
+      // 工作负载扩展
+      {
+        path: 'workload/replicaset',
+        name: 'ReplicaSet',
+        component: () => import('@/views/workload/ReplicaSet.vue'),
+        meta: {
+          title: 'ReplicaSet',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'workload/hpa',
+        name: 'Hpa',
+        component: () => import('@/views/workload/Hpa.vue'),
+        meta: {
+          title: '弹性伸缩',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'service/ingressclass',
+        name: 'IngressClass',
+        component: () => import('@/views/service/IngressClass.vue'),
+        meta: {
+          title: 'IngressClass',
+          requiresAuth: true
+        }
+      },
+      // 策略管理
+      {
+        path: 'policy/resourcequota',
+        name: 'ResourceQuota',
+        component: () => import('@/views/policy/ResourceQuota.vue'),
+        meta: {
+          title: '资源配额',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'policy/limitrange',
+        name: 'LimitRange',
+        component: () => import('@/views/policy/LimitRange.vue'),
+        meta: {
+          title: '默认资源限制',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'policy/networkpolicy',
+        name: 'NetworkPolicy',
+        component: () => import('@/views/policy/NetworkPolicy.vue'),
+        meta: {
+          title: '网络策略',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'policy/pdb',
+        name: 'PodDisruptionBudget',
+        component: () => import('@/views/policy/PodDisruptionBudget.vue'),
+        meta: {
+          title: '中断预算',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'policy/priorityclass',
+        name: 'PriorityClass',
+        component: () => import('@/views/policy/PriorityClass.vue'),
+        meta: {
+          title: '优先级',
+          requiresAuth: true
+        }
+      },
+      // 运维工具
+      {
+        path: 'resource/events',
+        name: 'EventCenter',
+        component: () => import('@/views/resource/EventCenter.vue'),
+        meta: {
+          title: '事件中心',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'resource/kubectl',
+        name: 'Kubectl',
+        component: () => import('@/views/resource/Kubectl.vue'),
+        meta: {
+          title: 'Web kubectl',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'resource/crd/instances',
+        name: 'CustomResourceList',
+        component: () => import('@/views/resource/CustomResourceList.vue'),
+        meta: {
+          // 所属菜单: 从这里进入的页面显示在该菜单的标签里
+          parent: 'resource/crd',
+          title: '自定义资源',
           requiresAuth: true
         }
       },
@@ -392,6 +602,14 @@ router.beforeEach(async (to, from, next) => {
   }
 
   next()
+})
+
+// 顶部标签: 跳转完成后更新当前标签
+router.afterEach((to, from, failure) => {
+  const tagsStore = useTagsStore()
+  if (failure) tagsStore.clearIntent()
+  // 刷新浏览器、或从首页 / 集群列表进入集群时, 按地址找对应标签, 不覆盖之前停留的标签
+  else tagsStore.onRoute(to, !from.matched.length || !from.path.startsWith('/cluster/'))
 })
 
 // 路由错误处理

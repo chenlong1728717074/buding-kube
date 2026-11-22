@@ -4,117 +4,55 @@ import (
 	"buding-kube/internal/service"
 	"buding-kube/internal/web/dto"
 	"buding-kube/internal/web/middleware"
-	"buding-kube/internal/web/vo"
 	"buding-kube/pkg/logs"
-	"context"
-	"sort"
-	"strings"
-	"time"
-
-	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gin-gonic/gin"
 )
 
+// CrdApi CRD 定义; 自定义资源(CRD 的实例)使用通用的 /resource 接口
 type CrdApi struct {
 	router *gin.RouterGroup
 	BaseApi
 }
 
 func NewCrdApi(router *gin.RouterGroup) *CrdApi {
-	api := CrdApi{
-		router: router,
-	}
+	api := CrdApi{router: router}
 	api.Router()
 	return &api
 }
 
 func (api *CrdApi) Router() {
 	api.router.GET("/list", api.List)
-	api.router.GET("", middleware.Blocker(), api.Detail)
+	api.router.GET("", api.Detail)
 	api.router.DELETE("", middleware.Blocker(), api.Delete)
 }
 
-// getCrdClient 通过缓存的集群配置构造 apiextensions 客户端
-// kubernetes.Clientset 不包含 CRD 操作接口, 需使用独立的 apiextensionsclientset
-func (api *CrdApi) getCrdClient(clusterId string) (*apiextensionsclientset.Clientset, error) {
-	restConfig, err := service.ClusterMap.GetConfig(clusterId)
-	if err != nil {
-		return nil, err
-	}
-	return apiextensionsclientset.NewForConfig(restConfig)
-}
-
-// List 查询当前集群的 CRD 列表
+// List CRD 概要列表(分页); 完整定义通过 /resource/yaml 按需查看
 func (api *CrdApi) List(ctx *gin.Context) {
 	var query dto.CrdPageQueryDTO
 	if err := api.BindQuery(ctx, &query); err != nil {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	crdClient, err := api.getCrdClient(query.ClusterId)
+	items, err := service.ListCrds(ctx.Request.Context(), query.ClusterId, query.Refresh)
 	if err != nil {
-		api.InternalError(ctx, "获取集群客户端失败:", err)
+		logs.Error("查询CRD列表失败: %s %v", query.ClusterId, err)
+		api.InternalError(ctx, "查询失败", err)
 		return
 	}
-	crdList, err := crdClient.ApiextensionsV1().CustomResourceDefinitions().
-		List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		logs.Error("查询CRD列表失败:%v", err)
-		api.InternalError(ctx, "查询失败:", err)
-		return
-	}
-
-	keyword := strings.TrimSpace(query.Keyword)
-	result := make([]vo.CrdVO, 0, len(crdList.Items))
-	for _, item := range crdList.Items {
-		storageVersion := ""
-		for _, ver := range item.Spec.Versions {
-			if ver.Storage {
-				storageVersion = ver.Name
-				break
-			}
-		}
-		cvo := vo.CrdVO{
-			Name:       item.Name,
-			Kind:       item.Spec.Names.Kind,
-			Group:      item.Spec.Group,
-			Version:    storageVersion,
-			Scope:      string(item.Spec.Scope),
-			CreateTime: item.CreationTimestamp.Format("2006-01-02 15:04:05"),
-		}
-		if keyword != "" &&
-			!strings.Contains(cvo.Name, keyword) &&
-			!strings.Contains(cvo.Kind, keyword) &&
-			!strings.Contains(cvo.Group, keyword) {
-			continue
-		}
-		result = append(result, cvo)
-	}
-	// 按名称排序保证顺序稳定
-	sort.Slice(result, func(i, j int) bool { return result[i].Name < result[j].Name })
-
-	response := BuildPageResponse(result, query.Page, query.PageSize)
-	api.SuccessWithData(ctx, response)
+	api.SuccessWithData(ctx, BuildPageResponse(service.FilterCrds(items, query.Keyword), query.Page, query.PageSize))
 }
 
-// Detail 查询单个 CRD 原始对象(前端渲染 YAML)
+// Detail 单个 CRD 的概要(名称、组、版本、作用域等, 不含 schema)
 func (api *CrdApi) Detail(ctx *gin.Context) {
 	var base dto.CrdBaseDTO
 	if err := api.BindQuery(ctx, &base); err != nil {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	crdClient, err := api.getCrdClient(base.ClusterId)
+	item, err := service.GetCrd(ctx.Request.Context(), base.ClusterId, base.Name)
 	if err != nil {
-		api.InternalError(ctx, "获取集群客户端失败:", err)
-		return
-	}
-	item, err := crdClient.ApiextensionsV1().CustomResourceDefinitions().
-		Get(context.Background(), base.Name, metav1.GetOptions{})
-	if err != nil {
-		api.InternalError(ctx, "获取失败:%v", err)
+		api.InternalError(ctx, "获取失败", err)
 		return
 	}
 	api.SuccessWithData(ctx, item)
@@ -127,17 +65,9 @@ func (api *CrdApi) Delete(ctx *gin.Context) {
 		api.ParamBindError(ctx, err)
 		return
 	}
-	crdClient, err := api.getCrdClient(base.ClusterId)
-	if err != nil {
-		api.InternalError(ctx, "获取集群客户端失败:", err)
-		return
-	}
-	deleteCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	if err = crdClient.ApiextensionsV1().CustomResourceDefinitions().
-		Delete(deleteCtx, base.Name, metav1.DeleteOptions{}); err != nil {
-		logs.Error("删除CRD失败:%s %v", base.Name, err)
-		api.InternalError(ctx, "删除失败:%v", err)
+	if err := service.DeleteCrd(ctx.Request.Context(), base.ClusterId, base.Name); err != nil {
+		logs.Error("删除CRD失败: %s %v", base.Name, err)
+		api.InternalError(ctx, "删除失败", err)
 		return
 	}
 	api.SuccessMsg(ctx, "删除成功")

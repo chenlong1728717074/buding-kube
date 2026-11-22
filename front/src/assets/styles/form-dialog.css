@@ -1,0 +1,962 @@
+/* ==========================================================
+ * 表单弹窗统一风格(添加 / 编辑类弹窗)
+ * 作用于 class 含 config-dialog(YAML 编辑弹窗除外)或 form-dialog 的 el-dialog
+ * 兼容两种标题写法: 自定义 #header(.dialog-header + .dialog-title) 和 Element 默认 title
+ * ========================================================== */
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) {
+  --fd-primary: #3b74f2;
+  --el-component-size: 40px;
+  padding: 0 !important;
+  border: 1px solid #e8eefa;
+  border-radius: 18px !important;
+  background: #ffffff;
+  box-shadow: 0 24px 64px rgba(30, 64, 175, 0.16), 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+  overflow: hidden;
+}
+
+/* ---------- 头部: 立方体图标 + 标题 + 蓝色短下划线 + 蓝色关闭按钮 ---------- */
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__header {
+  position: relative;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-bottom: 1px solid #edf1f7 !important;
+  background: linear-gradient(180deg, #fafcff 0%, #ffffff 100%);
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .dialog-header {
+  position: relative;
+  gap: 12px;
+  padding: 18px 64px 16px 24px !important;
+  border-bottom: none !important;
+  background: transparent !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__header > .el-dialog__title {
+  position: relative;
+  padding: 18px 64px 16px 24px;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .dialog-header::after,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__header > .el-dialog__title::after {
+  content: '';
+  position: absolute;
+  left: 24px;
+  bottom: -1px;
+  width: 44px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--fd-primary);
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .dialog-title,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  line-height: 28px;
+  color: #1e293b !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .dialog-title::before,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__title::before {
+  content: '';
+  flex: none;
+  width: 26px;
+  height: 26px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 28 9.5 16 16 4 9.5Z' fill='%2386bcff'/%3E%3Cpath d='M4 9.5 16 16v13L4 22.5Z' fill='%233b82f6'/%3E%3Cpath d='M28 9.5 16 16v13l12-6.5Z' fill='%231d5fe0'/%3E%3Cpath d='M16 3 28 9.5 16 16 4 9.5Z' fill='none' stroke='%23fff' stroke-opacity='.4' stroke-width='.8' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* 副标题与标题同行显示 */
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .dialog-header > div:first-child {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 12px;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .dialog-header > div:first-child > div {
+  margin-top: 0 !important;
+  font-size: 13px !important;
+  color: #94a3b8 !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__headerbtn {
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__headerbtn:hover {
+  background: #eff5ff;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__headerbtn .el-dialog__close {
+  font-size: 18px;
+  color: var(--fd-primary) !important;
+}
+
+/* ---------- 内容区 ---------- */
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__body {
+  padding: 24px 32px 8px !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__body:has(> .config-editor) {
+  padding: 0 !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .config-content {
+  padding: 26px 40px 10px !important;
+  background: #ffffff !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-form-item {
+  margin-bottom: 20px !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-form-item__label {
+  font-size: 14px;
+  font-weight: 500 !important;
+  color: #334155 !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-input__wrapper,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-select__wrapper,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-textarea__inner {
+  border-radius: 10px !important;
+  box-shadow: 0 0 0 1px #dde4ef inset !important;
+  transition: box-shadow 0.15s ease;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-input__wrapper:hover,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-select__wrapper:hover,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px #b9cdf3 inset !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-input__wrapper.is-focus,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-select__wrapper.is-focused,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--fd-primary) inset, 0 0 0 3px rgba(59, 116, 242, 0.12) !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-input.is-disabled .el-input__wrapper {
+  background: #f6f8fb;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-textarea__inner {
+  padding: 10px 14px;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-input__count,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-textarea .el-input__count {
+  color: #94a3b8;
+  background: transparent;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-input__inner::placeholder,
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-textarea__inner::placeholder {
+  color: #a3adbd;
+}
+
+/* ---------- 底部: 取消(白色胶囊) / 确定(蓝色渐变胶囊) ---------- */
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__footer {
+  padding: 14px 24px !important;
+  border-top: 1px solid #edf1f7 !important;
+  background: #fbfcfe;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__footer .dialog-footer {
+  gap: 12px;
+  padding: 0 !important;
+  border-top: none !important;
+  background: transparent !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__footer .el-button {
+  min-width: 76px;
+  height: 36px;
+  margin-left: 0 !important;
+  padding: 0 20px !important;
+  border-radius: 999px !important;
+  font-weight: 500;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__footer .el-button + .el-button {
+  margin-left: 12px !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__footer .dialog-footer .el-button + .el-button {
+  margin-left: 0 !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__footer .el-button--default {
+  color: #334155 !important;
+  background: #ffffff !important;
+  border: 1px solid #d5dce8 !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__footer .el-button--default:hover {
+  color: #2563eb !important;
+  background: #f5f9ff !important;
+  border-color: #b9cdf3 !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__footer .el-button--primary:not(.is-plain):not(.is-text):not(.is-link) {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #5b9cff 0%, #3b74f2 100%) !important;
+  border: none !important;
+  box-shadow: 0 6px 16px rgba(59, 116, 242, 0.32) !important;
+}
+
+:is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__footer .el-button--primary:not(.is-plain):not(.is-text):not(.is-link):hover {
+  filter: brightness(1.05);
+}
+
+@media (max-width: 768px) {
+  :is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .config-content {
+    padding: 18px 16px 6px !important;
+  }
+
+  :is(.el-dialog.config-dialog:not(.yaml-dialog), .el-dialog.form-dialog) .el-dialog__body {
+    padding: 18px 16px 6px !important;
+  }
+}
+
+
+/* ==========================================================
+ * 紧凑表单弹窗(只有几个输入项的添加 / 编辑弹窗), 比例参照原型:
+ * 宽 800px, 宽高比约 2.5 : 1; 标签列 96px 右对齐, 输入框 36px 高
+ * ========================================================== */
+.el-dialog.form-dialog--compact {
+  --el-component-size: 36px;
+  max-width: calc(100vw - 32px);
+  border-radius: 16px !important;
+}
+
+.el-dialog.form-dialog--compact .dialog-header {
+  padding: 15px 60px 14px 28px !important;
+}
+
+.el-dialog.form-dialog--compact .dialog-header::after {
+  left: 28px;
+  width: 40px;
+}
+
+.el-dialog.form-dialog--compact .dialog-title {
+  gap: 10px;
+  font-size: 17px !important;
+  line-height: 26px;
+}
+
+.el-dialog.form-dialog--compact .dialog-title::before {
+  width: 24px;
+  height: 24px;
+}
+
+.el-dialog.form-dialog--compact .el-dialog__headerbtn {
+  top: 10px;
+  right: 12px;
+}
+
+.el-dialog.form-dialog--compact .config-content {
+  padding: 22px 56px 4px 24px !important;
+}
+
+/* 页面里 scoped 的表单内边距会让输入框变窄, 这里统一清掉 */
+.el-dialog.form-dialog--compact .config-content > .el-form {
+  padding: 0 !important;
+}
+
+.el-dialog.form-dialog--compact .el-form-item {
+  margin-bottom: 18px !important;
+}
+
+.el-dialog.form-dialog--compact .el-form-item__label {
+  height: 36px;
+  padding-right: 14px;
+  line-height: 36px;
+  color: #334155 !important;
+}
+
+.el-dialog.form-dialog--compact .el-form-item__content {
+  min-height: 36px;
+  line-height: 36px;
+}
+
+.el-dialog.form-dialog--compact .el-form-item.is-required:not(.is-no-asterisk) > .el-form-item__label::before {
+  margin-right: 6px;
+  color: #ef4444;
+}
+
+.el-dialog.form-dialog--compact .el-input__wrapper {
+  padding: 0 14px;
+  border-radius: 8px !important;
+}
+
+.el-dialog.form-dialog--compact .el-textarea__inner {
+  min-height: 76px !important;
+  padding: 8px 14px 22px;
+  border-radius: 8px !important;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.el-dialog.form-dialog--compact .el-input__count {
+  font-size: 12px;
+}
+
+.el-dialog.form-dialog--compact .el-textarea .el-input__count {
+  right: 14px;
+  bottom: 6px;
+  line-height: 16px;
+}
+
+.el-dialog.form-dialog--compact .el-form-item__error {
+  padding-top: 3px;
+}
+
+.el-dialog.form-dialog--compact .el-dialog__footer {
+  padding: 12px 24px !important;
+  background: #ffffff;
+}
+
+.el-dialog.form-dialog--compact .el-dialog__footer .el-button {
+  min-width: 68px;
+  height: 32px;
+  padding: 0 18px !important;
+  border-radius: 10px !important;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .el-dialog.form-dialog--compact .config-content {
+    padding: 18px 18px 4px 8px !important;
+  }
+}
+
+/* ==========================================================
+ * 大型表单弹窗(分步创建 / 编辑数据 / 添加集群)
+ * 头部与底部固定, 中间内容区固定高度并在内部滚动, 切换步骤时弹窗尺寸不跳动
+ * ========================================================== */
+.el-dialog.form-dialog--wide {
+  --el-component-size: 36px;
+  max-width: calc(100vw - 48px);
+  border-radius: 18px !important;
+}
+
+.el-dialog.form-dialog--wide .dialog-header {
+  align-items: center;
+  padding: 15px 64px 14px 28px !important;
+}
+
+.el-dialog.form-dialog--wide .dialog-header::after {
+  left: 28px;
+}
+
+.el-dialog.form-dialog--wide .dialog-title {
+  font-size: 17px !important;
+}
+
+.el-dialog.form-dialog--wide .el-dialog__headerbtn {
+  top: 10px;
+}
+
+/* 标题栏右侧的「编辑 YAML」开关 */
+.el-dialog.form-dialog--wide .dialog-actions {
+  gap: 8px;
+  padding: 4px 14px;
+  border: 1px solid #e3ecfb;
+  border-radius: 999px;
+  background: #f6f9ff;
+}
+
+.el-dialog.form-dialog--wide .dialog-actions .el-switch {
+  --el-switch-on-color: #3b74f2;
+  height: 28px;
+}
+
+.el-dialog.form-dialog--wide .dialog-actions .el-switch__label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.el-dialog.form-dialog--wide .dialog-actions .el-switch__label.is-active {
+  color: #2563eb;
+}
+
+/* ---------- 步骤条 ---------- */
+.el-dialog.form-dialog--wide .step-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 14px 28px !important;
+  border-bottom: 1px solid #edf1f7 !important;
+  background: #f8fbff !important;
+}
+
+.el-dialog.form-dialog--wide .step-tab {
+  position: relative;
+  flex: 0 1 auto !important;
+  gap: 12px !important;
+  min-width: 0;
+  padding: 8px 20px 8px 8px !important;
+  border: 1px solid transparent !important;
+  border-radius: 999px;
+  background: transparent !important;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.el-dialog.form-dialog--wide .step-tab + .step-tab {
+  margin-left: 72px;
+}
+
+/* 步骤之间的连接线, 前一步完成后变蓝 */
+.el-dialog.form-dialog--wide .step-tab + .step-tab::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -64px;
+  width: 56px;
+  height: 2px;
+  border-radius: 2px;
+  background: #d8e3f4;
+}
+
+.el-dialog.form-dialog--wide .step-tab.completed + .step-tab::before {
+  background: linear-gradient(90deg, #10b981, #3b74f2);
+}
+
+.el-dialog.form-dialog--wide .step-tab:hover {
+  background: #eef4ff !important;
+}
+
+.el-dialog.form-dialog--wide .step-tab.active {
+  border-color: #d4e2fb !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.1);
+}
+
+.el-dialog.form-dialog--wide .step-icon {
+  width: 32px !important;
+  height: 32px !important;
+  border: 2px solid #d8e3f4;
+  background: #ffffff !important;
+  color: #94a3b8 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.el-dialog.form-dialog--wide .step-tab.active .step-icon {
+  border-color: transparent;
+  background: linear-gradient(135deg, #5b9cff 0%, #3b74f2 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(59, 116, 242, 0.35);
+}
+
+.el-dialog.form-dialog--wide .step-tab.completed:not(.active) .step-icon {
+  border-color: transparent;
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.el-dialog.form-dialog--wide .step-title {
+  margin-bottom: 2px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+}
+
+.el-dialog.form-dialog--wide .step-tab.active .step-title {
+  color: #2563eb !important;
+}
+
+.el-dialog.form-dialog--wide .step-desc {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  white-space: nowrap;
+}
+
+/* ---------- 内容区: 固定高度, 内部滚动 ---------- */
+.el-dialog.form-dialog--wide .config-content {
+  height: min(60vh, 600px);
+  padding: 22px 32px 24px !important;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd8ee transparent;
+}
+
+/* 没有 config-editor 包裹的弹窗(添加 / 编辑集群) */
+.el-dialog.form-dialog--wide .el-dialog__body:not(:has(> .config-editor)) {
+  max-height: min(68vh, 720px);
+  padding: 22px 32px 8px !important;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.el-dialog.form-dialog--wide .config-content > .yaml-view {
+  height: 100%;
+  border: none !important;
+  border-radius: 12px !important;
+}
+
+/* 基本信息: 右对齐标签, 两列网格; 文本域占满整行 */
+.el-dialog.form-dialog--wide .basic-form > .el-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 28px;
+  margin-bottom: 8px;
+}
+
+.el-dialog.form-dialog--wide .basic-form > .el-form > .el-form-item:has(.el-textarea) {
+  grid-column: 1 / -1;
+}
+
+.el-dialog.form-dialog--wide .el-form-item {
+  margin-bottom: 18px !important;
+}
+
+.el-dialog.form-dialog--wide .el-form-item__label {
+  height: 36px;
+  padding-right: 14px;
+  line-height: 36px;
+}
+
+.el-dialog.form-dialog--wide .el-form--label-top .el-form-item__label {
+  height: auto;
+  margin-bottom: 6px !important;
+  line-height: 22px;
+}
+
+.el-dialog.form-dialog--wide .el-form-item.is-required:not(.is-no-asterisk) > .el-form-item__label::before {
+  margin-right: 6px;
+  color: #ef4444;
+}
+
+.el-dialog.form-dialog--wide .el-input__wrapper,
+.el-dialog.form-dialog--wide .el-select__wrapper {
+  border-radius: 8px !important;
+}
+
+.el-dialog.form-dialog--wide .el-textarea__inner {
+  border-radius: 8px !important;
+  line-height: 1.6;
+}
+
+.el-dialog.form-dialog--wide .field-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+/* 单选按钮组(连接方式) */
+.el-dialog.form-dialog--wide .el-radio-group .el-radio-button__inner {
+  height: 36px;
+  padding: 0 18px;
+  line-height: 34px;
+}
+
+.el-dialog.form-dialog--wide .el-radio-group .el-radio-button:first-child .el-radio-button__inner {
+  border-radius: 8px 0 0 8px;
+}
+
+.el-dialog.form-dialog--wide .el-radio-group .el-radio-button:last-child .el-radio-button__inner {
+  border-radius: 0 8px 8px 0;
+}
+
+.el-dialog.form-dialog--wide .el-radio-button__original-radio:checked + .el-radio-button__inner {
+  background: #3b74f2;
+  border-color: #3b74f2;
+  box-shadow: -1px 0 0 0 #3b74f2;
+}
+
+/* ---------- 分区(标签 / 注解 / 数据) ---------- */
+.el-dialog.form-dialog--wide .form-section {
+  margin: 0 0 22px !important;
+  padding-top: 18px;
+  border-top: 1px dashed #e3eaf5;
+}
+
+.el-dialog.form-dialog--wide .basic-form > .form-section:first-of-type {
+  margin-top: 4px !important;
+}
+
+.el-dialog.form-dialog--wide .data-form > .form-section:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.el-dialog.form-dialog--wide .form-section:last-child {
+  margin-bottom: 0 !important;
+}
+
+.el-dialog.form-dialog--wide .section-header-row {
+  margin-bottom: 12px !important;
+}
+
+.el-dialog.form-dialog--wide .section-title {
+  position: relative;
+  margin: 0 !important;
+  padding-left: 12px;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
+
+.el-dialog.form-dialog--wide .section-title::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #5b9cff 0%, #3b74f2 100%);
+  transform: translateY(-50%);
+}
+
+/* 分区右侧的小按钮: 白底蓝字胶囊 */
+.el-dialog.form-dialog--wide .section-header-row .el-button {
+  height: 30px;
+  margin-left: 0 !important;
+  padding: 0 14px !important;
+  border: 1px solid #d4e2fb !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: #2563eb !important;
+  box-shadow: none !important;
+  font-weight: 500;
+}
+
+.el-dialog.form-dialog--wide .section-header-row .el-button:hover {
+  background: #eff5ff !important;
+  border-color: #a9c5f7 !important;
+}
+
+.el-dialog.form-dialog--wide .section-actions {
+  gap: 8px !important;
+}
+
+/* 标签 / 注解编辑表格 */
+.el-dialog.form-dialog--wide .form-section .el-table {
+  --el-table-border-color: #edf1f7;
+  --el-table-header-bg-color: #f3f7fd;
+  --el-table-row-hover-bg-color: #fafcff;
+  border: 1px solid #e8eef8;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.el-dialog.form-dialog--wide .form-section .el-table th.el-table__cell {
+  height: 42px;
+  background: #f3f7fd !important;
+  font-weight: 500;
+  color: #475569;
+}
+
+.el-dialog.form-dialog--wide .form-section .el-table td.el-table__cell {
+  padding: 8px 0;
+}
+
+.el-dialog.form-dialog--wide .form-section .el-table__inner-wrapper::before {
+  display: none;
+}
+
+.el-dialog.form-dialog--wide .form-section .el-table__empty-block {
+  min-height: 56px;
+}
+
+.el-dialog.form-dialog--wide .form-section .el-table__empty-text {
+  font-size: 13px;
+  color: #a3adbd;
+}
+
+/* KV 编辑器外框交给组件自己处理 */
+.el-dialog.form-dialog--wide .data-editor {
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+/* ---------- 编辑数据时顶部的资源信息 ---------- */
+.el-dialog.form-dialog--wide .resource-info-bar {
+  flex-wrap: wrap;
+  gap: 10px !important;
+  padding: 12px 28px !important;
+  border-bottom: 1px solid #edf1f7 !important;
+  background: #f8fbff !important;
+}
+
+.el-dialog.form-dialog--wide .resource-info-item {
+  gap: 6px !important;
+  padding: 5px 14px;
+  border: 1px solid #e3ecfb;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.el-dialog.form-dialog--wide .resource-info-label {
+  color: #94a3b8 !important;
+}
+
+.el-dialog.form-dialog--wide .resource-info-value {
+  color: #1e293b !important;
+  font-weight: 600 !important;
+}
+
+/* ---------- 底部 ---------- */
+.el-dialog.form-dialog--wide .el-dialog__footer {
+  padding: 12px 24px !important;
+  background: #ffffff;
+}
+
+.el-dialog.form-dialog--wide .el-dialog__footer .el-button {
+  min-width: 72px;
+  height: 34px;
+  padding: 0 18px !important;
+  border-radius: 10px !important;
+}
+
+@media (max-width: 900px) {
+  .el-dialog.form-dialog--wide .basic-form > .el-form {
+    grid-template-columns: 1fr;
+  }
+
+  .el-dialog.form-dialog--wide .step-tab + .step-tab {
+    margin-left: 24px;
+  }
+
+  .el-dialog.form-dialog--wide .step-tab + .step-tab::before {
+    display: none;
+  }
+
+  .el-dialog.form-dialog--wide .step-desc {
+    display: none;
+  }
+
+  .el-dialog.form-dialog--wide .config-content {
+    padding: 18px 16px !important;
+  }
+}
+
+
+/* ==========================================================
+ * 表单弹窗里的选择卡片(存储来源 / 存储类 / 创建方式等)
+ * ========================================================== */
+.el-dialog.form-dialog--wide .basic-form > .el-form > .el-form-item.is-full {
+  grid-column: 1 / -1;
+}
+
+.fd-subtitle {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.fd-subtitle small {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.fd-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.fd-choice-grid.is-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fd-choice {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid #e3eaf5;
+  border-radius: 12px;
+  background: #ffffff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.fd-choice:hover {
+  border-color: #b9cdf3;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08);
+}
+
+.fd-choice:focus-visible {
+  outline: 2px solid #3b74f2;
+  outline-offset: 2px;
+}
+
+.fd-choice.is-active {
+  border-color: #3b74f2;
+  background: #f5f9ff;
+  box-shadow: 0 0 0 3px rgba(59, 116, 242, 0.12);
+}
+
+.fd-choice__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+}
+
+.fd-choice__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding-right: 18px;
+}
+
+.fd-choice__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.fd-choice__title > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fd-choice__badge {
+  flex: none;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #eff5ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.fd-choice__badge.is-primary {
+  background: linear-gradient(135deg, #5b9cff 0%, #3b74f2 100%);
+  color: #ffffff;
+}
+
+.fd-choice__desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.fd-choice__meta {
+  overflow: hidden;
+  color: #94a3b8;
+  font-family: 'SF Mono', Consolas, Monaco, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fd-choice__check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 16px;
+  color: #3b74f2;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 0.15s ease;
+}
+
+.fd-choice.is-active .fd-choice__check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.fd-capacity {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.fd-capacity .el-input-number {
+  flex: 1;
+}
+
+.fd-capacity .el-select {
+  width: 96px;
+  flex: none;
+}
+
+.fd-inline-hint {
+  margin-left: 12px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.fd-access-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fd-access-modes .el-checkbox,
+.fd-access-modes .el-radio {
+  height: 36px;
+  margin-right: 0;
+  border-radius: 8px;
+}
+
+.fd-access-mode {
+  font-family: 'SF Mono', Consolas, Monaco, monospace;
+  font-weight: 600;
+}
+
+.fd-access-mode__desc {
+  margin-left: 6px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.fd-pick-table .el-table__row {
+  cursor: pointer;
+}
+
+.fd-pick-table .el-table__row.current-row > td.el-table__cell {
+  background: #eef4ff !important;
+}
+
+@media (max-width: 900px) {
+  .fd-choice-grid.is-two {
+    grid-template-columns: 1fr;
+  }
+
+  .fd-inline-hint {
+    display: block;
+    margin-left: 0;
+  }
+}

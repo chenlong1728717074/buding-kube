@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 	"sort"
 	"strings"
 	"sync"
@@ -41,7 +40,7 @@ func (s *EndpointService) List(query dto.EndpointPageQueryBaseDTO) ([]vo.Endpoin
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	items, err := clientSet.CoreV1().Endpoints(query.Namespace).List(context.TODO(), metav1.ListOptions{})
+	items, err := clientSet.CoreV1().Endpoints(query.Namespace).List(context.TODO(), metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取Endpoint失败: %v", err)
 		return nil, fmt.Errorf("获取Endpoint失败: %v", err)
@@ -50,15 +49,6 @@ func (s *EndpointService) List(query dto.EndpointPageQueryBaseDTO) ([]vo.Endpoin
 	for _, item := range items.Items {
 		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
 			vi := vo.Endpoint2VO(item)
-			copy := item.DeepCopy()
-			copy.ObjectMeta.ManagedFields = nil
-			copy.ObjectMeta.ResourceVersion = ""
-			copy.ObjectMeta.CreationTimestamp = metav1.Time{}
-			yamlData, err := yaml.Marshal(copy)
-			if err != nil {
-				logs.Error("序列化Endpoint失败: %v", err)
-			}
-			vi.Yaml = string(yamlData)
 			result = append(result, vi)
 		}
 	}

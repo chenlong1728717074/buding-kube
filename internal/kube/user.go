@@ -52,6 +52,7 @@ var roleLevel = map[Role]int{
 	RoleSuperAdmin: 1,
 }
 
+// RoleLevel 角色级别, 数字越小权限越高; 未知角色返回 0
 func RoleLevel(role Role) int {
 	return roleLevel[role]
 }
@@ -156,37 +157,9 @@ type UserList struct {
 	Items           []User `json:"items"`
 }
 
-// IsEnabled 检查用户是否启用
-func (u *User) IsEnabled() bool {
-	return u.Spec.Enabled
-}
-
-// IsActive 检查用户是否激活
-func (u *User) IsActive() bool {
-	return u.Status.State == "active"
-}
-
-// IsSuperAdmin 检查是否是超级管理员
-func (u *User) IsSuperAdmin() bool {
-	return u.Spec.Role == "super"
-}
-
-// IsAdmin 检查是否是管理员
-func (u *User) IsAdmin() bool {
-	return u.Spec.Role == "admin" || u.Spec.Role == "super"
-}
-
 func (u *User) CheckPassword(password string) bool {
 	match, _ := argon2id.ComparePasswordAndHash(password, u.Spec.Password)
 	return match
-}
-
-func (u *User) getRoleLevel() int {
-	return roleLevel[u.Spec.Role]
-}
-
-func (u *User) HasPermission(requiredRole Role) bool {
-	return roleLevel[u.Spec.Role] <= roleLevel[requiredRole]
 }
 
 func CreateUser(user *User, client dynamic.Interface) error {

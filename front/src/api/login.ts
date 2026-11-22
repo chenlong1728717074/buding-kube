@@ -36,6 +36,4 @@ export const loginApi = {
   }
 }
 
-// 兼容旧版本的导出
-export const authApi = loginApi
 export default loginApi

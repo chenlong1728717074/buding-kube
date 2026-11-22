@@ -165,7 +165,7 @@
     </div>
 
     <!-- 修改密码对话框 -->
-    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="80%" :close-on-click-modal="false" class="config-dialog">
+    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="800px" :close-on-click-modal="false" class="config-dialog form-dialog--compact">
       <template #header>
         <div class="dialog-header">
           <h3 class="dialog-title">修改密码</h3>
@@ -217,14 +217,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { 
-  Edit, 
-  UserFilled, 
-  Camera, 
-  Lock, 
-  Message, 
-  Phone
-} from '@element-plus/icons-vue'
+import { Edit, UserFilled, Camera, Lock, Phone} from '@element-plus/icons-vue'
 import { userApi } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import '@/assets/styles/config-editor.css'

@@ -157,7 +157,7 @@ func (s *NamespaceService) List(query dto.NamespacePageQueryBaseDTO) ([]vo.Names
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	listOptions := metav1.ListOptions{}
+	listOptions := metav1.ListOptions{ResourceVersion: "0"}
 	namespaces, err2 := s.getAllNamespaces(listOptions, clientSet)
 	if err2 != nil {
 		return []vo.NamespaceVO{}, err2
@@ -207,8 +207,6 @@ func (s *NamespaceService) GetById(base dto.NamespaceBaseDTO) (*vo.NamespaceVO, 
 	}
 	result := vo.Namespace2VO(ns)
 	result.Yaml = string(yamlData)
-	//构建资源信息
-	s.buildResourceStat(clientSet, &result)
 	return &result, nil
 }
 
@@ -253,8 +251,4 @@ func (s *NamespaceService) Apply(apply dto.NamespaceApplyDTO) error {
 	}
 	logs.Info("命名空间更新成功: %s", ns.Name)
 	return nil
-}
-
-func (s *NamespaceService) buildResourceStat(clientSet *kubernetes.Clientset, result *vo.NamespaceVO) {
-
 }

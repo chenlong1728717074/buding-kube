@@ -9,17 +9,17 @@ import (
 
 type ServiceVO struct {
 	BaseVO
-	Alias          string    `json:"alias"`
-	Describe       string    `json:"describe"`
-	Yaml           string    `json:"yaml"`
-	Status         string    `json:"status"`
-	CreateTime     time.Time `json:"createTime"`
-	InternalIP     string    `json:"internalIP"`     // 内部IP (ClusterIP)
-	ExternalIP     string    `json:"externalIP"`     // 外部IP
-	InternalAccess string    `json:"internalAccess"` // 内部访问域名
-	ExternalAccess string    `json:"externalAccess"` // 外部访问地址
-	AccessMode     string    `json:"accessMode"`     // 访问模式
-	ServiceType    string    `json:"serviceType"`    // Service类型
+	Status         string            `json:"status"`
+	CreateTime     time.Time         `json:"createTime"`
+	InternalIP     string            `json:"internalIP"`     // 内部IP (ClusterIP)
+	ExternalIP     string            `json:"externalIP"`     // 外部IP
+	InternalAccess string            `json:"internalAccess"` // 内部访问域名
+	ExternalAccess string            `json:"externalAccess"` // 外部访问地址
+	AccessMode     string            `json:"accessMode"`     // 访问模式
+	ServiceType    string            `json:"serviceType"`    // Service类型
+	Headless       bool              `json:"headless"`
+	Ports          []ServicePortVO   `json:"ports"`
+	Selector       map[string]string `json:"selector"`
 }
 
 // 获取内部IP (ClusterIP)
@@ -116,9 +116,9 @@ func Service2VO(item corev1.Service) ServiceVO {
 		BaseVO: BaseVO{
 			Name:      item.Name,
 			Namespace: item.Namespace,
+			Alias:     item.Annotations["alias"],
+			Describe:  item.Annotations["describe"],
 		},
-		Alias:          item.Annotations["alias"],
-		Describe:       item.Annotations["describe"],
 		Status:         getServiceStatus(item),
 		CreateTime:     item.CreationTimestamp.Time,
 		InternalIP:     getInternalIP(item),
@@ -127,5 +127,112 @@ func Service2VO(item corev1.Service) ServiceVO {
 		ExternalAccess: getExternalAccess(item),
 		AccessMode:     getAccessMode(item),
 		ServiceType:    getServiceType(item),
+		Headless:       item.Spec.ClusterIP == corev1.ClusterIPNone,
+		Ports:          servicePorts2VO(item.Spec.Ports),
+		Selector:       item.Spec.Selector,
 	}
+}
+
+// ServicePortVO 服务端口
+type ServicePortVO struct {
+	Name       string `json:"name"`
+	Protocol   string `json:"protocol"`
+	Port       int32  `json:"port"`
+	TargetPort string `json:"targetPort"`
+	NodePort   int32  `json:"nodePort"`
+}
+
+// ServiceEndpointVO 服务的一个后端地址
+type ServiceEndpointVO struct {
+	IP       string `json:"ip"`
+	Ready    bool   `json:"ready"`
+	PodName  string `json:"podName"`
+	NodeName string `json:"nodeName"`
+	Ports    string `json:"ports"`
+}
+
+// ServiceWorkloadVO 被服务选中的工作负载
+type ServiceWorkloadVO struct {
+	Kind          string `json:"kind"`
+	Name          string `json:"name"`
+	Replicas      int32  `json:"replicas"`
+	ReadyReplicas int32  `json:"readyReplicas"`
+}
+
+// ServiceDetailVO 服务详情
+type ServiceDetailVO struct {
+	ServiceVO
+	ClusterIP              string              `json:"clusterIP"`
+	ClusterIPs             []string            `json:"clusterIPs"`
+	Headless               bool                `json:"headless"`
+	ExternalIPs            []string            `json:"externalIPs"`
+	SessionAffinity        string              `json:"sessionAffinity"`
+	SessionAffinityTimeout *int32              `json:"sessionAffinityTimeout"`
+	ExternalName           string              `json:"externalName"`
+	ExternalTrafficPolicy  string              `json:"externalTrafficPolicy"`
+	LoadBalancerIngress    []string            `json:"loadBalancerIngress"`
+	IPFamilies             []string            `json:"ipFamilies"`
+	Creator                string              `json:"creator"`
+	Uid                    string              `json:"uid"`
+	Labels                 map[string]string   `json:"labels"`
+	Annotations            map[string]string   `json:"annotations"`
+	Endpoints              []ServiceEndpointVO `json:"endpoints"`
+	Pods                   []JobPodVO          `json:"pods"`
+	Workloads              []ServiceWorkloadVO `json:"workloads"`
+	Ingresses              []string            `json:"ingresses"`
+	Events                 []EventVO           `json:"events"`
+}
+
+func servicePorts2VO(ports []corev1.ServicePort) []ServicePortVO {
+	result := make([]ServicePortVO, 0, len(ports))
+	for _, p := range ports {
+		protocol := string(p.Protocol)
+		if protocol == "" {
+			protocol = "TCP"
+		}
+		target := p.TargetPort.String()
+		if target == "" || target == "0" {
+			target = fmt.Sprint(p.Port)
+		}
+		result = append(result, ServicePortVO{Name: p.Name, Protocol: protocol, Port: p.Port, TargetPort: target, NodePort: p.NodePort})
+	}
+	return result
+}
+
+func Service2DetailVO(svc *corev1.Service) ServiceDetailVO {
+	result := ServiceDetailVO{
+		ServiceVO:             Service2VO(*svc),
+		ClusterIP:             svc.Spec.ClusterIP,
+		ClusterIPs:            svc.Spec.ClusterIPs,
+		Headless:              svc.Spec.ClusterIP == corev1.ClusterIPNone,
+		ExternalIPs:           svc.Spec.ExternalIPs,
+		SessionAffinity:       string(svc.Spec.SessionAffinity),
+		ExternalName:          svc.Spec.ExternalName,
+		ExternalTrafficPolicy: string(svc.Spec.ExternalTrafficPolicy),
+		LoadBalancerIngress:   []string{},
+		IPFamilies:            []string{},
+		Creator:               ResourceCreator(svc.Annotations),
+		Uid:                   string(svc.UID),
+		Labels:                svc.Labels,
+		Annotations:           svc.Annotations,
+		Endpoints:             []ServiceEndpointVO{},
+		Pods:                  []JobPodVO{},
+		Workloads:             []ServiceWorkloadVO{},
+		Ingresses:             []string{},
+		Events:                []EventVO{},
+	}
+	if cfg := svc.Spec.SessionAffinityConfig; cfg != nil && cfg.ClientIP != nil {
+		result.SessionAffinityTimeout = cfg.ClientIP.TimeoutSeconds
+	}
+	for _, ing := range svc.Status.LoadBalancer.Ingress {
+		if ing.IP != "" {
+			result.LoadBalancerIngress = append(result.LoadBalancerIngress, ing.IP)
+		} else if ing.Hostname != "" {
+			result.LoadBalancerIngress = append(result.LoadBalancerIngress, ing.Hostname)
+		}
+	}
+	for _, f := range svc.Spec.IPFamilies {
+		result.IPFamilies = append(result.IPFamilies, string(f))
+	}
+	return result
 }

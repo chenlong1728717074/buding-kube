@@ -65,11 +65,17 @@ export interface ConfigMapVO {
   labels?: Record<string, string>
   creationTimestamp?: string
   yaml?: string
+  // 数据条数; 列表接口只返回这个, 不返回 data / yaml
+  dataCount?: number
 }
 
 export const configMapApi = {
   getList(params: ConfigMapPageQueryDTO): Promise<ApiResponse<PageResponse<ConfigMapVO>>> {
-    return request.get('/configMap/list', { params })
+    return request.get('/configMap/list', { params, timeout: 30000 })
+  },
+  // 查询单个 ConfigMap 的完整信息(含 data 和 yaml)
+  getInfo(params: ConfigMapBaseDTO): Promise<ApiResponse<ConfigMapVO>> {
+    return request.get('/configMap', { params })
   },
   add(data: ConfigMapCreateDTO): Promise<ApiResponse<void>> {
     return request.post('/configMap/add', data)

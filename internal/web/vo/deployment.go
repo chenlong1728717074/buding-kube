@@ -10,9 +10,9 @@ func Deployment2WorkloadVO(item v1.Deployment) WorkloadVO {
 		BaseVO: BaseVO{
 			Name:      item.Name,
 			Namespace: item.Namespace,
+			Alias:     item.Annotations["alias"],
+			Describe:  item.Annotations["describe"],
 		},
-		Alias:         item.Annotations["alias"],
-		Describe:      item.Annotations["describe"],
 		Status:        GetDeploymentStatusText(item),
 		Replicas:      int(item.Status.Replicas),
 		ReadyReplicas: int(item.Status.ReadyReplicas),

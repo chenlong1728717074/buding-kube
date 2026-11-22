@@ -2,17 +2,17 @@
   <div class="tags-view">
     <div class="tags-list">
       <el-dropdown
-        v-for="tag in tags"
-        :key="tag.fullPath"
+        v-for="tag in tagsStore.tags"
+        :key="tag.key"
         trigger="contextmenu"
-        @command="(cmd:string)=>handleAction(cmd, tag)"
+        @command="(cmd: string) => handleAction(cmd, tag)"
       >
         <el-tag
-          :type="tag.active ? 'success' : 'info'"
+          :type="tag.key === tagsStore.activeKey ? 'success' : 'info'"
           closable
-          @close="closeTag(tag)"
-          @click="activateTag(tag)"
           class="tag-item"
+          @close="tagsStore.close(router, tag)"
+          @click="tagsStore.activate(router, tag)"
         >
           {{ tag.title }}
         </el-tag>
@@ -30,144 +30,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useTagsStore, type TagItem } from '@/stores/tags'
 
-interface TagItem {
-  title: string
-  fullPath: string
-  active: boolean
-}
-
-const route = useRoute()
+// 标签的增减和切换逻辑在 stores/tags.ts, 由路由的 afterEach 驱动
 const router = useRouter()
-const tags = ref<TagItem[]>([])
-
-const normalizeFullPath = (fp: string): string => {
-  try {
-    const url = new URL(fp, window.location.origin)
-    const params = new URLSearchParams(url.search)
-    params.delete('__refresh')
-    const qs = params.toString()
-    return url.pathname + (qs ? `?${qs}` : '')
-  } catch {
-    return fp
-  }
-}
-
-const addTag = () => {
-  const title = (route.meta.title as string) || route.name?.toString() || route.path
-  const fullPath = normalizeFullPath(route.fullPath)
-  const exists = tags.value.find(t => t.fullPath === fullPath)
-  tags.value.forEach(t => (t.active = false))
-  if (exists) {
-    exists.active = true
-  } else {
-    tags.value.push({ title, fullPath, active: true })
-  }
-  persist()
-}
-
-const activateTag = (tag: TagItem) => {
-  tags.value.forEach(t => (t.active = t.fullPath === tag.fullPath))
-  router.push(tag.fullPath)
-}
-
-const closeTag = (tag: TagItem) => {
-  const idx = tags.value.findIndex(t => t.fullPath === tag.fullPath)
-  if (idx >= 0) {
-    const wasActive = tags.value[idx].active
-    tags.value.splice(idx, 1)
-    if (wasActive) {
-      const next = tags.value[idx - 1] || tags.value[idx] || null
-      if (next) {
-        activateTag(next)
-      }
-    }
-  }
-  persist()
-}
+const tagsStore = useTagsStore()
 
 const handleAction = (command: string, tag: TagItem) => {
   switch (command) {
     case 'refresh':
-      refreshTag(tag)
+      tagsStore.refresh(router, tag)
       break
     case 'close-left':
-      closeLeft(tag)
+      tagsStore.closeLeft(tag)
       break
     case 'close-right':
-      closeRight(tag)
+      tagsStore.closeRight(tag)
       break
     case 'close-all':
-      closeAll()
+      tagsStore.closeAll(router)
       break
   }
 }
-
-const refreshTag = (tag: TagItem) => {
-  try {
-    const url = new URL(tag.fullPath, window.location.origin)
-    const params = new URLSearchParams(url.search)
-    params.set('__refresh', String(Date.now()))
-    const newFull = url.pathname + (params.toString() ? `?${params.toString()}` : '')
-    router.push(newFull)
-  } catch {
-    router.push({ path: tag.fullPath })
-  }
-}
-
-const closeAll = () => {
-  tags.value = []
-  persist()
-  const clusterId = String(route.params.clusterId || '')
-  if (clusterId) {
-    router.push(`/cluster/${clusterId}/overview`)
-    return
-  }
-  const matched = route.path.match(/^\/cluster\/([^/]+)/)
-  if (matched?.[1]) {
-    router.push(`/cluster/${matched[1]}/overview`)
-    return
-  }
-  router.push('/home')
-}
-
-const closeLeft = (tag?: TagItem) => {
-  const idx = tags.value.findIndex(t => (tag ? t.fullPath === tag.fullPath : t.active))
-  if (idx <= 0) return
-  tags.value.splice(0, idx)
-  persist()
-}
-
-const closeRight = (tag?: TagItem) => {
-  const idx = tags.value.findIndex(t => (tag ? t.fullPath === tag.fullPath : t.active))
-  if (idx < 0) return
-  tags.value.splice(idx + 1)
-  persist()
-}
-
-const persist = () => {
-  try {
-    localStorage.setItem('tagsView', JSON.stringify(tags.value))
-  } catch {}
-}
-
-const restore = () => {
-  try {
-    const raw = localStorage.getItem('tagsView')
-    if (raw) {
-      const arr = JSON.parse(raw) as TagItem[]
-      tags.value = arr.map(t => ({ ...t, active: false }))
-      // 激活当前路由对应的标签
-      const cur = tags.value.find(t => t.fullPath === normalizeFullPath(route.fullPath))
-      if (cur) cur.active = true
-    }
-  } catch {}
-}
-
-watch(() => route.fullPath, addTag, { immediate: true })
-restore()
 </script>
 
 <style scoped>

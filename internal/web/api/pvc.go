@@ -24,6 +24,7 @@ func NewPVCApi(router *gin.RouterGroup) *PVCApi {
 
 func (a *PVCApi) Router() {
 	a.router.GET("/list", a.List)
+	a.router.POST("", middleware.Blocker(), BindJSON[dto.PVCCreateDTO](a.Create))
 	a.router.DELETE("", middleware.Blocker(), a.Delete)
 }
 
@@ -54,4 +55,13 @@ func (a *PVCApi) List(ctx *gin.Context) {
 	}
 	response := BuildPageResponse(list, query.Page, query.PageSize)
 	a.SuccessWithData(ctx, response)
+}
+
+// Create 创建持久卷声明
+func (a *PVCApi) Create(ctx *gin.Context, req dto.PVCCreateDTO) {
+	if err := a.srv.Create(ctx.Request.Context(), req); err != nil {
+		a.InternalError(ctx, "创建失败", err)
+		return
+	}
+	a.SuccessMsg(ctx, "创建成功")
 }

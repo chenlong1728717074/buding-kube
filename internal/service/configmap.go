@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,37 +38,101 @@ func GetSingletonConfigMapService() *ConfigMapService {
 	return configMapSrv
 }
 
-func (s *ConfigMapService) List(query dto.ConfigMapPageQueryBaseDTO) ([]vo.ConfigMapVO, error) {
-	clientSet, err := ClusterMap.Get(query.ClusterId)
+// List 查询 ConfigMap 列表.
+// 列表页只展示名称 / 别名 / 创建时间, 而 ConfigMap 的 data 可能很大(例如 Grafana 仪表盘、
+// Prometheus 规则, 单个就有几百 KB). 之前的实现拉取完整对象, 还给每一条都生成一遍 YAML,
+// 数据量大时请求很慢. 现在改为 Table 格式只取元数据(见 listAsTable), data 和 YAML 由详情接口按需获取
+func (s *ConfigMapService) List(ctx context.Context, query dto.ConfigMapPageQueryBaseDTO) ([]vo.ConfigMapVO, error) {
+	clientSet, err := s.getClientSet(query.ClusterId)
 	if err != nil {
-		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
-		return nil, errors.New("获取集群失败")
+		return nil, err
 	}
-	items, err := clientSet.CoreV1().ConfigMaps(query.Namespace).List(context.TODO(), metav1.ListOptions{})
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	items, err := s.listConfigMapSummaries(ctx, clientSet, query.Namespace)
 	if err != nil {
-		logs.Error("获取ConfigMap失败: %v", err)
-		return nil, fmt.Errorf("获取ConfigMap失败: %v", err)
-	}
-	result := make([]vo.ConfigMapVO, 0)
-	for _, item := range items.Items {
-		if query.Keyword == "" || strings.Contains(item.Name, query.Keyword) {
-			vi := vo.ConfigMap2VO(item)
-			copy := item.DeepCopy()
-			copy.ObjectMeta.ManagedFields = nil
-			copy.ObjectMeta.ResourceVersion = ""
-			copy.ObjectMeta.CreationTimestamp = metav1.Time{}
-			yamlData, err := yaml.Marshal(copy)
-			if err != nil {
-				logs.Error("序列化ConfigMap失败: %v", err)
-			}
-			vi.Yaml = string(yamlData)
-			result = append(result, vi)
+		// 极老版本的集群不支持 Table 格式时, 回退为普通列表
+		logs.Warn("以 Table 格式查询 ConfigMap 失败, 回退为普通列表: %v", err)
+		items, err = s.listConfigMapsFallback(ctx, clientSet, query.Namespace)
+		if err != nil {
+			logs.Error("获取ConfigMap失败: %v", err)
+			return nil, fmt.Errorf("获取ConfigMap失败: %v", err)
 		}
+	}
+
+	result := make([]vo.ConfigMapVO, 0, len(items))
+	for _, item := range items {
+		if query.Keyword != "" && !strings.Contains(item.Name, query.Keyword) {
+			continue
+		}
+		result = append(result, item)
 	}
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].CreateTime.After(result[j].CreateTime)
 	})
 	return result, nil
+}
+
+func (s *ConfigMapService) listConfigMapSummaries(ctx context.Context, clientSet *kubernetes.Clientset, namespace string) ([]vo.ConfigMapVO, error) {
+	rows, err := listAsTable(ctx, clientSet.CoreV1().RESTClient(), "configmaps", namespace)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]vo.ConfigMapVO, 0, len(rows))
+	for _, row := range rows {
+		item := vo.ConfigMapSummary2VO(row.Meta)
+		item.DataCount = row.cellInt("Data")
+		result = append(result, item)
+	}
+	return result, nil
+}
+
+func (s *ConfigMapService) listConfigMapsFallback(ctx context.Context, clientSet *kubernetes.Clientset, namespace string) ([]vo.ConfigMapVO, error) {
+	list, err := clientSet.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]vo.ConfigMapVO, 0, len(list.Items))
+	for i := range list.Items {
+		item := vo.ConfigMapSummary2VO(list.Items[i].ObjectMeta)
+		item.DataCount = len(list.Items[i].Data) + len(list.Items[i].BinaryData)
+		result = append(result, item)
+	}
+	return result, nil
+}
+
+// Get 查询单个 ConfigMap 的完整信息(含 data 和 YAML)
+func (s *ConfigMapService) Get(ctx context.Context, base dto.BaseDTO) (*vo.ConfigMapVO, error) {
+	if base.Name == "" || base.Namespace == "" {
+		return nil, errors.New("ConfigMap名称或命名空间为空")
+	}
+	clientSet, err := s.getClientSet(base.ClusterId)
+	if err != nil {
+		return nil, err
+	}
+	cm, err := clientSet.CoreV1().ConfigMaps(base.Namespace).Get(ctx, base.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, errors.New("ConfigMap不存在")
+		}
+		logs.Error("获取ConfigMap失败: %v", err)
+		return nil, err
+	}
+
+	result := vo.ConfigMap2VO(*cm)
+	cmCopy := cm.DeepCopy()
+	cmCopy.ManagedFields = nil
+	cmCopy.ResourceVersion = ""
+	cmCopy.CreationTimestamp = metav1.Time{}
+	yamlData, err := yaml.Marshal(cmCopy)
+	if err != nil {
+		logs.Error("序列化ConfigMap失败: %v", err)
+	} else {
+		result.Yaml = string(yamlData)
+	}
+	result.DataCount = len(cm.Data) + len(cm.BinaryData)
+	return &result, nil
 }
 
 func (s *ConfigMapService) Apply(apply dto.BaseYamlApplyDTO) error {

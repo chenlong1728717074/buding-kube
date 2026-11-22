@@ -8,12 +8,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -37,23 +37,93 @@ func NewNodeService() *NodeService {
 	return &NodeService{}
 }
 
-func (s NodeService) List(query dto.NodeQueryDTO) ([]vo.NodeVO, error) {
-	//获取连接
-	clientSet, err := ClusterMap.Get(query.ClusterId)
+// List 节点列表, 附带每个节点的已分配资源(容器组预留合计)和 metrics-server 的实时用量
+func (s *NodeService) List(query dto.NodeQueryDTO) ([]vo.NodeVO, error) {
+	clientSet, err := ClusterMap.GetClientSet(query.ClusterId)
 	if err != nil {
-		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, err
 	}
-	list, _ := clientSet.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	ctx := context.TODO()
+	list, err := clientSet.CoreV1().Nodes().List(ctx, metav1.ListOptions{ResourceVersion: "0"})
 	if err != nil {
 		logs.Error("获取节点失败 集群:%s 异常:%v", query.ClusterId, err)
 		return nil, err
 	}
-	result := make([]vo.NodeVO, 0)
-	for _, item := range list.Items {
-		result = append(result, vo.Node2VO(&item))
+	keyword := strings.TrimSpace(query.Keyword)
+	result := make([]vo.NodeVO, 0, len(list.Items))
+	for i := range list.Items {
+		node := &list.Items[i]
+		row := vo.Node2VO(node)
+		if keyword != "" && !strings.Contains(row.Hostname, keyword) && !strings.Contains(row.IP, keyword) {
+			continue
+		}
+		if query.Status != "" && row.Status != query.Status {
+			continue
+		}
+		if query.Role != "" && !nodeHasRole(row.Roles, query.Role) {
+			continue
+		}
+		result = append(result, row)
 	}
+	if len(result) == 0 {
+		return result, nil
+	}
+
+	var (
+		wg      sync.WaitGroup
+		pods    *corev1.PodList
+		metrics map[string][2]int64
+	)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		var podErr error
+		pods, podErr = clientSet.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
+			ResourceVersion: "0",
+			FieldSelector:   "status.phase!=Succeeded,status.phase!=Failed",
+		})
+		if podErr != nil {
+			logs.Warn("获取容器组失败, 节点已分配资源统计跳过: %v", podErr)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		metrics = fetchNodeMetrics(ctx, clientSet)
+	}()
+	wg.Wait()
+
+	index := make(map[string]*vo.NodeVO, len(result))
+	for i := range result {
+		index[result[i].Hostname] = &result[i]
+	}
+	if pods != nil {
+		for i := range pods.Items {
+			pod := &pods.Items[i]
+			if row := index[pod.Spec.NodeName]; row != nil && vo.IsPodActive(pod) {
+				row.AddPod(pod)
+			}
+		}
+	}
+	for name, m := range metrics {
+		if row := index[name]; row != nil {
+			cpu, mem := m[0], m[1]
+			row.CPUUsage, row.MemoryUsage = &cpu, &mem
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Hostname < result[j].Hostname
+	})
 	return result, nil
+}
+
+// nodeHasRole control-plane 同时匹配旧版的 master 角色
+func nodeHasRole(roles []string, role string) bool {
+	for _, r := range roles {
+		if r == role || (role == "control-plane" && r == "master") {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *NodeService) UnSchedule(query dto.NodeUnScheduleDTO) error {
@@ -84,30 +154,75 @@ func (s *NodeService) GetNode(query dto.NodeInfoQueryDTO) (*corev1.Node, *kubern
 	return node, clientSet, nil
 }
 
+// GetNodeInfo 节点详情: 属性、资源分配与用量、污点、状态条件、容器组和事件
 func (s *NodeService) GetNodeInfo(query dto.NodeInfoQueryDTO) (*vo.NodeInfoVO, error) {
-	//获取node
 	node, clientSet, err := s.GetNode(query)
 	if err != nil {
 		return nil, err
 	}
-	//获取事件
-	events, err := clientSet.CoreV1().Events("").List(context.TODO(), metav1.ListOptions{
-		FieldSelector: "involvedObject.kind=Node,involvedObject.name=" + node.Name,
-	})
-	if err != nil {
-		logs.Error("获取节点事件失败: %s %s %v", query.ClusterId, query.Hostname, err)
-		return nil, err
+	ctx := context.TODO()
+	result := vo.Node2InfoVO(node)
+
+	var (
+		wg          sync.WaitGroup
+		events      *corev1.EventList
+		pods        *corev1.PodList
+		podErr      error
+		nodeUsage   *[2]int64
+		podsMetrics map[string]*podMetrics
+	)
+	wg.Add(4)
+	go func() {
+		defer wg.Done()
+		var evErr error
+		events, evErr = clientSet.CoreV1().Events(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
+			FieldSelector: "involvedObject.kind=Node,involvedObject.name=" + node.Name,
+		})
+		if evErr != nil {
+			logs.Warn("获取节点事件失败: %s %s %v", query.ClusterId, query.Hostname, evErr)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		pods, podErr = clientSet.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
+			FieldSelector: "spec.nodeName=" + node.Name,
+		})
+	}()
+	go func() {
+		defer wg.Done()
+		nodeUsage = fetchSingleNodeMetrics(ctx, clientSet, node.Name)
+	}()
+	go func() {
+		defer wg.Done()
+		// 容器组的用量只能按命名空间或全部查询, 这里查全部再按名称取
+		podsMetrics = fetchPodMetrics(ctx, clientSet, "")
+	}()
+	wg.Wait()
+	if podErr != nil {
+		logs.Error("获取节点容器组失败: %s %s %v", query.ClusterId, query.Hostname, podErr)
+		return nil, podErr
 	}
-	//获取pod
-	pods, err := clientSet.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
-		FieldSelector: "spec.nodeName=" + node.Name,
-	})
-	if err != nil {
-		logs.Error("获取节点事件失败: %s %s %v", query.ClusterId, query.Hostname, err)
-		return nil, err
+
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if vo.IsPodActive(pod) {
+			result.Resources.AddPod(pod)
+		}
+		item := vo.Pod2JobPodVO(pod)
+		if podsMetrics != nil {
+			item.PodUsage = podsMetrics[pod.Namespace+"/"+pod.Name].usage()
+		}
+		result.Pods = append(result.Pods, item)
 	}
-	//metrics-server相关暂时不获取
-	return vo.Node2InfoVO(node, events, pods), nil
+	sortJobPods(result.Pods)
+	if nodeUsage != nil {
+		cpu, mem := nodeUsage[0], nodeUsage[1]
+		result.Resources.CPUUsage, result.Resources.MemoryUsage = &cpu, &mem
+	}
+	if events != nil {
+		result.Events = vo.Events2VO(events)
+	}
+	return result, nil
 }
 
 // Delete 删除Node对象(节点重新注册后会再次出现)
@@ -122,15 +237,6 @@ func (s *NodeService) Delete(base dto.BaseDTO) error {
 		return err
 	}
 	return nil
-}
-
-type nodeMetricsListResponse struct {
-	Items []struct {
-		Usage struct {
-			CPU    string `json:"cpu"`
-			Memory string `json:"memory"`
-		} `json:"usage"`
-	} `json:"items"`
 }
 
 type kubeletStatsSummaryResponse struct {
@@ -217,22 +323,14 @@ func (s *NodeService) GetClusterUsage(query dto.NodeUsageQueryDTO) (*vo.ClusterR
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		raw, mErr := clientSet.RESTClient().Get().AbsPath("/apis/metrics.k8s.io/v1beta1/nodes").DoRaw(ctx)
-		if mErr != nil {
-			return
-		}
-		var resp nodeMetricsListResponse
-		if json.Unmarshal(raw, &resp) != nil || len(resp.Items) == 0 {
+		usage := fetchNodeMetrics(ctx, clientSet)
+		if len(usage) == 0 {
 			return
 		}
 		var cpuSum, memSum int64
-		for _, item := range resp.Items {
-			if q, qErr := resource.ParseQuantity(item.Usage.CPU); qErr == nil {
-				cpuSum += q.MilliValue()
-			}
-			if q, qErr := resource.ParseQuantity(item.Usage.Memory); qErr == nil {
-				memSum += q.Value()
-			}
+		for _, u := range usage {
+			cpuSum += u[0]
+			memSum += u[1]
 		}
 		metricsCPUMilli = cpuSum
 		metricsMemBytes = memSum

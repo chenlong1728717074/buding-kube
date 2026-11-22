@@ -411,8 +411,8 @@
     <el-dialog
       v-model="showAddDialog"
       title="添加集群"
-      width="92%"
-      :close-on-click-modal="false"
+      width="960px" top="6vh"
+      :close-on-click-modal="false" class="form-dialog form-dialog--wide"
     >
       <el-form :model="clusterForm" :rules="addRules" ref="formRef" label-width="100px" label-position="top">
         <el-row :gutter="20">
@@ -438,8 +438,8 @@
         />
       </el-form>
       <template #footer>
-        <el-button @click="showAddDialog = false" size="large">取消</el-button>
-        <el-button type="primary" @click="handleAddCluster" :loading="submitting" size="large">确定</el-button>
+        <el-button @click="showAddDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleAddCluster" :loading="submitting">确定</el-button>
       </template>
     </el-dialog>
 
@@ -447,8 +447,8 @@
     <el-dialog
       v-model="showEditDialog"
       title="编辑集群"
-      width="92%"
-      :close-on-click-modal="false"
+      width="960px" top="6vh"
+      :close-on-click-modal="false" class="form-dialog form-dialog--wide"
     >
       <el-form :model="editClusterForm" :rules="editRules" ref="editFormRef" label-width="100px" label-position="top">
         <el-row :gutter="20">
@@ -476,8 +476,8 @@
         />
       </el-form>
       <template #footer>
-        <el-button @click="showEditDialog = false" size="large">取消</el-button>
-        <el-button type="primary" @click="handleEditCluster" :loading="submitting" size="large">确定</el-button>
+        <el-button @click="showEditDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleEditCluster" :loading="submitting">确定</el-button>
       </template>
     </el-dialog>
   </div>

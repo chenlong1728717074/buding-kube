@@ -1,16 +1,15 @@
 <template>
-  <div class="service-list">
-    <el-card class="header-card">
-      <div class="page-header">
-        <h1>Service管理</h1>
-        <div class="header-actions">
-          <el-button type="success" @click="openYamlAdd">
-            <el-icon><Document /></el-icon>
-            YAML添加
-          </el-button>
-        </div>
-      </div>
-    </el-card>
+  <div class="service-list list-page">
+    <PageHeader title="Service管理" subtitle="管理服务发现与负载均衡" icon="svc">
+      <el-button type="primary" @click="openCreate">
+        <el-icon><Plus /></el-icon>
+        创建服务
+      </el-button>
+      <el-button type="success" @click="openYamlAdd">
+        <el-icon><Document /></el-icon>
+        YAML添加
+      </el-button>
+    </PageHeader>
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
@@ -20,16 +19,16 @@
             :fetch-data="namespaceFetcher"
             v-bind="namespaceSelectConfig"
             style="width: 200px"
-            @change="handleNamespaceChange"
+            @change="handleSearch"
           />
         </el-form-item>
         <el-form-item label="名称">
-          <el-input 
-            v-model="searchForm.name" 
-            placeholder="输入Service名称" 
-            clearable
-            style="width: 200px"
-          />
+          <el-input v-model="searchForm.keyword" placeholder="输入Service名称" clearable style="width: 200px" @keyup.enter="handleSearch" />
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select v-model="searchForm.type" placeholder="全部" clearable style="width: 200px" @change="handleSearch">
+            <el-option v-for="t in SERVICE_TYPE_OPTIONS" :key="t.value" :label="t.label" :value="t.value" />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">
@@ -45,68 +44,56 @@
     </el-card>
 
     <el-card class="table-card">
-      <el-table 
-        v-loading="loading" 
-        :data="serviceList" 
-        stripe
-        style="width: 100%"
-      >
-        <el-table-column prop="name" label="名称" min-width="120" header-align="center" align="center">
+      <el-table v-loading="loading" :data="serviceList" style="width: 100%" :header-cell-class-name="tableHeaderClass" :cell-class-name="tableCellClass">
+        <el-table-column prop="name" label="名称" min-width="180" header-align="center" align="center">
           <template #default="{ row }">
-            <el-link type="primary" @click="handleDetail(row)" :title="row.describe || ''">
-              {{ row.name }}
-            </el-link>
+            <div class="name-cell">
+              <el-link type="primary" :title="row.describe || ''" @click="openDetail(row)">{{ row.name }}</el-link>
+              <span v-if="row.alias" class="name-cell__alias">{{ row.alias }}</span>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column prop="namespace" label="命名空间" width="120" header-align="center" align="center">
+        <el-table-column label="服务类型" min-width="120" header-align="center" align="center">
           <template #default="{ row }">
-            <el-link type="primary" @click="handleNamespaceDetail(row)">
-              {{ row.namespace }}
-            </el-link>
+            <el-tag :type="serviceTypeTag(row)" size="small">{{ serviceTypeLabel(row) }}</el-tag>
+            <span v-if="row.status !== 'Ready'" class="sub-text">{{ row.status }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="alias" label="别名" min-width="80" header-align="center" align="center">
+        <el-table-column label="集群 IP" min-width="130" header-align="center" align="center">
+          <template #default="{ row }"><span class="mono">{{ row.internalIP }}</span></template>
+        </el-table-column>
+        <el-table-column label="端口" min-width="170" header-align="center" align="center">
           <template #default="{ row }">
-            <span v-if="row.alias">{{ row.alias }}</span>
+            <span v-if="row.ports?.length" class="mono">{{ row.ports.map(servicePortText).join('，') }}</span>
             <el-text v-else type="info">-</el-text>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" min-width="80" align="center" header-align="center">
+        <el-table-column label="外部访问" min-width="150" header-align="center" align="center">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="serviceType" label="类型" min-width="100" header-align="center" align="center" />
-        <el-table-column prop="internalIP" label="内网IP" min-width="120" header-align="center" align="center">
-          <template #default="{ row }">
-            <span v-if="row.internalIP">{{ row.internalIP }}</span>
+            <span v-if="row.externalAccess && row.externalAccess !== '-'" class="mono">{{ row.externalAccess }}</span>
             <el-text v-else type="info">-</el-text>
           </template>
         </el-table-column>
-        <el-table-column prop="externalIP" label="外网IP" min-width="120" header-align="center" align="center">
+        <el-table-column prop="namespace" label="命名空间" min-width="120" header-align="center" align="center">
           <template #default="{ row }">
-            <span v-if="row.externalIP">{{ row.externalIP }}</span>
-            <el-text v-else type="info">-</el-text>
+            <el-link type="primary" @click="openNamespace(row)">{{ row.namespace }}</el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" min-width="140" header-align="center" align="center">
-          <template #default="{ row }">
-            {{ formatTime(row.createTime) }}
-          </template>
+        <el-table-column label="创建时间" min-width="160" header-align="center" align="center">
+          <template #default="{ row }">{{ formatDateTime(row.createTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right" header-align="center" align="center">
+        <el-table-column label="操作" width="200" fixed="right" header-align="center">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" class="btn-main" @click="handleDetail(row)">详情</el-button>
-              <el-dropdown trigger="click" @command="(command: string) => handleMoreAction(command, row)">
+              <el-button size="small" type="primary" class="btn-main" @click="openDetail(row)">详情</el-button>
+              <el-dropdown trigger="click" @command="(command: string) => handleMore(command, row)">
                 <el-button size="small" text circle class="more-btn">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
+                    <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                    <el-dropdown-item command="yaml">编辑YAML</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -116,248 +103,162 @@
         </el-table-column>
       </el-table>
 
-      <!-- 分页器 -->
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
+      <ListPagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50, 100]"
+        @size-change="handleSizeChange"
+        @current-change="fetchList"
+      />
     </el-card>
 
-    <!-- YAML添加对话框 -->
-    <el-dialog v-model="yamlAddDialogVisible" title="YAML添加Service" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">YAML添加Service</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">已内置示例，可直接修改后使用</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-editor-wrapper">
-            <YamlEditor v-model="yamlAddContent" :readonly="false" height="100%" filename="service.yaml" />
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlAddDialogVisible = false">取消</el-button>
-          <el-button type="primary" :loading="yamlAddLoading" @click="confirmYamlAdd">应用</el-button>
-        </div>
-      </template>
-    </el-dialog>
-
-    <!-- 查看YAML对话框 -->
-    <el-dialog v-model="viewYamlDialogVisible" title="查看YAML" width="80%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">查看YAML</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">Service 配置</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-dialog-content">
-            <div class="yaml-info">
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="集群">{{ viewYamlForm.clusterName }}</el-descriptions-item>
-                <el-descriptions-item label="命名空间">{{ viewYamlForm.namespace }}</el-descriptions-item>
-                <el-descriptions-item label="名称" v-if="currentService">{{ currentService.name }}</el-descriptions-item>
-                <el-descriptions-item label="类型">Service</el-descriptions-item>
-              </el-descriptions>
-            </div>
-
-            <div class="yaml-view">
-              <YamlEditor :modelValue="viewYamlForm.yaml" @change="handleYamlChange" :readonly="true" height="100%" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="viewYamlDialogVisible = false">关闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <ServiceFormDialog v-model="formVisible" :cluster-id="clusterId" :default-namespace="searchForm.namespace" :edit-target="editTarget" @success="handleSaved" />
+    <YamlDialog
+      v-model="yamlAddVisible"
+      title="YAML添加Service"
+      subtitle="已内置示例，可直接修改后使用"
+      v-model:content="yamlAddContent"
+      :readonly="false"
+      filename="service.yaml"
+      :submitting="yamlAddLoading"
+      @confirm="confirmYamlAdd"
+    />
+    <YamlDialog
+      v-model="yamlVisible"
+      title="编辑YAML"
+      subtitle="Service 配置"
+      :info="[{ label: '集群', value: clusterName }, { label: '命名空间', value: current?.namespace }, { label: '名称', value: current?.name }, { label: '类型', value: 'Service' }]"
+      v-model:content="yamlContent"
+      :editor-title="`${current?.name} - Service YAML`"
+      :filename="`${current?.name}-service.yaml`"
+      :apply-target="current ? { clusterId, kind: 'service', namespace: current.namespace, name: current.name } : null"
+      @applied="fetchList"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, MoreFilled, Document } from '@element-plus/icons-vue'
-import { serviceApi, type ServiceVO, type ServiceQueryDTO } from '@/api/service'
-
-import { useClusterStore } from '@/stores/cluster'
+import { Document, MoreFilled, Plus, Refresh, Search } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
+import ListPagination from '@/components/ListPagination.vue'
 import InfiniteSelect from '@/components/InfiniteSelect.vue'
-import YamlEditor from '@/components/YamlEditor.vue'
+import YamlDialog from '@/components/YamlDialog.vue'
+import ServiceFormDialog from '@/components/service/ServiceFormDialog.vue'
+import { serviceApi, type ServiceVO } from '@/api/service'
+import { fetchResourceYaml, resourceApi } from '@/api/resource'
+import { useClusterStore } from '@/stores/cluster'
 import { useNamespaceFetcher, namespaceSelectConfig } from '@/composables/useInfiniteSelect'
+import { tableHeaderClass, tableCellClass } from '@/utils/table'
+import { formatDateTime } from '@/utils/job'
+import { SERVICE_TYPE_OPTIONS, servicePortText, serviceTypeLabel, serviceTypeTag, serviceYamlExample } from '@/utils/network'
 import '@/assets/styles/config-editor.css'
 
-// 路由
+const route = useRoute()
 const router = useRouter()
-
-// 集群上下文
 const clusterStore = useClusterStore()
 const clusterId = computed(() => clusterStore.currentClusterId)
 const clusterName = computed(() => clusterStore.currentClusterName)
-
-// 响应式数据
-const loading = ref(false)
-const serviceList = ref<ServiceVO[]>([])
-const viewYamlDialogVisible = ref(false)
-const currentService = ref<ServiceVO | null>(null)
-const applyLoading = ref(false)
-const yamlAddDialogVisible = ref(false)
-const yamlAddLoading = ref(false)
-const yamlAddContent = ref('')
-
-// 查看YAML表单
-const viewYamlForm = reactive({
-  clusterName: '',
-  namespace: '',
-  yaml: ''
-})
-
-// 渐进式加载的数据获取函数
 const namespaceFetcher = computed(() => useNamespaceFetcher(clusterId.value))
 
-// 搜索表单
-const searchForm = reactive<Omit<ServiceQueryDTO, 'clusterId'>>({
-  namespace: '',
-  name: '',
-  page: 1,
-  pageSize: 10
-})
+const loading = ref(false)
+const serviceList = ref<ServiceVO[]>([])
+// 从其他页面跳转过来时可以带上命名空间
+const searchForm = reactive({ namespace: (route.query.namespace as string) || '', keyword: '', type: '' })
+const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
 
-// 分页信息
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
+const formVisible = ref(false)
+const editTarget = ref<{ namespace: string; name: string } | null>(null)
+const yamlVisible = ref(false)
+const yamlContent = ref('')
+const yamlAddVisible = ref(false)
+const yamlAddContent = ref('')
+const yamlAddLoading = ref(false)
+const current = ref<ServiceVO | null>(null)
 
-// 获取Service列表
-const fetchServiceList = async () => {
+const fetchList = async () => {
   if (!clusterId.value) {
-    // 没有集群时清空列表
     serviceList.value = []
     pagination.total = 0
     return
   }
-  
   loading.value = true
   try {
-    const params = {
-      ...searchForm,
+    const resp = await serviceApi.getServices({
       clusterId: clusterId.value,
+      namespace: searchForm.namespace,
+      keyword: searchForm.keyword.trim(),
+      type: searchForm.type,
       page: pagination.page,
       pageSize: pagination.pageSize
-    }
-    
-    const response = await serviceApi.getServices(params)
-    if (response.code === 200) {
-      serviceList.value = response.data.items || []
-      pagination.total = response.data.total || 0
-      // 调试：检查第一个项目的yaml字段
-      if (response.data.items && response.data.items.length > 0) {
-      }
-    }
-  } catch (error) {
-    console.error('获取Service列表失败:', error)
-    ElMessage.error('获取Service列表失败')
+    })
+    serviceList.value = resp.data?.items || []
+    pagination.total = resp.data?.total || 0
+  } catch {
+    serviceList.value = []
   } finally {
     loading.value = false
   }
 }
 
-// 命名空间变化处理
-const handleNamespaceChange = (namespace: string) => {
-  searchForm.namespace = namespace
-  if (clusterId.value) {
-    // 重置分页
-    pagination.page = 1
-    // 重新获取数据（包括清空namespace的情况）
-    fetchServiceList()
-  }
-}
-
-// 搜索处理
 const handleSearch = () => {
   pagination.page = 1
-  fetchServiceList()
+  fetchList()
 }
 
-// 重置处理
 const handleReset = () => {
-  searchForm.namespace = ''
-  searchForm.name = ''
-  pagination.page = 1
-  fetchServiceList()
+  Object.assign(searchForm, { namespace: '', keyword: '', type: '' })
+  handleSearch()
 }
 
-// 分页大小变化
 const handleSizeChange = (size: number) => {
   pagination.pageSize = size
-  pagination.page = 1
-  fetchServiceList()
+  handleSearch()
 }
 
-// 当前页变化
-const handleCurrentChange = (page: number) => {
-  pagination.page = page
-  fetchServiceList()
+const openDetail = (row: { namespace: string; name: string }) => {
+  router.push({ path: `/cluster/${clusterId.value}/service/service/detail`, query: { namespace: row.namespace, name: row.name } })
 }
 
-// 更多操作处理
-const handleMoreAction = (command: string, row: ServiceVO) => {
-  switch (command) {
-    case 'yaml':
-      handleViewYaml(row)
-      break
-    case 'detail':
-      handleDetail(row)
-      break
+const openNamespace = (row: ServiceVO) => {
+  router.push({ path: `/cluster/${clusterId.value}/namespace/detail`, query: { namespace: row.namespace } })
+}
+
+const openCreate = () => {
+  editTarget.value = null
+  formVisible.value = true
+}
+
+const handleSaved = (namespace: string, name: string) => {
+  const created = !editTarget.value
+  fetchList()
+  if (!created) return
+  ElMessageBox.confirm('服务已创建，是否查看详情？', '创建成功', { type: 'success', confirmButtonText: '查看详情', cancelButtonText: '留在列表' })
+    .then(() => openDetail({ namespace, name }))
+    .catch(() => {})
+}
+
+const handleMore = async (command: string, row: ServiceVO) => {
+  current.value = row
+  if (command === 'edit') {
+    editTarget.value = { namespace: row.namespace, name: row.name }
+    formVisible.value = true
+  } else if (command === 'yaml') {
+    try {
+      yamlContent.value = await fetchResourceYaml({ clusterId: clusterId.value, kind: 'service', namespace: row.namespace, name: row.name })
+      yamlVisible.value = true
+    } catch {
+      // 请求拦截器已提示错误
+    }
   }
-}
-
-const buildServiceYamlExample = () => {
-  const namespace = searchForm.namespace || 'default'
-  return [
-    'apiVersion: v1',
-    'kind: Service',
-    'metadata:',
-    '  name: example-service',
-    `  namespace: ${namespace}`,
-    '  labels:',
-    '    app: example-app',
-    'spec:',
-    '  selector:',
-    '    app: example-app',
-    '  ports:',
-    '    - name: http',
-    '      port: 80',
-    '      targetPort: 80',
-    '  type: ClusterIP'
-  ].join('\n')
 }
 
 const openYamlAdd = () => {
-  yamlAddContent.value = buildServiceYamlExample()
-  yamlAddDialogVisible.value = true
+  yamlAddContent.value = serviceYamlExample(searchForm.namespace || 'default')
+  yamlAddVisible.value = true
 }
 
 const confirmYamlAdd = async () => {
@@ -367,119 +268,50 @@ const confirmYamlAdd = async () => {
   }
   yamlAddLoading.value = true
   try {
-    ElMessage.warning('当前版本后端暂未开放Service YAML应用接口，请先复制示例使用kubectl apply执行')
+    await resourceApi.apply({ clusterId: clusterId.value, kind: 'service', namespace: searchForm.namespace || undefined, yaml: yamlAddContent.value })
+    ElMessage.success('创建成功')
+    yamlAddVisible.value = false
+    fetchList()
+  } catch {
+    // 请求拦截器已提示错误
   } finally {
     yamlAddLoading.value = false
   }
 }
 
-// 查看YAML
-const handleViewYaml = async (row: ServiceVO) => {
-  if (!row.yaml) {
-    ElMessage.error('YAML数据不可用')
-    return
-  }
-  
-  viewYamlForm.clusterName = clusterName.value
-  viewYamlForm.namespace = row.namespace
-  viewYamlForm.yaml = row.yaml
-  currentService.value = row
-  viewYamlDialogVisible.value = true
-}
-
-// 处理YAML内容变化
-const handleYamlChange = (newYaml: string) => {
-  viewYamlForm.yaml = newYaml
-}
-
-// 查看详情
-const handleDetail = (row: ServiceVO) => {
-  ElMessage.info('详情功能暂未实现')
-}
-
-// 删除Service
-const handleDelete = (row: ServiceVO) => {
-  ElMessageBox.confirm(
-    `确定要删除 Service "${row.name}" 吗？此操作不可恢复。`,
-    '确认删除',
-    {
+const handleDelete = async (row: ServiceVO) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除服务 "${row.name}" 吗？此操作不可恢复。`, '确认删除', {
       type: 'warning',
       confirmButtonText: '确定删除',
       cancelButtonText: '取消'
-    }
-  ).then(async () => {
-    try {
-      await serviceApi.deleteService({
-        clusterId: clusterId.value,
-        namespace: row.namespace,
-        name: row.name
-      })
-      ElMessage.success('删除成功')
-      fetchServiceList()
-    } catch (error) {
-      console.error('删除失败:', error)
-      ElMessage.error('删除失败')
-    }
-  }).catch(() => {})
-}
-
-// 跳转到命名空间详情
-const handleNamespaceDetail = (row: ServiceVO) => {
-  router.push({
-    path: `/cluster/${clusterId.value}/namespace/detail`,
-    query: {
-      clusterId: clusterId.value,
-      namespace: row.namespace
-    }
-  })
-}
-
-// 时间格式化
-const formatTime = (time: string) => {
-  if (!time) return '-'
-  return new Date(time).toLocaleString('zh-CN')
-}
-
-// 获取状态类型
-const getStatusType = (status: string) => {
-  switch (status) {
-    case 'Running':
-    case 'Active':
-    case 'Ready':
-      return 'success'
-    case 'Pending':
-      return 'warning'
-    case 'Failed':
-    case 'Error':
-      return 'danger'
-    default:
-      return 'info'
+    })
+  } catch {
+    return
+  }
+  try {
+    await serviceApi.deleteService({ clusterId: clusterId.value, namespace: row.namespace, name: row.name })
+    ElMessage.success('删除成功')
+    if (serviceList.value.length === 1 && pagination.page > 1) pagination.page--
+    fetchList()
+  } catch {
+    // 请求拦截器已提示错误
   }
 }
 
-// 监听集群变化
-watch(clusterId, (newClusterId) => {
-  if (newClusterId) {
-    // 清空命名空间选择
-    searchForm.namespace = ''
-    // 重置分页
+watch(
+  clusterId,
+  (id, old) => {
+    if (old !== undefined) searchForm.namespace = ''
     pagination.page = 1
-    // 重新获取数据
-    fetchServiceList()
-  } else {
-    // 没有集群时清空列表
-    serviceList.value = []
-    pagination.total = 0
-  }
-}, { immediate: true })
-
-// 组件挂载时初始化
-onMounted(() => {
-  // 如果已有集群ID，加载数据
-  if (clusterId.value) {
-    fetchServiceList()
-  }
-})
+    if (id) fetchList()
+    else {
+      serviceList.value = []
+      pagination.total = 0
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -487,21 +319,22 @@ onMounted(() => {
   padding: 20px;
 }
 
-.header-card {
-  margin-bottom: 20px;
-}
-
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #303133;
+  color: #2c3e50;
 }
 
 .header-actions {
@@ -523,17 +356,10 @@ onMounted(() => {
   margin-top: 20px;
 }
 
-:deep(.el-table .el-table__cell) {
-  padding: 8px 0;
-}
-
-:deep(.el-button + .el-button) {
-  margin-left: 6px;
-}
-
 .yaml-dialog-content {
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
 .yaml-info {
@@ -542,7 +368,10 @@ onMounted(() => {
 
 .yaml-editor-wrapper {
   flex: 1;
-  min-height: 0;
+}
+
+.dialog-footer {
+  text-align: right;
 }
 .action-buttons {
   display: flex;
@@ -552,9 +381,13 @@ onMounted(() => {
   flex-wrap: nowrap;
 }
 
+.btn-main,
+.btn-edit {
+  font-weight: 500;
+}
+
 .btn-more {
   color: #475569;
-  font-weight: 500;
   border-color: #d5deea;
   background: #fff;
 }
@@ -572,4 +405,37 @@ onMounted(() => {
   border-radius: 8px;
 }
 
+.name-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.3;
+}
+
+.name-cell__alias {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.status-msg {
+  display: block;
+  max-width: 220px;
+  margin: 2px auto 0;
+  overflow: hidden;
+  color: #ef4444;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sub-text {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', Consolas, Menlo, monospace;
+}
 </style>

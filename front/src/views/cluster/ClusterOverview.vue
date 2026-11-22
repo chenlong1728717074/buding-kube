@@ -425,24 +425,26 @@
         </div>
       </div>
 
-      <!-- 3. 集群事件（暂不接后端，无查看全部按钮） -->
+      <!-- 3. 集群事件: 最近的 Warning 事件 -->
       <div class="panel-card events-panel">
         <div class="panel-header">
           <div class="panel-title">
             <span class="title-accent" />
-            <span>集群事件</span>
+            <span>最近告警事件</span>
           </div>
+          <el-link type="primary" :underline="false" @click="goTo('resource/events')">查看全部</el-link>
         </div>
 
-        <div class="events-list">
-          <div v-for="(ev, idx) in placeholderEvents" :key="idx" class="event-row">
+        <div v-loading="eventsLoading" class="events-list">
+          <div v-for="(ev, idx) in recentEvents" :key="idx" class="event-row" :title="`${ev.object}：${ev.message}`">
             <span class="event-badge">
-              <span class="event-dot" :class="ev.tone" />
-              <span class="event-type">{{ ev.type }}</span>
+              <span class="event-dot is-amber" />
+              <span class="event-type">{{ ev.reason }}</span>
             </span>
-            <span class="event-time">{{ ev.time }}</span>
-            <span class="event-msg" :title="ev.message">{{ ev.message }}</span>
+            <span class="event-time">{{ timeAgo(ev.lastTime) }}</span>
+            <span class="event-msg">{{ ev.object }}：{{ ev.message }}</span>
           </div>
+          <el-empty v-if="!eventsLoading && !recentEvents.length" description="最近没有 Warning 事件" :image-size="60" />
         </div>
       </div>
     </section>
@@ -460,6 +462,9 @@ import {
   type ClusterResourceUsageVO
 } from '@/api/cluster'
 import K8sIcon from '@/components/K8sIcon.vue'
+import { eventApi } from '@/api/event'
+import type { EventVO } from '@/api/job'
+import { timeAgo } from '@/utils/navigation'
 
 const router = useRouter()
 const clusterStore = useClusterStore()
@@ -490,13 +495,21 @@ const createEmptyUsage = (): ClusterResourceUsageVO => ({
 
 const usage = ref<ClusterResourceUsageVO>(createEmptyUsage())
 
-// 集群事件静态占位展示（按需求暂不接后端）
-const placeholderEvents = [
-  { type: 'Normal', tone: 'is-green', time: '2m ago', message: '节点已就绪，集群状态正常' },
-  { type: 'Normal', tone: 'is-blue', time: '5m ago', message: 'Deployment 副本调度已完成' },
-  { type: 'Warning', tone: 'is-amber', time: '10m ago', message: '部分 Pod 处于拉取镜像或重启检测中' },
-  { type: 'Normal', tone: 'is-green', time: '15m ago', message: '服务 kubernetes 端点同步正常' }
-]
+// 最近的 Warning 事件
+const recentEvents = ref<EventVO[]>([])
+const eventsLoading = ref(false)
+const loadEvents = async () => {
+  if (!clusterStore.currentClusterId) return
+  eventsLoading.value = true
+  try {
+    const resp = await eventApi.list({ clusterId: clusterStore.currentClusterId, type: 'Warning', page: 1, pageSize: 6 })
+    recentEvents.value = resp.data?.items || []
+  } catch {
+    recentEvents.value = []
+  } finally {
+    eventsLoading.value = false
+  }
+}
 
 const currentStatus = computed(
   () => detail.value?.status || clusterStore.currentCluster?.status || 'Active'
@@ -619,6 +632,7 @@ const loadUsage = async () => {
 const loadAll = () => {
   loadStats()
   loadUsage()
+  loadEvents()
 }
 
 watch(
@@ -1197,7 +1211,7 @@ onMounted(() => {
 
 .event-row {
   display: grid;
-  grid-template-columns: 76px 56px 1fr;
+  grid-template-columns: 128px 64px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
   font-size: 13px;
@@ -1245,8 +1259,22 @@ onMounted(() => {
 }
 
 .event-msg {
+  display: -webkit-box;
+  overflow: hidden;
   color: #1e293b;
   word-break: break-word;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.event-type {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.event-badge {
+  min-width: 0;
 }
 
 /* ==================== 响应式适配 ==================== */

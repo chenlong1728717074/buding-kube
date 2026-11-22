@@ -34,6 +34,9 @@ import pvcIcon from '@/assets/icons/k8s/pvc.svg'
 import scIcon from '@/assets/icons/k8s/sc.svg'
 import crdIcon from '@/assets/icons/k8s/crd.svg'
 import etcdIcon from '@/assets/icons/k8s/etcd.svg'
+import hpaIcon from '@/assets/icons/k8s/hpa.svg'
+import quotaIcon from '@/assets/icons/k8s/quota.svg'
+import limitsIcon from '@/assets/icons/k8s/limits.svg'
 
 export type K8sIconName =
   | 'k8s'
@@ -60,6 +63,9 @@ export type K8sIconName =
   | 'sc'
   | 'crd'
   | 'etcd'
+  | 'hpa'
+  | 'quota'
+  | 'limits'
 
 const iconMap: Record<K8sIconName, string> = {
   k8s: k8sIcon,
@@ -85,7 +91,10 @@ const iconMap: Record<K8sIconName, string> = {
   pvc: pvcIcon,
   sc: scIcon,
   crd: crdIcon,
-  etcd: etcdIcon
+  etcd: etcdIcon,
+  hpa: hpaIcon,
+  quota: quotaIcon,
+  limits: limitsIcon
 }
 
 const props = withDefaults(

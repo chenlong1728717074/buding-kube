@@ -1,14 +1,21 @@
 <template>
-  <div class="pvc-page">
-    <div class="page-header">
-      <h1>PersistentVolumeClaim管理</h1>
-    </div>
+  <div class="pvc-page list-page">
+    <PageHeader title="PersistentVolumeClaim管理" subtitle="管理命名空间内的存储申请" icon="pvc">
+      <el-button type="primary" @click="createVisible = true">
+        <el-icon><Plus /></el-icon>
+        添加持久卷声明
+      </el-button>
+      <el-button type="success" @click="openYamlAdd">
+        <el-icon><Document /></el-icon>
+        YAML添加
+      </el-button>
+    </PageHeader>
 
     <el-card class="search-card">
       <el-form :model="searchForm" inline>
         <el-form-item label="命名空间">
-          <el-select v-model="searchForm.namespace" placeholder="全部命名空间" clearable filterable style="width: 200px" @change="handleNamespaceChange">
-            <el-option v-for="ns in namespaceList" :key="ns.name" :label="ns.name" :value="ns.name" />
+          <el-select v-model="searchForm.namespace" placeholder="全部命名空间" clearable filterable style="width: 200px" @change="handleSearch">
+            <el-option v-for="ns in namespaceList" :key="ns" :label="ns" :value="ns" />
           </el-select>
         </el-form-item>
         <el-form-item label="关键词">
@@ -28,19 +35,29 @@
     </el-card>
 
     <el-card class="table-card">
-      <el-table v-loading="loading" :data="items" stripe style="width: 100%">
-        <el-table-column prop="name" label="名称" min-width="180" />
+      <el-table v-loading="loading" :data="items" style="width: 100%" :header-cell-class-name="tableHeaderClass" :cell-class-name="tableCellClass">
+        <el-table-column prop="name" label="名称" min-width="200">
+          <template #default="{ row }">
+            <div class="res-name">
+              <span class="res-name__main">{{ row.name }}</span>
+              <span v-if="row.annotations?.alias" class="res-name__alias">{{ row.annotations.alias }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="namespace" label="命名空间" min-width="130" align="center" header-align="center" />
         <el-table-column label="容量" min-width="100" align="center" header-align="center">
-          <template #default="{ row }">{{ formatCapacity(row.capacity) }}</template>
+          <template #default="{ row }">{{ row.capacity?.storage || requestedCapacity(row) }}</template>
         </el-table-column>
-        <el-table-column label="访问模式" min-width="140" align="center" header-align="center">
+        <el-table-column label="访问模式" min-width="120" align="center" header-align="center">
           <template #default="{ row }">{{ formatAccessModes(row.accessModes) }}</template>
         </el-table-column>
         <el-table-column prop="storageClassName" label="StorageClass" min-width="140" align="center" header-align="center">
-          <template #default="{ row }">{{ row.storageClassName || '-' }}</template>
+          <template #default="{ row }">
+            <el-link v-if="row.storageClassName" type="primary" @click="goStorageClass(row.storageClassName)">{{ row.storageClassName }}</el-link>
+            <span v-else>-</span>
+          </template>
         </el-table-column>
-        <el-table-column prop="volumeName" label="绑定Volume" min-width="140" align="center" header-align="center">
+        <el-table-column prop="volumeName" label="绑定Volume" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">{{ row.volumeName || '-' }}</template>
         </el-table-column>
         <el-table-column prop="phase" label="状态" min-width="100" align="center" header-align="center">
@@ -54,135 +71,104 @@
         <el-table-column label="操作" width="200" align="center" header-align="center" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" type="primary" class="btn-main" @click="handleViewDetail(row)">详情</el-button>
-              <el-dropdown trigger="click" @command="(cmd: string) => handleRowAction(cmd, row)">
-                <el-button size="small" text circle class="more-btn">
-                  <el-icon><MoreFilled /></el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="yaml">查看YAML</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
+              <el-button size="small" type="primary" class="btn-main" @click="openYaml(row)">编辑YAML</el-button>
               <el-button size="small" type="danger" plain class="btn-danger" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
-      </div>
+      <ListPagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50, 100]"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </el-card>
 
-    <el-dialog v-model="yamlDialogVisible" :title="`YAML详情 - ${currentName}`" width="90%" :close-on-click-modal="false" class="config-dialog yaml-dialog">
-      <template #header>
-        <div class="dialog-header">
-          <div>
-            <h3 class="dialog-title">YAML详情</h3>
-            <div style="margin-top:4px;color:#6b7280;font-size:12px;">PersistentVolumeClaim: {{ currentName }}</div>
-          </div>
-        </div>
-      </template>
-      <div class="config-editor">
-        <div class="config-content">
-          <div class="yaml-view">
-            <YamlEditor :model-value="yamlContent" :readonly="true" height="100%" />
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="yamlDialogVisible = false">关闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <PersistentVolumeClaimCreateDialog v-model="createVisible" :cluster-id="clusterId" :default-namespace="searchForm.namespace" @success="fetchList" />
+
+    <YamlDialog
+      v-model="yamlDialogVisible"
+      title="编辑YAML"
+      :subtitle="`PersistentVolumeClaim: ${currentNamespace}/${currentName}`"
+      :content="yamlContent"
+      :apply-target="currentName ? { clusterId, kind: 'persistentvolumeclaim', namespace: currentNamespace, name: currentName } : null"
+      :filename="`${currentName}.yaml`"
+      tip="已绑定的 PVC 只能扩大容量（需要存储类允许卷扩展），其余规格不能修改"
+      @applied="fetchList"
+    />
+
+    <YamlDialog
+      v-model="yamlAddVisible"
+      v-model:content="yamlAddContent"
+      title="YAML添加持久卷声明"
+      subtitle="已内置示例，修改后点击应用"
+      :readonly="false"
+      editor-title="PersistentVolumeClaim YAML"
+      filename="pvc.yaml"
+      :submitting="yamlAddLoading"
+      @confirm="confirmYamlAdd"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { reactive, ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, MoreFilled } from '@element-plus/icons-vue'
-
+import { Search, Refresh, Plus, Document } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
+import ListPagination from '@/components/ListPagination.vue'
+import YamlDialog from '@/components/YamlDialog.vue'
+import PersistentVolumeClaimCreateDialog from '@/components/storage/PersistentVolumeClaimCreateDialog.vue'
+import { fetchResourceYaml, resourceApi } from '@/api/resource'
 import { namespaceApi } from '@/api/namespace'
-import { pvcApi, type PVCVO, type PVCQueryDTO } from '@/api/pvc'
+import { pvcApi, type PVCVO } from '@/api/pvc'
 import { useClusterStore } from '@/stores/cluster'
-import YamlEditor from '@/components/YamlEditor.vue'
+import { tableHeaderClass, tableCellClass } from '@/utils/table'
+import { defaultPvcYaml, formatAccessModes } from '@/utils/storageclass'
 import '@/assets/styles/config-editor.css'
 
-// 集群上下文
+const router = useRouter()
 const clusterStore = useClusterStore()
 const clusterId = computed(() => clusterStore.currentClusterId)
 
 const loading = ref(false)
 const items = ref<PVCVO[]>([])
-const namespaceList = ref<{ name: string }[]>([])
+const namespaceList = ref<string[]>([])
+const searchForm = reactive({ namespace: '', keyword: '' })
+const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
 
-const searchForm = reactive<Omit<PVCQueryDTO, 'clusterId'>>({
-  page: 1,
-  pageSize: 20,
-  namespace: '',
-  keyword: ''
-})
-
-const pagination = reactive({
-  page: 1,
-  pageSize: 20,
-  total: 0
-})
+const createVisible = ref(false)
 
 const yamlDialogVisible = ref(false)
 const yamlContent = ref('')
 const currentName = ref('')
+const currentNamespace = ref('')
 
-const formatCapacity = (capacity?: Record<string, string>) => {
-  if (!capacity) return '-'
-  return capacity.storage || Object.values(capacity)[0] || '-'
-}
+const yamlAddVisible = ref(false)
+const yamlAddContent = ref('')
+const yamlAddLoading = ref(false)
 
-const formatAccessModes = (modes?: string[]) => {
-  if (!modes || modes.length === 0) return '-'
-  return modes.join(', ')
-}
+// 未绑定时 status.capacity 为空, 显示申请的容量
+const requestedCapacity = (row: PVCVO & { resources?: { requests?: Record<string, string> } }) =>
+  row.resources?.requests?.storage ? `${row.resources.requests.storage}（申请）` : '-'
 
 const getStatusType = (phase?: string) => {
-  const map: Record<string, string> = {
-    Bound: 'success',
-    Pending: 'warning',
-    Lost: 'danger'
-  }
+  const map: Record<string, 'success' | 'warning' | 'danger'> = { Bound: 'success', Pending: 'warning', Lost: 'danger' }
   return (phase && map[phase]) || 'info'
 }
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-'
-  try {
-    const d = new Date(dateString)
-    if (isNaN(d.getTime())) return '-'
-    return d.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  } catch {
-    return '-'
-  }
+  const d = new Date(dateString)
+  if (isNaN(d.getTime())) return '-'
+  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
-// 获取命名空间列表(用于筛选)
 const fetchNamespaces = async () => {
   if (!clusterId.value) {
     namespaceList.value = []
@@ -190,9 +176,7 @@ const fetchNamespaces = async () => {
   }
   try {
     const resp = await namespaceApi.getList({ clusterId: clusterId.value, page: 1, pageSize: 10000 })
-    if (resp.code === 200) {
-      namespaceList.value = resp.data.items || []
-    }
+    namespaceList.value = (resp.data?.items || []).map(ns => ns.name)
   } catch {
     namespaceList.value = []
   }
@@ -214,21 +198,14 @@ const fetchList = async () => {
       keyword: searchForm.keyword || ''
     })
     if (resp.code === 200) {
-      const list = (resp.data as any).items || (resp.data as any).list || []
-      const total = (resp.data as any).total || (resp.data as any).totalCount || 0
-      items.value = list
-      pagination.total = total
+      items.value = resp.data.items || []
+      pagination.total = resp.data.total || 0
     }
   } catch {
-    ElMessage.error('获取PersistentVolumeClaim列表失败')
+    // 请求拦截器已提示错误
   } finally {
     loading.value = false
   }
-}
-
-const handleNamespaceChange = () => {
-  pagination.page = 1
-  fetchList()
 }
 
 const handleSearch = () => {
@@ -236,11 +213,11 @@ const handleSearch = () => {
   fetchList()
 }
 
-const handleReset = async () => {
+const handleReset = () => {
   searchForm.namespace = ''
   searchForm.keyword = ''
   pagination.page = 1
-  await fetchList()
+  fetchList()
 }
 
 const handleSizeChange = (size: number) => {
@@ -254,91 +231,103 @@ const handleCurrentChange = (page: number) => {
   fetchList()
 }
 
-const openYaml = (row: PVCVO) => {
+const goStorageClass = (name: string) => {
+  router.push({ path: `/cluster/${clusterId.value}/storage/storageclass/detail`, query: { clusterId: clusterId.value, name } })
+}
+
+const openYaml = async (row: PVCVO) => {
+  let yamlText = ''
+  try {
+    yamlText = await fetchResourceYaml({ clusterId: clusterId.value, kind: 'persistentvolumeclaim', namespace: row.namespace, name: row.name })
+  } catch {
+    return
+  }
   currentName.value = row.name
-  yamlContent.value = row.yaml || ''
+  currentNamespace.value = row.namespace
+  yamlContent.value = yamlText
   yamlDialogVisible.value = true
 }
 
-// 详情(暂未实现, 与全站统一)
-const handleViewDetail = (row: PVCVO) => {
-  ElMessage.info('详情功能暂未实现')
+const openYamlAdd = () => {
+  yamlAddContent.value = defaultPvcYaml(searchForm.namespace || 'default')
+  yamlAddVisible.value = true
 }
 
-// 行操作分发
-const handleRowAction = (cmd: string, row: PVCVO) => {
-  if (cmd === 'yaml') {
-    openYaml(row)
+const confirmYamlAdd = async () => {
+  if (!yamlAddContent.value.trim()) {
+    ElMessage.warning('YAML内容不能为空')
+    return
+  }
+  yamlAddLoading.value = true
+  try {
+    await resourceApi.apply({ clusterId: clusterId.value, kind: 'persistentvolumeclaim', namespace: searchForm.namespace || undefined, yaml: yamlAddContent.value })
+    ElMessage.success('应用成功')
+    yamlAddVisible.value = false
+    fetchList()
+  } catch {
+    // 请求拦截器已提示错误
+  } finally {
+    yamlAddLoading.value = false
   }
 }
 
-// 删除PersistentVolumeClaim
 const handleDelete = (row: PVCVO) => {
   ElMessageBox.confirm(
-    `确定要删除 PersistentVolumeClaim "${row.name}" 吗？此操作不可恢复。`,
+    `确定要删除 PersistentVolumeClaim "${row.namespace}/${row.name}" 吗？正在使用它的 Pod 不受影响，但 Pod 删除后数据可能随持久卷一起删除（取决于回收策略）。`,
     '确认删除',
-    {
-      type: 'warning',
-      confirmButtonText: '确定删除',
-      cancelButtonText: '取消'
-    }
-  ).then(async () => {
-    try {
-      await pvcApi.deletePVC({
-        clusterId: clusterId.value,
-        namespace: row.namespace,
-        name: row.name
-      })
-      ElMessage.success('删除成功')
-      fetchList()
-    } catch (error) {
-      console.error('删除失败:', error)
-      ElMessage.error('删除失败')
-    }
-  }).catch(() => {})
+    { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消' }
+  )
+    .then(async () => {
+      try {
+        await pvcApi.deletePVC({ clusterId: clusterId.value, namespace: row.namespace, name: row.name })
+        ElMessage.success('删除成功')
+        fetchList()
+      } catch {
+        // 请求拦截器已提示错误
+      }
+    })
+    .catch(() => {})
 }
 
-// 监听集群变化
-watch(clusterId, (newClusterId) => {
-  if (newClusterId) {
-    searchForm.namespace = ''
-    pagination.page = 1
-    fetchNamespaces()
-    fetchList()
-  } else {
-    namespaceList.value = []
-    items.value = []
-    pagination.total = 0
-  }
-}, { immediate: true })
-
-onMounted(async () => {
-  if (clusterId.value) {
-    await fetchList()
-  }
-})
+watch(
+  clusterId,
+  value => {
+    if (value) {
+      searchForm.namespace = ''
+      pagination.page = 1
+      fetchNamespaces()
+      fetchList()
+    } else {
+      namespaceList.value = []
+      items.value = []
+      pagination.total = 0
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
-.pvc-page { padding: 20px; }
-.search-card {
-  margin-bottom: 16px;
+.pvc-page {
+  padding: 20px;
 }
-.action-buttons {
+
+.res-name {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: nowrap;
+  flex-direction: column;
+  min-width: 0;
 }
 
-.btn-main {
+.res-name__main {
+  overflow: hidden;
+  color: #1e293b;
   font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-:deep(.action-buttons .el-button) {
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 8px;
+.res-name__alias {
+  font-size: 12px;
+  color: #94a3b8;
 }
 </style>

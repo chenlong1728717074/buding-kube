@@ -46,7 +46,6 @@ export interface NamespaceVO {
   metadata: any
   spec: any
   yaml?: string
-  resources?: any
 }
 
 // 命名空间API
