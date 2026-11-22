@@ -344,6 +344,8 @@ func buildClientSet(config string) (*kubernetes.Clientset, *rest.Config, error) 
 	restConfig.QPS = 100
 	restConfig.Burst = 200
 	restConfig.Timeout = 30 * time.Second
+	// 关闭 client-go 默认 stderr 废弃 API 告警输出（如 K8s 1.33+ 查询 v1 Endpoints 时的 Warning 刷屏）
+	restConfig.WarningHandler = rest.NoWarnings{}
 
 	restConfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
 		return &debugTransport{rt: rt}

@@ -14,3 +14,7 @@ type NodeInfoQueryDTO struct {
 	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`
 	Hostname  string `json:"hostname" form:"hostname" binding:"required"`
 }
+
+type NodeUsageQueryDTO struct {
+	ClusterId string `json:"clusterId" form:"clusterId" binding:"required"`
+}

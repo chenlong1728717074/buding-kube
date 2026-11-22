@@ -1,10 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  creationTimestamp: null
   name: kube-buding-system
-spec: {}
-status: {}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -12,23 +9,40 @@ metadata:
   name: buding-system
   namespace: kube-buding-system
 ---
+# 敏感配置: 部署前务必替换为随机字符串, 例如 openssl rand -base64 32
+# JWT 密钥和 kubeconfig 加密密钥分开配置, 轮换 JWT 密钥时已保存的集群凭证不会失效
+apiVersion: v1
+kind: Secret
+metadata:
+  name: buding-kube-secret
+  namespace: kube-buding-system
+type: Opaque
+stringData:
+  JWT_SECRET_KEY: "please-change-me-jwt-secret"
+  KUBE_SECRET_KEY: "please-change-me-kubeconfig-encrypt-key"
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: buding-system-ns-secrets-manager
 rules:
+  # 启动时检查/创建自身的命名空间
   - apiGroups: [""]
     resources:
       - namespaces
       - secrets
-    verbs:
-      - create
-      - get
-      - list
-      - watch
-      - update
-      - patch
-      - delete
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  # 启动时注册 User / Cluster 两个 CRD
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources:
+      - customresourcedefinitions
+    verbs: ["create", "get", "list", "watch", "update", "patch"]
+  # 读写用户和集群数据
+  - apiGroups: ["kube.buding.goaigc.fun"]
+    resources:
+      - clusters
+      - users
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -69,10 +83,14 @@ spec:
         - containerPort: 8080
           name: http
         env:
-        - name: PORT
+        # 代码读取的是 KUBE_RUNTIME_PORT(之前写的 PORT 不会生效)
+        - name: KUBE_RUNTIME_PORT
           value: "8080"
         - name: KUBE_RUNTIME_ENV
           value: "KUBE_POD"
+        envFrom:
+        - secretRef:
+            name: buding-kube-secret
         resources:
           requests:
             memory: "128Mi"

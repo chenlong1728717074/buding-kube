@@ -1,10 +1,31 @@
 <template>
   <el-container class="layout-container">
-    <!-- 侧边栏 -->
-    <el-aside :width="isCollapsed ? '72px' : '250px'" class="sidebar">
-      <div class="logo" @click="goHome" style="cursor: pointer;">
+    <!-- 深海蓝侧边栏 -->
+    <el-aside :width="isCollapsed ? '72px' : '228px'" class="sidebar">
+      <!-- 底部柔和 K8s 舵轮水印 -->
+      <svg v-if="!isCollapsed" class="sidebar-watermark" viewBox="0 0 120 120" aria-hidden="true">
+        <g
+          fill="none"
+          stroke="rgba(96, 165, 250, 0.16)"
+          stroke-width="7.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="60" cy="60" r="34" />
+          <circle cx="60" cy="60" r="11" />
+          <line x1="60" y1="10" x2="60" y2="49" />
+          <line x1="99" y1="29" x2="68.5" y2="53" />
+          <line x1="109" y1="71" x2="70.5" y2="62.5" />
+          <line x1="82" y1="105" x2="64.8" y2="70" />
+          <line x1="38" y1="105" x2="55.2" y2="70" />
+          <line x1="11" y1="71" x2="49.5" y2="62.5" />
+          <line x1="21" y1="29" x2="51.5" y2="53" />
+        </g>
+      </svg>
+
+      <div class="logo" :class="{ 'is-collapsed': isCollapsed }" @click="goHome" style="cursor: pointer;">
         <div class="logo-icon">
-          <img :src="logoK8sWhite" alt="Kubernetes" />
+          <K8sIcon name="k8s" :size="30" />
         </div>
         <h2 v-if="!isCollapsed">Kubernetes</h2>
       </div>
@@ -15,137 +36,138 @@
         :collapse="isCollapsed"
         :collapse-transition="false"
         unique-opened
+        popper-class="k8s-dark-menu-popper"
       >
         <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/overview`">
-          <el-icon><House /></el-icon>
+          <el-icon class="k8s-menu-icon"><K8sIcon name="k8s" :size="20" /></el-icon>
           <span>集群概览</span>
         </el-menu-item>
-        
+
         <el-sub-menu index="resource">
           <template #title>
-            <el-icon><FolderOpened /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="group" :size="20" /></el-icon>
             <span>资源管理</span>
           </template>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/namespace`">
-            <el-icon><List /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="ns" :size="19" /></el-icon>
             <span>命名空间</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/nodes`">
-            <el-icon><Monitor /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="node" :size="19" /></el-icon>
             <span>节点管理</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/pod`">
-            <el-icon><Box /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="pod" :size="19" /></el-icon>
             <span>Pod管理</span>
           </el-menu-item>
         </el-sub-menu>
-        
+
         <el-sub-menu index="workload">
           <template #title>
-            <el-icon><Operation /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="rs" :size="20" /></el-icon>
             <span>工作负载</span>
           </template>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/workload/deployment`">
-            <el-icon><Grid /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="deploy" :size="19" /></el-icon>
             <span>Deployment</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/workload/daemonset`">
-            <el-icon><Cpu /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="ds" :size="19" /></el-icon>
             <span>DaemonSet</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/workload/statefulset`">
-            <el-icon><DataBoard /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="sts" :size="19" /></el-icon>
             <span>StatefulSet</span>
           </el-menu-item>
         </el-sub-menu>
-        
+
         <el-sub-menu index="service">
           <template #title>
-            <el-icon><Connection /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="netpol" :size="20" /></el-icon>
             <span>服务发现</span>
           </template>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/service/service`">
-            <el-icon><Link /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="svc" :size="19" /></el-icon>
             <span>Service</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/service/ingress`">
-            <el-icon><Share /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="ing" :size="19" /></el-icon>
             <span>Ingress</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/service/endpoint`">
-            <el-icon><Position /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="ep" :size="19" /></el-icon>
             <span>Endpoint</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/service/endpointslice`">
-            <el-icon><Position /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="ep" :size="19" /></el-icon>
             <span>EndpointSlice</span>
           </el-menu-item>
         </el-sub-menu>
-        
+
         <el-sub-menu index="config">
           <template #title>
-            <el-icon><Setting /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="cm" :size="20" /></el-icon>
             <span>配置管理</span>
           </template>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/config/configmap`">
-            <el-icon><Files /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="cm" :size="19" /></el-icon>
             <span>ConfigMap</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/config/secret`">
-            <el-icon><Key /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="secret" :size="19" /></el-icon>
             <span>Secret</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/config/serviceaccount`">
-            <el-icon><UserFilled /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="sa" :size="19" /></el-icon>
             <span>ServiceAccount</span>
           </el-menu-item>
         </el-sub-menu>
-        
+
         <el-sub-menu index="job">
           <template #title>
-            <el-icon><Timer /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="cronjob" :size="20" /></el-icon>
             <span>任务调度</span>
           </template>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/job/job`">
-            <el-icon><Clock /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="job" :size="19" /></el-icon>
             <span>Job</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/job/cronjob`">
-            <el-icon><AlarmClock /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="cronjob" :size="19" /></el-icon>
             <span>CronJob</span>
           </el-menu-item>
         </el-sub-menu>
-        
+
         <el-sub-menu index="storage">
           <template #title>
-            <el-icon><Folder /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="vol" :size="20" /></el-icon>
             <span>存储管理</span>
           </template>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/storage/pv`">
-            <el-icon><Folder /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="pv" :size="19" /></el-icon>
             <span>PersistentVolume</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/storage/pvc`">
-            <el-icon><FolderAdd /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="pvc" :size="19" /></el-icon>
             <span>PersistentVolumeClaim</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/storage/storageclass`">
-            <el-icon><Document /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="sc" :size="19" /></el-icon>
             <span>StorageClass</span>
           </el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="advanced">
           <template #title>
-            <el-icon><MoreFilled /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="etcd" :size="20" /></el-icon>
             <span>高级功能</span>
           </template>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/resource/crd`">
-            <el-icon><Document /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="crd" :size="19" /></el-icon>
             <span>CRD</span>
           </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/resource/tools`">
-            <el-icon><MoreFilled /></el-icon>
+            <el-icon class="k8s-menu-icon"><K8sIcon name="etcd" :size="19" /></el-icon>
             <span>工具</span>
           </el-menu-item>
         </el-sub-menu>
@@ -164,7 +186,7 @@
             <!-- 集群切换下拉选择器 -->
             <el-dropdown trigger="click" @command="switchCluster" class="cluster-dropdown">
               <div class="cluster-selector">
-                <el-icon><Monitor /></el-icon>
+                <K8sIcon name="k8s" :size="18" />
                 <span>{{ clusterStore.currentClusterName }}</span>
                 <el-icon class="arrow"><ArrowDown /></el-icon>
               </div>
@@ -191,9 +213,9 @@
         <div class="header-right">
           <div class="header-extras">
             <div class="clock">
-              <el-icon class="clock-icon"><Timer /></el-icon>
+              <span class="clock-live-dot" />
               <span class="clock-time">{{ nowTimeText }}</span>
-              <span class="clock-split">·</span>
+              <span class="clock-split">|</span>
               <span class="clock-date">{{ nowDateText }}</span>
             </div>
             <span class="header-divider" />
@@ -231,8 +253,8 @@
           </div>
           <el-dropdown @command="handleCommand">
             <span class="user-info">
-              <el-icon><Avatar /></el-icon>
-              {{ userStore.userInfo?.username }}
+              <span class="user-avatar-circle">{{ userInitial }}</span>
+              <span class="user-name">{{ userStore.userInfo?.username }}</span>
               <el-icon class="el-icon--right"><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
@@ -269,40 +291,20 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useClusterStore } from '@/stores/cluster'
 import {
-  House,
-  Monitor,Avatar,
   Bell,
-  ArrowDown,List,
-  UserFilled,
-  Box,
-  Operation,
-  Document,
-  Timer,
-  Clock,
-  AlarmClock,
-  Connection,
-  Link,
-  Share,
-  Position,
+  ArrowDown,
   Setting,
-  Files,
-  Key,
-  FolderOpened,
-  Folder,
-  FolderAdd,
-  Grid,
-  Cpu,
-  DataBoard,
   Refresh,
   FullScreen,
-  MoreFilled
+  MoreFilled,
+  Fold,
+  Expand
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import TagsView from '@/components/TagsView.vue'
+import K8sIcon from '@/components/K8sIcon.vue'
 import { clusterApi } from '@/api/cluster'
 
-import { Fold, Expand } from '@element-plus/icons-vue'
-import logoK8sWhite from '@/assets/logo-k8s-white.svg'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
@@ -311,6 +313,10 @@ const nowDateText = ref('')
 const nowTimeText = ref('')
 const isFullscreen = ref(false)
 const fullscreenText = computed(() => (isFullscreen.value ? '退出全屏' : '进入全屏'))
+const userInitial = computed(() => {
+  const name = userStore.userInfo?.username || 'A'
+  return name.slice(0, 1).toUpperCase()
+})
 const clusterList = ref<any[]>([])
 
 // 加载集群列表
@@ -487,97 +493,165 @@ onUnmounted(() => {
 }
 
 .sidebar {
-  background: #ffffff;
-  border-right: 1px solid rgba(59,130,246,0.16);
+  position: relative;
+  background: linear-gradient(180deg, #0b1f44 0%, #102a5c 52%, #0c2354 100%);
+  border-right: 1px solid rgba(59, 130, 246, 0.14);
+  box-shadow: 4px 0 24px rgba(10, 25, 60, 0.14);
   overflow: hidden;
-  border-radius: 18px;
+  transition: width 0.24s ease;
+}
+
+.sidebar-watermark {
+  position: absolute;
+  left: -32px;
+  bottom: -26px;
+  width: 176px;
+  height: 176px;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .logo {
+  position: relative;
+  z-index: 2;
   height: 60px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding-left: 16px;
-  gap: 10px;
-  background: #ffffff;
-  border-bottom: 1px solid rgba(59,130,246,0.16);
+  padding: 0 18px;
+  gap: 11px;
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logo.is-collapsed {
+  justify-content: center;
+  padding: 0;
 }
 
 .logo-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: #fff;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.logo-icon img {
-  width: 24px;
-  height: 24px;
-  filter: brightness(0) invert(1);
+  filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.45));
 }
 
 .logo h2 {
-  color: var(--brand-500);
+  color: #ffffff;
   margin: 0;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.3px;
   white-space: nowrap;
 }
 
 .sidebar-menu {
+  position: relative;
+  z-index: 2;
   border: none;
   height: calc(100vh - 60px);
   overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 0 24px;
+  background: transparent !important;
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: rgba(219, 234, 254, 0.82);
+  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08);
+  --el-menu-active-color: #ffffff;
 }
 
-.sidebar-menu .el-menu-item {
-  height: 48px;
-  line-height: 48px;
-  border-radius: 16px;
+.sidebar-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+}
+
+.sidebar-menu :deep(.el-menu) {
+  background: rgba(6, 17, 42, 0.28) !important;
+  border-radius: 12px;
+  margin: 2px 10px 6px;
+  padding: 4px 0;
+}
+
+.sidebar-menu :deep(.el-menu-item),
+.sidebar-menu :deep(.el-sub-menu__title) {
+  height: 44px;
+  line-height: 44px;
+  border-radius: 11px;
+  margin: 3px 10px;
+  color: rgba(219, 234, 254, 0.85);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.sidebar-menu :deep(.el-sub-menu .el-menu-item) {
+  height: 40px;
+  line-height: 40px;
+  margin: 2px 6px;
+  padding-left: 38px !important;
+  font-size: 13px;
+  color: rgba(203, 213, 225, 0.86);
+}
+
+.sidebar-menu.el-menu--collapse :deep(.el-menu-item),
+.sidebar-menu.el-menu--collapse :deep(.el-sub-menu__title) {
   margin: 4px 10px;
+  padding: 0 !important;
+  justify-content: center;
 }
 
-.sidebar-menu .el-sub-menu__title {
-  height: 48px;
-  line-height: 48px;
-  border-radius: 16px;
-  margin: 4px 10px;
+.sidebar-menu .k8s-menu-icon {
+  width: 22px;
+  height: 22px;
+  margin-right: 10px;
+  flex-shrink: 0;
 }
 
-.sidebar-menu .el-menu-item:hover {
-  background-color: #f5f8ff !important;
+.sidebar-menu.el-menu--collapse .k8s-menu-icon {
+  margin-right: 0;
 }
 
-.sidebar-menu .el-menu-item.is-active {
-  background-color: #eef2ff !important;
-  color: var(--brand-600) !important;
+.sidebar-menu :deep(.el-sub-menu__icon-arrow) {
+  color: rgba(148, 163, 184, 0.75);
 }
 
-.sidebar-menu .el-menu-item.is-active span { color: var(--brand-600) !important; }
-.sidebar-menu .el-menu-item.is-active .el-icon { color: var(--brand-600) !important; }
-
-.sidebar-menu .el-sub-menu.is-active .el-sub-menu__title {
-  color: #93c5fd !important;
+.sidebar-menu :deep(.el-menu-item:hover),
+.sidebar-menu :deep(.el-sub-menu__title:hover) {
+  background-color: rgba(255, 255, 255, 0.09) !important;
+  color: #ffffff !important;
 }
 
-.sidebar-menu .el-sub-menu.is-active .el-sub-menu__title span {
-  color: #409EFF !important;
+.sidebar-menu :deep(.el-menu-item.is-active) {
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 78%, rgba(37, 99, 235, 0.85) 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.36);
 }
 
-.sidebar-menu .el-sub-menu.is-active .el-sub-menu__title .el-icon {
-  color: #409EFF !important;
+.sidebar-menu :deep(.el-menu-item.is-active span) {
+  color: #ffffff !important;
+}
+
+.sidebar-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  color: #ffffff !important;
+}
+
+.sidebar-menu :deep(.el-sub-menu.is-active > .el-sub-menu__title span) {
+  color: #ffffff !important;
 }
 
 .header {
-  background: #ffffff;
-  border-bottom: 1px solid rgba(59,130,246,0.16);
-  box-shadow: var(--shadow-card);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.03);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -676,54 +750,81 @@ onUnmounted(() => {
 .header-right .user-info {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   cursor: pointer;
-  color: #1e3a8a;
+  color: #1e293b;
   font-size: 14px;
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.04);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  font-weight: 500;
+  height: 36px;
+  padding: 0 12px 0 6px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
 }
+
+.user-avatar-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-name {
+  color: #1e293b;
+}
+
 .header-extras {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-right: 12px;
+  margin-right: 6px;
 }
 
 .clock {
   display: inline-flex;
   align-items: center;
   height: 34px;
-  padding: 0 10px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.04);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   color: #0f172a;
   gap: 8px;
 }
 
-.clock-icon {
-  color: rgba(15, 23, 42, 0.65);
+.clock-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.55);
+  flex-shrink: 0;
 }
 
 .clock-time {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.2px;
   font-variant-numeric: tabular-nums;
 }
 
 .clock-split {
-  color: rgba(15, 23, 42, 0.35);
+  color: #cbd5e1;
   font-size: 12px;
   line-height: 1;
 }
 
 .clock-date {
   font-size: 12px;
-  color: rgba(15, 23, 42, 0.65);
+  color: #64748b;
   line-height: 1;
 }
 
@@ -768,8 +869,8 @@ onUnmounted(() => {
 }
 
 .main-content {
-  background: linear-gradient(180deg, #f5faff 0%, #fbfdff 100%);
-  padding: 24px;
+  background: linear-gradient(155deg, #f2f6fe 0%, #eaf1fc 52%, #f4f7fe 100%);
+  padding: 20px 24px;
   overflow-y: auto;
 }
 
@@ -802,5 +903,31 @@ onUnmounted(() => {
 .fade-transform-leave-to {
   opacity: 0;
   transform: translateX(-30px);
+}
+</style>
+
+<style>
+.k8s-dark-menu-popper .el-menu {
+  background: #0e2552 !important;
+  border: 1px solid rgba(96, 165, 250, 0.2) !important;
+  border-radius: 12px !important;
+  padding: 6px !important;
+}
+
+.k8s-dark-menu-popper .el-menu-item {
+  color: rgba(219, 234, 254, 0.88) !important;
+  border-radius: 8px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+}
+
+.k8s-dark-menu-popper .el-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.k8s-dark-menu-popper .el-menu-item.is-active {
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
 }
 </style>

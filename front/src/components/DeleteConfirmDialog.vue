@@ -8,35 +8,29 @@
   >
     <div class="delete-confirm-content">
       <div class="content-row">
-        <div class="danger-icon">
-          <el-icon :size="20" color="#ffffff">
-            <CloseBold />
+        <div class="warning-icon">
+          <el-icon :size="24" color="#f59e0b">
+            <WarningFilled />
           </el-icon>
         </div>
-        <p class="main-message">{{ message }}</p>
-      </div>
-
-      <div class="input-section">
-        <p class="input-label">请输入 <strong>{{ displayName }}</strong> 来确认删除：</p>
-        <el-input
-          v-model="confirmInput"
-          :placeholder="`请输入 ${displayName}`"
-          @keyup.enter="handleConfirm"
-          ref="inputRef"
-        />
+        <div class="message-wrap">
+          <p class="main-message">{{ message }}</p>
+          <p v-if="showTargetName" class="target-name">
+            目标对象：<strong>{{ itemName }}</strong>
+          </p>
+        </div>
       </div>
     </div>
-    
+
     <template #footer>
       <div class="delete-confirm-footer">
         <el-button @click="handleClose">取消</el-button>
         <el-button
-          type="danger"
-          :disabled="!canConfirm"
+          type="primary"
           :loading="loading"
           @click="handleConfirm"
         >
-          确定
+          确定删除
         </el-button>
       </div>
     </template>
@@ -44,14 +38,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue'
-import { CloseBold } from '@element-plus/icons-vue'
+import { computed, ref, watch } from 'vue'
+import { WarningFilled } from '@element-plus/icons-vue'
 
 interface Props {
   modelValue: boolean
   title?: string
   message?: string
-  itemName: string
+  itemName?: string
   width?: string
   loading?: boolean
 }
@@ -65,32 +59,25 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   title: '确认删除',
   message: '确定要删除此项吗？',
-  width: '600px',
+  itemName: '',
+  width: '440px',
   loading: false
 })
 
 const emit = defineEmits<Emits>()
 
 const visible = ref(false)
-const confirmInput = ref('')
-const inputRef = ref()
 
-const dialogWidth = computed(() => props.width || '600px')
-const displayName = computed(() => props.itemName || '资源名称')
-const canConfirm = computed(() => Boolean(props.itemName) && confirmInput.value === props.itemName)
+const dialogWidth = computed(() => props.width || '440px')
+const showTargetName = computed(
+  () => Boolean(props.itemName) && !props.message.includes(props.itemName)
+)
 
 // 监听 modelValue 变化
 watch(
   () => props.modelValue,
   (newVal) => {
     visible.value = newVal
-    if (newVal) {
-      confirmInput.value = ''
-      // 延迟聚焦到输入框
-      nextTick(() => {
-        inputRef.value?.focus()
-      })
-    }
   },
   { immediate: true }
 )
@@ -106,93 +93,79 @@ const handleClose = () => {
 }
 
 const handleConfirm = () => {
-  if (canConfirm.value) {
-    emit('confirm')
-  }
+  emit('confirm')
 }
 </script>
 
 <style scoped>
 .delete-confirm-content {
-  padding: 0;
+  padding: 6px 0;
 }
 
 .content-row {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: 12px;
 }
 
-.danger-icon {
+.warning-icon {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #F56C6C;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding-top: 1px;
+}
+
+.message-wrap {
+  flex: 1;
+  min-width: 0;
 }
 
 .main-message {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   color: #303133;
-  line-height: 1.5;
-  padding-top: 4px;
+  line-height: 1.6;
 }
 
-.input-section {
-  text-align: left;
-}
-
-.input-label {
-  margin-bottom: 10px;
-  font-size: 15px;
+.target-name {
+  margin: 6px 0 0;
+  font-size: 13px;
   color: #606266;
-  line-height: 1.4;
+  line-height: 1.5;
+  word-break: break-all;
 }
 
-.input-label strong {
-  color: #303133;
+.target-name strong {
+  color: #2563eb;
   font-weight: 600;
-}
-
-.input-section :deep(.el-input__wrapper) {
-  padding: 10px 12px;
-}
-
-.input-section :deep(.el-input__inner) {
-  font-size: 15px;
 }
 
 .delete-confirm-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
 }
 
 :deep(.delete-confirm-dialog .el-dialog__header) {
-  padding: 18px 24px 14px 24px;
+  padding: 16px 20px 12px 20px;
 }
 
 :deep(.delete-confirm-dialog .el-dialog__title) {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 :deep(.el-dialog__body) {
-  padding: 18px 24px 18px 24px;
+  padding: 14px 20px 18px 20px;
 }
 
 :deep(.el-dialog__footer) {
-  padding: 16px 24px;
-  background: #f3f4f6;
-  border-top: 1px solid #e5e7eb;
+  padding: 12px 20px 16px;
+  border-top: none !important;
 }
 
 .delete-confirm-footer :deep(.el-button) {
-  min-width: 96px;
+  min-width: 84px;
 }
 </style>

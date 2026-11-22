@@ -629,10 +629,9 @@ const handleDelete = async (row: DaemonSetVO) => {
       `确定要删除DaemonSet "${row.name}" 吗？此操作不可恢复。`,
       '确认删除',
       {
-        confirmButtonText: '确定',
+        confirmButtonText: '确定删除',
         cancelButtonText: '取消',
-        type: 'warning',
-        confirmButtonClass: 'el-button--danger',
+        type: 'warning'
       }
     )
 

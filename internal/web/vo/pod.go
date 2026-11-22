@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// PodVO Pod 列表项. 不包含 YAML, YAML 由详情接口按需加载
 type PodVO struct {
 	CreationTimestamp time.Time `json:"creationTimestamp"`
 	Namespace         string    `json:"namespace"`
@@ -14,10 +15,9 @@ type PodVO struct {
 	NodeName          string    `json:"nodeName"`
 	HostIP            string    `json:"hostIP"`
 	PodIP             string    `json:"podIP"`
-	Yaml              string    `json:"yaml"`
 }
 
-func Pod2VO(item corev1.Pod, yaml string) PodVO {
+func Pod2VO(item *corev1.Pod) PodVO {
 	return PodVO{
 		CreationTimestamp: item.CreationTimestamp.Time,
 		Name:              item.Name,
@@ -26,7 +26,6 @@ func Pod2VO(item corev1.Pod, yaml string) PodVO {
 		HostIP:            item.Status.HostIP,
 		PodIP:             item.Status.PodIP,
 		NodeName:          item.Spec.NodeName,
-		Yaml:              yaml,
 	}
 }
 
@@ -92,26 +91,33 @@ func Pod2InfoVO(item *corev1.Pod, events *corev1.EventList) PodInfoVO {
 	}
 }
 
+// buildPodContainer 构建容器信息.
+// 按容器名匹配状态(ContainerStatuses 与 Spec.Containers 的顺序不保证一致),
+// 并兼容 Pending 阶段还没有状态、Started 为 nil 的情况, 避免空指针 panic
 func buildPodContainer(item *corev1.Pod) []PodContainerVO {
-	result := make([]PodContainerVO, 0)
-	containers := item.Spec.Containers
-	for index, status := range item.Status.ContainerStatuses {
-		container := containers[index]
-		vo := PodContainerVO{
+	statusMap := make(map[string]corev1.ContainerStatus, len(item.Status.ContainerStatuses))
+	for _, status := range item.Status.ContainerStatuses {
+		statusMap[status.Name] = status
+	}
+	result := make([]PodContainerVO, 0, len(item.Spec.Containers))
+	for _, container := range item.Spec.Containers {
+		c := PodContainerVO{
 			Name:         container.Name,
-			Ready:        status.Ready,
-			RestartCount: status.RestartCount,
 			Image:        container.Image,
-			Started:      *status.Started,
 			VolumeMounts: container.VolumeMounts,
 			Args:         container.Args,
 			Envs:         buildPodEnvVO(container.Env),
 			Ports:        buildPodPorts(container.Ports),
 		}
-		if status.State.Running != nil {
-			vo.StartedAt = status.State.Running.StartedAt.Time
+		if status, ok := statusMap[container.Name]; ok {
+			c.Ready = status.Ready
+			c.RestartCount = status.RestartCount
+			c.Started = status.Started != nil && *status.Started
+			if status.State.Running != nil {
+				c.StartedAt = status.State.Running.StartedAt.Time
+			}
 		}
-		result = append(result, vo)
+		result = append(result, c)
 	}
 	return result
 }

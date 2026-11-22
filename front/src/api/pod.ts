@@ -217,11 +217,25 @@ export const podApi = {
     }
   },
 
-  // 下载文件
-  downloadFile(params: PodFileDTO): Promise<Blob> {
-    return request.post('/pod/download', params, {
-      responseType: 'blob'
+  // 下载文件(大文件耗时可能较长, 不设置超时)
+  async downloadFile(params: PodFileDTO): Promise<Blob> {
+    const blob = await request.post<Blob, Blob>('/pod/download', params, {
+      responseType: 'blob',
+      timeout: 0
     })
+    // 后端出错时返回的是 JSON({code, msg}), blob 模式下响应拦截器识别不了, 需要在这里解析,
+    // 否则会把错误信息当成 tar 文件保存下来
+    if (blob.type.includes('application/json')) {
+      let msg = '下载文件失败'
+      try {
+        const payload = JSON.parse(await blob.text())
+        msg = payload?.msg || msg
+      } catch {
+        // 忽略解析失败, 使用默认提示
+      }
+      throw new Error(msg)
+    }
+    return blob
   },
 
   // 上传文件
@@ -234,7 +248,9 @@ export const podApi = {
     formData.append('filePath', params.filePath)
     formData.append('file', file)
     
+    // 大文件上传耗时可能较长, 不设置超时
     return request.post('/pod/upload', formData, {
+      timeout: 0,
       headers: {
         'Content-Type': 'multipart/form-data'
       }

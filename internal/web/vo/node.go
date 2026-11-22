@@ -55,6 +55,25 @@ type NodeRuntimeVO struct {
 	IntelGPU         string `json:"intelGpu,omitempty"`
 }
 
+type ResourceMetricVO struct {
+	Used      float64 `json:"used"`
+	Total     float64 `json:"total"`
+	Percent   float64 `json:"percent"`
+	UsedText  string  `json:"usedText"`
+	TotalText string  `json:"totalText"`
+}
+
+type ClusterResourceUsageVO struct {
+	CPU        ResourceMetricVO `json:"cpu"`
+	Memory     ResourceMetricVO `json:"memory"`
+	Storage    ResourceMetricVO `json:"storage"`
+	NodeTotal  int64            `json:"nodeTotal"`
+	NodeReady  int64            `json:"nodeReady"`
+	PodTotal   int64            `json:"podTotal"`
+	PodRunning int64            `json:"podRunning"`
+	Source     string           `json:"source"`
+}
+
 type NodePodVO struct {
 	BaseVO
 	Image       string    `json:"image"`       // 镜像信息

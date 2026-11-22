@@ -4,6 +4,7 @@ import (
 	"buding-kube/internal/web/middleware"
 	"buding-kube/internal/web/router"
 	"buding-kube/pkg/config"
+	"buding-kube/pkg/consts"
 	_ "buding-kube/pkg/docs"
 	"buding-kube/pkg/logs"
 	"context"
@@ -16,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -29,7 +31,9 @@ func NewApp() *App {
 	//日志
 	gin.DefaultWriter = logs.NewGinLoggerAdapter(zapcore.InfoLevel)
 	gin.DefaultErrorWriter = logs.NewGinLoggerAdapter(zapcore.ErrorLevel)
-	engine := gin.Default()
+	// 使用 gin.New 而不是 gin.Default: 访问日志和异常恢复已由自定义中间件负责,
+	// gin.Default 会再挂一套 Logger/Recovery, 导致日志重复打印、panic 被重复处理
+	engine := gin.New()
 
 	//中间件
 	engine.Use(middleware.Cors(), middleware.Logger(), middleware.Recovery())
@@ -48,30 +52,24 @@ func NewApp() *App {
 }
 
 func (app *App) Start() {
-	var port int
-	var addr string
-	var server *http.Server
-	var err error
-
-	//初始化
-	port = getPort()
-	addr = fmt.Sprintf(":%d", port)
-	server = &http.Server{
-		Addr:           addr,
-		Handler:        app.engine,
-		ReadTimeout:    10 * time.Second, // 添加超时配置
-		WriteTimeout:   0,                // 不限制写超时: Pod 日志 SSE、文件下载是长连接流式响应
-		IdleTimeout:    120 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+	addr := fmt.Sprintf(":%d", getPort())
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           app.engine,
+		ReadHeaderTimeout: 10 * time.Second, // 限制请求头读取时间, 防御 slowloris
+		ReadTimeout:       0,                // 不限制请求体读取: 大文件上传耗时可能远超 10 秒
+		WriteTimeout:      0,                // 不限制写超时: Pod 日志、文件下载是长连接流式响应
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 	app.server = server
 	//启动
 	go func() {
-		if err = server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logs.Fatal("Server Shutdown err:", err)
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logs.Fatal("Server Shutdown err: %v", err)
 		}
 	}()
-	app.server = server
+	logs.Info("HTTP 服务监听地址 %s", addr)
 }
 
 func (app *App) Stop(ctx context.Context) error {
@@ -88,21 +86,24 @@ func (app *App) Stop(ctx context.Context) error {
 	return nil
 }
 
+// getPort 端口优先级: 环境变量 KUBE_RUNTIME_PORT > 配置文件 server.port > 默认 8080
 func getPort() int {
-	//配置
-	var port int
-	port = config.GetConfig().Server.Port
+	port := config.GetConfig().Server.Port
 
-	//env
-	portStr := os.Getenv("KUBE_RUNTIME_PORT")
-	envPort, err := strconv.Atoi(portStr)
-	if err == nil {
-		port = envPort
+	if portStr := strings.TrimSpace(os.Getenv("KUBE_RUNTIME_PORT")); portStr != "" {
+		envPort, err := strconv.Atoi(portStr)
+		if err != nil {
+			logs.Warn("环境变量 KUBE_RUNTIME_PORT=%s 不是合法端口, 已忽略", portStr)
+		} else {
+			port = envPort
+		}
 	}
 
 	if port <= 0 || port > 65535 {
-		logs.Warn("Invalid port %s, using default 8080", portStr)
-		return 8080
+		if port != 0 {
+			logs.Warn("非法端口 %d, 使用默认端口 %d", port, consts.ServerPort)
+		}
+		return consts.ServerPort
 	}
 	return port
 }

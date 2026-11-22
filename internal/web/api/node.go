@@ -24,9 +24,24 @@ func NewNodeApi(router *gin.RouterGroup) *NodeApi {
 
 func (api *NodeApi) Router() {
 	api.router.GET("/list", api.List)
+	api.router.GET("/usage", api.Usage)
 	api.router.GET("", api.Info)
 	api.router.PUT("/unSchedule", middleware.Blocker(), api.UnSchedule)
 	api.router.DELETE("", middleware.Blocker(), api.Delete)
+}
+
+func (api *NodeApi) Usage(ctx *gin.Context) {
+	var query dto.NodeUsageQueryDTO
+	if err := api.BindQuery(ctx, &query); err != nil {
+		api.ParamBindError(ctx, err)
+		return
+	}
+	result, err := api.srv.GetClusterUsage(query)
+	if err != nil {
+		api.InternalError(ctx, "获取集群资源使用情况失败:", err)
+		return
+	}
+	api.SuccessWithData(ctx, result)
 }
 
 // Delete 删除Node对象(节点重新注册后会再次出现)

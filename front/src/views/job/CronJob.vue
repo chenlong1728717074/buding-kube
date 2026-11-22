@@ -408,10 +408,9 @@ const handleDelete = (row: CronJobVO) => {
     `确定要删除CronJob "${row.name}" 吗？`,
     '确认删除',
     {
-      confirmButtonText: '确定',
+      confirmButtonText: '确定删除',
       cancelButtonText: '取消',
-      type: 'warning',
-        confirmButtonClass: 'el-button--danger',
+      type: 'warning'
     }
   ).then(() => {
     ElMessage.info('删除功能开发中')

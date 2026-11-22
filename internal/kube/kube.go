@@ -75,6 +75,7 @@ func getConfig() (*rest.Config, string, error) {
 		if err != nil {
 			return nil, "", fmt.Errorf("获取集群内配置失败: %w", err)
 		}
+		config.WarningHandler = rest.NoWarnings{}
 		return config, namespace, nil
 	}
 
@@ -95,6 +96,7 @@ func getConfig() (*rest.Config, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("❌  加载配置文件失败: %w", err)
 	}
+	config.WarningHandler = rest.NoWarnings{}
 
 	return config, namespace, nil
 }

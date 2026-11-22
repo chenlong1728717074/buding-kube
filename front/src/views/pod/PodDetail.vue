@@ -755,9 +755,9 @@ const confirmDownload = async () => {
     
     ElMessage.success('文件下载成功')
     downloadDialogVisible.value = false
-  } catch (error) {
+  } catch (error: any) {
     console.error('下载文件失败:', error)
-    ElMessage.error('下载文件失败')
+    ElMessage.error(error?.message || '下载文件失败')
   } finally {
     downloadLoading.value = false
   }

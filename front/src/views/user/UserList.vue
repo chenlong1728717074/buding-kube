@@ -129,12 +129,16 @@
           </el-empty>
         </template>
 
-        <el-table-column prop="username" label="用户名" min-width="150">
+        <el-table-column prop="username" label="用户名" min-width="140" show-overflow-tooltip>
           <template #default="{ row }">
-            <div class="user-info">
-              <div class="user-name">{{ row.username }}</div>
-              <div v-if="row.realName" class="user-realname">{{ row.realName }}</div>
-            </div>
+            <span class="user-name">{{ row.username }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="realName" label="姓名" min-width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.realName">{{ row.realName }}</span>
+            <el-text v-else type="info">未设置</el-text>
           </template>
         </el-table-column>
 
@@ -1221,20 +1225,9 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.user-info {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
 .user-name {
   font-weight: 500;
   color: #2c3e50;
-}
-
-.user-realname {
-  font-size: 12px;
-  color: #6b7280;
 }
 
 .status-tag {

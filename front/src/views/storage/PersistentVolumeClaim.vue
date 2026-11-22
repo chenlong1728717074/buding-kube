@@ -280,8 +280,7 @@ const handleDelete = (row: PVCVO) => {
     {
       type: 'warning',
       confirmButtonText: '确定删除',
-      cancelButtonText: '取消',
-      confirmButtonClass: 'el-button--danger'
+      cancelButtonText: '取消'
     }
   ).then(async () => {
     try {

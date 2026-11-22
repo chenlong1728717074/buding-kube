@@ -136,6 +136,9 @@ func (s *UserService) CreateUser(req dto.CreateUserDTO, currentUser *kube.LoginU
 		return errors.New("不允许创建超级管理员")
 	}
 	user, err = BuildUserFromDTO(req)
+	if err != nil {
+		return fmt.Errorf("构建用户失败: %w", err)
+	}
 	if !currentUser.CanManageUser(user) {
 		return errors.New("权限不足")
 	}

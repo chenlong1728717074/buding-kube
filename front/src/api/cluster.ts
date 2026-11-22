@@ -36,6 +36,27 @@ export interface ClusterSaveDTO {
   token?: string
 }
 
+// 集群资源使用单项指标
+export interface ResourceMetricVO {
+  used: number
+  total: number
+  percent: number
+  usedText: string
+  totalText: string
+}
+
+// 集群节点资源使用率汇总
+export interface ClusterResourceUsageVO {
+  cpu: ResourceMetricVO
+  memory: ResourceMetricVO
+  storage: ResourceMetricVO
+  nodeTotal: number
+  nodeReady: number
+  podTotal: number
+  podRunning: number
+  source: 'metrics-server' | 'requests' | string
+}
+
 // 集群管理API
 export const clusterApi = {
   // 获取集群列表
@@ -66,6 +87,11 @@ export const clusterApi = {
   // 获取节点列表
   getNodes: (clusterId: string, params?: any): Promise<ApiResponse<PageResponse<any>>> => {
     return request.get(`/node/list`, { params: { ...params, clusterId } })
+  },
+
+  // 获取集群节点资源使用情况
+  getClusterUsage: (clusterId: string): Promise<ApiResponse<ClusterResourceUsageVO>> => {
+    return request.get('/node/usage', { params: { clusterId } })
   },
 
   // 获取节点详情

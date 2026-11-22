@@ -509,10 +509,9 @@ const handleDelete = (row: DeploymentVO) => {
     `确定要删除Deployment "${row.name}" 吗？此操作不可恢复。`,
     '确认删除',
     {
-      confirmButtonText: '确定',
+      confirmButtonText: '确定删除',
       cancelButtonText: '取消',
-      confirmButtonClass: 'el-button--danger',
-            type: 'warning'
+      type: 'warning'
     }
   ).then(async () => {
     try {

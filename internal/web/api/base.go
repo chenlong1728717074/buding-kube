@@ -254,16 +254,12 @@ func (api *BaseApi) CurrentUser(ctx *gin.Context) *kube.LoginUser {
 }
 
 func (api *BaseApi) keepAliveTextPlain(ctx *gin.Context) {
-	_ = ctx.Request.ParseMultipartForm(32 << 20)
-	// 设置SSE头信息
+	// 流式响应头. 跨域头由 Cors 中间件统一设置; Transfer-Encoding 由 net/http 自动处理, 手动设置反而可能出错
 	ctx.Header("Content-Type", "text/plain; charset=utf-8")
-	ctx.Header("Cache-Control", "no-cache,private")
+	ctx.Header("Cache-Control", "no-cache, private")
 	ctx.Header("Connection", "keep-alive")
 	ctx.Header("X-Accel-Buffering", "no") // 禁用 Nginx 的缓冲
-	ctx.Header(`Access-Control-Allow-Origin`, `*`)
-	ctx.Header("Transfer-Encoding", "chunked")
-	// 设置状态码
-	ctx.Writer.WriteHeader(200)
+	ctx.Writer.WriteHeader(http.StatusOK)
 }
 
 type StreamPlan struct {
