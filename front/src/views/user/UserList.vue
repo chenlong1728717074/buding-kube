@@ -542,21 +542,12 @@ const fetchUserList = async () => {
       ...searchForm
     }
     const res = await userApi.getUsers(params)
-    
-    if (res.code === 200 && res.data) {
-      userList.value = res.data.items || []
-      pagination.total = res.data.total || 0
-    } else {
-      userList.value = []
-      pagination.total = 0
-      ElMessage.warning(res.msg || '暂无用户数据')
-    }
-  } catch (error: any) {
+    userList.value = res.data?.items || []
+    pagination.total = res.data?.total || 0
+  } catch {
+    // 请求拦截器已提示错误(例如权限不足、登录过期)
     userList.value = []
     pagination.total = 0
-     else if (error.response?.status === 401) {
-    } else {
-    }
   } finally {
     loading.value = false
   }

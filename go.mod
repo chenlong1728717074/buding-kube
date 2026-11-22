@@ -12,13 +12,14 @@ require (
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
 	go.uber.org/zap v1.27.1
-	golang.org/x/crypto v0.46.0
 	k8s.io/api v0.35.0
 	k8s.io/apiextensions-apiserver v0.35.0
 	k8s.io/apimachinery v0.35.0
 	k8s.io/client-go v0.35.0
 	sigs.k8s.io/yaml v1.6.0
 )
+
+require golang.org/x/crypto v0.46.0 // indirect
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
