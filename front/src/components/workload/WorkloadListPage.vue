@@ -108,7 +108,7 @@
       :alias="current?.alias"
       :describe="current?.describe"
       :submit="saveInfo"
-      @success="fetchList"
+      @success="fetchList()"
     />
     <YamlDialog
       v-model="yamlAddVisible"
@@ -129,13 +129,13 @@
       :editor-title="`${current?.name} - ${meta.label} YAML`"
       :filename="`${current?.name}-${kind}.yaml`"
       :apply-target="current ? { clusterId, kind, namespace: current.namespace, name: current.name } : null"
-      @applied="fetchList"
+      @applied="fetchList()"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, MoreFilled, Plus, Refresh, Search } from '@element-plus/icons-vue'
@@ -187,12 +187,23 @@ const current = ref<WorkloadRow | null>(null)
 
 // 快速切换条件时只采用最后一次查询的结果
 const nextRequest = useLatestRequest()
-const fetchList = async () => {
+let initialized = false
+const isActive = ref(true)
+let pollTimer: ReturnType<typeof setTimeout> | undefined
+
+const schedulePoll = () => {
+  clearTimeout(pollTimer)
+  if (isActive.value && list.value.some(r => r.status === '更新中')) {
+    pollTimer = setTimeout(() => fetchList(true), 4000)
+  }
+}
+
+const fetchList = async (silent = false) => {
   if (!clusterId.value) {
     list.value = []
     return
   }
-  loading.value = true
+  if (!silent) loading.value = true
   const params = { clusterId: clusterId.value, namespace: searchForm.namespace, name: searchForm.name.trim(), page: 1, pageSize: 100000 }
   const isLatest = nextRequest()
   try {
@@ -202,9 +213,12 @@ const fetchList = async () => {
     list.value = resp.data?.items || []
   } catch {
     if (!isLatest()) return
-    list.value = []
+    if (!silent) list.value = []
   } finally {
-    if (isLatest()) loading.value = false
+    if (isLatest()) {
+      loading.value = false
+      schedulePoll()
+    }
   }
 }
 
@@ -330,6 +344,26 @@ watch(
   },
   { immediate: true }
 )
+
+// keep-alive 恢复列表页时（如从详情页更新副本/镜像/YAML返回）静默拉取最新状态
+onActivated(() => {
+  isActive.value = true
+  if (!initialized) {
+    initialized = true
+    return
+  }
+  if (clusterId.value) fetchList(true)
+})
+
+onDeactivated(() => {
+  isActive.value = false
+  clearTimeout(pollTimer)
+})
+
+onBeforeUnmount(() => {
+  isActive.value = false
+  clearTimeout(pollTimer)
+})
 </script>
 
 <style scoped>

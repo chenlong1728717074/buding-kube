@@ -213,6 +213,10 @@
             <el-icon class="k8s-menu-icon"><K8sIcon name="k8s" :size="19" /></el-icon>
             <span>Web kubectl</span>
           </el-menu-item>
+          <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/resource/topology`">
+            <el-icon class="k8s-menu-icon"><K8sIcon name="netpol" :size="19" /></el-icon>
+            <span>资源拓扑图</span>
+          </el-menu-item>
           <el-menu-item :index="`/cluster/${clusterStore.currentClusterId}/resource/tools`">
             <el-icon class="k8s-menu-icon"><K8sIcon name="etcd" :size="19" /></el-icon>
             <span>工具</span>

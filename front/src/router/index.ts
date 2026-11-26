@@ -493,6 +493,15 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
+        path: 'resource/topology',
+        name: 'ResourceTopology',
+        component: () => import('@/views/resource/Topology.vue'),
+        meta: {
+          title: '资源拓扑图',
+          requiresAuth: true
+        }
+      },
+      {
         path: 'resource/crd/instances',
         name: 'CustomResourceList',
         component: () => import('@/views/resource/CustomResourceList.vue'),

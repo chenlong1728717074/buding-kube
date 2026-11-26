@@ -14,7 +14,7 @@ func StatefulSet2WorkloadVO(item v1.StatefulSet) WorkloadVO {
 			Describe:  item.Annotations["describe"],
 		},
 		Status:        GetStatefulSetStatusText(item),
-		Replicas:      int(item.Status.Replicas),
+		Replicas:      int(int32Value(item.Spec.Replicas, 1)),
 		ReadyReplicas: int(item.Status.ReadyReplicas),
 		Containers:    len(item.Spec.Template.Spec.Containers),
 		UpdateTime:    GetStatefulSetUpdateTime(item),
@@ -33,23 +33,26 @@ func GetStatefulSetUpdateTime(sts v1.StatefulSet) *time.Time {
 }
 
 func GetStatefulSetStatusText(sts v1.StatefulSet) string {
-	// 获取副本状态
-	desired := sts.Status.Replicas
+	// 以 Spec.Replicas 作为期望副本数（未设置时 K8s 默认 1）
+	desired := int32Value(sts.Spec.Replicas, 1)
 	ready := sts.Status.ReadyReplicas
 	updated := sts.Status.UpdatedReplicas
 
-	// 1. 已停止：副本数为 0
+	// 1. 已停止 / 缩容至 0 中
 	if desired == 0 {
+		if sts.Status.Replicas > 0 || sts.Status.ObservedGeneration < sts.Generation {
+			return "更新中"
+		}
 		return "已停止"
 	}
-	// 2. 更新中：更新的副本数还没达到预期
-	if updated < desired || ready < desired {
+	// 2. 更新中：控制器尚未观测到最新 Generation，或副本/更新/版本未完全同步
+	if sts.Status.ObservedGeneration < sts.Generation ||
+		sts.Status.Replicas != desired ||
+		updated < desired ||
+		ready < desired ||
+		(sts.Status.UpdateRevision != "" && sts.Status.CurrentRevision != "" && sts.Status.CurrentRevision != sts.Status.UpdateRevision) {
 		return "更新中"
 	}
 	// 3. 运行中：一切就绪
-	if updated == desired && ready == desired {
-		return "运行中"
-	}
-	// 4. 默认兜底
-	return "未知"
+	return "运行中"
 }

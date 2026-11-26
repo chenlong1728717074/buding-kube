@@ -39,8 +39,8 @@ func (s *DeploymentService) List(ctx context.Context, query dto.WorkloadQueryDTO
 		logs.Error("获取集群失败: %s %s", query.ClusterId, err.Error())
 		return nil, errors.New("获取集群失败")
 	}
-	// 命名空间为空时查询所有命名空间
-	items, err := clientSet.AppsV1().Deployments(query.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
+	// 命名空间为空时查询所有命名空间（不使用 ResourceVersion:"0" 避免更新后读到过期缓存）
+	items, err := clientSet.AppsV1().Deployments(query.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		logs.Error("获取Deployment失败: %v", err)
 		return nil, err

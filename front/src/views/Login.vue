@@ -181,14 +181,14 @@ const onSubmit = async () => {
   transform: rotate(180deg);
 }
 
-/* 顶部品牌: 原型 x≈55 y≈50, logo 44px */
+/* 顶部品牌 */
 .brand-header {
   position: relative;
   z-index: 2;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 3.4vh 3.3vw 0;
+  padding: clamp(20px, 3vh, 34px) clamp(28px, 3.2vw, 56px) 0;
 }
 
 .brand-logo {
@@ -214,25 +214,28 @@ const onSubmit = async () => {
   letter-spacing: 0.5px;
 }
 
-/* 主体: 不创建堆叠上下文, 保证 3D 图 multiply 混合能与页面渐变背景融合
-   横向按原型: 左缘 6.9vw(大图), 标题 12.6vw, 卡片右缘 14.5vw, 卡片与大图间距 3vw */
+/* 主体: 不创建堆叠上下文, 保证 3D 图 multiply 混合能与页面渐变背景融合 */
 .login-main {
   flex: 1;
+  width: 100%;
+  max-width: 1560px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 7vw;
-  padding: 0 14.5vw 1vh 6.9vw;
+  justify-content: space-between;
+  gap: clamp(40px, 5vw, 96px);
+  padding: 0 clamp(32px, 7vw, 110px) 16px;
 }
 
-/* 左侧介绍: 标题在 intro 内缩进 5.7vw 到 12.6vw */
+/* 左侧介绍 */
 .intro {
   flex: 1 1 auto;
   min-width: 0;
 }
 
 .intro-title {
-  margin: 0 0 0 5.7vw;
-  font-size: clamp(30px, 2.7vw, 46px);
+  margin: 0 0 0 clamp(16px, 3.5vw, 56px);
+  font-size: clamp(30px, 2.7vw, 44px);
   line-height: 1.3;
   font-weight: 700;
   color: #16325c;
@@ -240,7 +243,7 @@ const onSubmit = async () => {
 }
 
 .intro-desc {
-  margin: 2vh 0 0 5.7vw;
+  margin: clamp(12px, 1.8vh, 20px) 0 0 clamp(16px, 3.5vw, 56px);
   font-size: clamp(13px, 0.95vw, 16px);
   color: #5b7396;
 }
@@ -250,13 +253,14 @@ const onSubmit = async () => {
   height: 4px;
   border-radius: 2px;
   background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  margin: 2.4vh 0 0 5.7vw;
+  margin: clamp(14px, 2.2vh, 24px) 0 0 clamp(16px, 3.5vw, 56px);
 }
 
 .intro-hero {
   display: block;
-  width: 45.3vw;
-  margin: 3.2vh 0 0 0;
+  width: 100%;
+  max-width: clamp(440px, 42vw, 680px);
+  margin: clamp(20px, 3vh, 36px) 0 0 0;
   mix-blend-mode: multiply;
   animation: hero-float 6s ease-in-out infinite;
 }
@@ -266,15 +270,14 @@ const onSubmit = async () => {
   50% { transform: translateY(-10px); }
 }
 
-/* 登录卡片: 原型宽≈505px(30.3vw), 高≈535px(56.7vh), 右缘距 14.5vw */
+/* 登录卡片: 保持接近 1:1 的舒适宽高比, 避免 23-27 寸大屏下因 vh 拉伸显得瘦长 */
 .login-card {
-  width: clamp(380px, 24.5vw, 440px);
-  min-height: 56.5vh;
+  width: clamp(400px, 28vw, 490px);
   flex-shrink: 0;
   background: #ffffff;
-  border-radius: 18px;
+  border-radius: 20px;
   box-shadow: 0 20px 60px rgba(59, 130, 246, 0.16);
-  padding: 6vh 36px 4.5vh;
+  padding: clamp(34px, 4.2vh, 46px) clamp(32px, 2.4vw, 44px) clamp(28px, 3.4vh, 38px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -287,7 +290,7 @@ const onSubmit = async () => {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-bottom: 4.5vh;
+  margin-bottom: clamp(24px, 3vh, 34px);
 }
 
 .card-logo {
@@ -339,17 +342,17 @@ const onSubmit = async () => {
 }
 
 .login-form :deep(.el-input__inner) {
-  height: 48px;
+  height: 46px;
 }
 
 .login-form :deep(.el-form-item) {
-  margin-bottom: 3.2vh;
+  margin-bottom: 22px;
 }
 
 .login-btn {
   width: 100%;
-  height: 54px;
-  margin-top: 1.6vh;
+  height: 50px;
+  margin-top: 8px;
   border-radius: 12px;
   font-size: 16px;
   letter-spacing: 4px;
@@ -364,7 +367,7 @@ const onSubmit = async () => {
 }
 
 .card-divider {
-  margin: 4vh 0 2.6vh;
+  margin: 26px 0 20px;
 }
 
 .card-divider :deep(.el-divider__text) {
@@ -383,8 +386,8 @@ const onSubmit = async () => {
 }
 
 .demo-value {
-  margin-top: 1vh;
-  font-size: clamp(15px, 1.1vw, 18px);
+  margin-top: 6px;
+  font-size: 16px;
   font-weight: 700;
   color: #3b82f6;
   cursor: pointer;
@@ -400,7 +403,7 @@ const onSubmit = async () => {
   position: relative;
   z-index: 2;
   text-align: center;
-  padding: 2vh 0 2.4vh;
+  padding: 16px 0 22px;
   font-size: 13px;
   color: #8ba3c7;
 }

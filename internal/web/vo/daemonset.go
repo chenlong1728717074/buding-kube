@@ -37,19 +37,22 @@ func GetDaemonSetStatusText(ds v1.DaemonSet) string {
 	desired := ds.Status.DesiredNumberScheduled
 	ready := ds.Status.NumberReady
 	updated := ds.Status.UpdatedNumberScheduled
+	available := ds.Status.NumberAvailable
 
-	// 1. 已停止：副本数为 0
+	// 1. 已停止：期望调度节点数为 0
 	if desired == 0 {
+		if ds.Status.ObservedGeneration < ds.Generation {
+			return "更新中"
+		}
 		return "已停止"
 	}
-	// 2. 更新中：更新的副本数还没达到预期
-	if updated < desired || ready < desired {
+	// 2. 更新中：控制器未观测到最新 Generation，或更新/就绪/可用节点数未达到预期
+	if ds.Status.ObservedGeneration < ds.Generation ||
+		updated < desired ||
+		ready < desired ||
+		available < desired {
 		return "更新中"
 	}
 	// 3. 运行中：一切就绪
-	if updated == desired && ready == desired {
-		return "运行中"
-	}
-	// 4. 默认兜底
-	return "未知"
+	return "运行中"
 }

@@ -28,6 +28,11 @@ const request: AxiosInstance = axios.create({
 })
 
 let redirectingToLogin = false
+let clearUserStateHandler: (() => void) | null = null
+
+export const registerUnauthorizedClearHandler = (handler: () => void) => {
+  clearUserStateHandler = handler
+}
 
 export const clearAuthStorage = () => {
   sessionStorage.removeItem('token')
@@ -42,8 +47,7 @@ export const redirectToLogin = async (message?: string) => {
   clearAuthStorage()
   // 同步清空内存中的用户状态, 否则守卫读到过期的 isLoggedIn 会把 /login 弹回 /home
   try {
-    const { useUserStore } = await import('@/stores/user')
-    useUserStore().clearUserData()
+    clearUserStateHandler?.()
   } catch {}
   try {
     await router.push('/login')

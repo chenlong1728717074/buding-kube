@@ -115,4 +115,8 @@ func SetupRouter(engine *gin.RouterGroup) {
 	//集群功能检测(例如网络插件是否支持网络策略)
 	capability := engine.Group("/capability", middleware.JWTAuth())
 	api.NewCapabilityApi(capability)
+
+	//命名空间资源拓扑图
+	topology := engine.Group("/topology", middleware.JWTAuth())
+	api.NewTopologyApi(topology)
 }
